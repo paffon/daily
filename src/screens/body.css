@@ -68,6 +68,18 @@
   color: var(--ink-quiet);
 }
 
+/* the photos line sits under the weights and is counted, never listed —
+   a count and its months is the whole of that half of the module */
+.body-rail-photos {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+  padding: 16px 24px 11px;
+  border-top: 1px solid var(--rule-light);
+  font: 400 14px/1 var(--family-mono);
+}
+
 .body-rail-progress {
   margin: 8px 0 0;
   padding: 16px 24px 28px;
@@ -168,6 +180,40 @@
   background: var(--steel-hover);
 }
 
+/* the second door into the module, and the quieter one — steel is reserved
+   for the live action, and the photo is the occasional thing */
+.body-photo {
+  align-items: center;
+  justify-content: center;
+  padding: 18px 26px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-quiet);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.body-photo:hover {
+  background: var(--paper-hover);
+}
+
+/* the photo that could not go up, and the one that could not come down */
+.body-trouble,
+.body-photo-path {
+  margin: 0;
+  font: 400 12.5px/1.5 var(--family-mono);
+  color: var(--mono);
+}
+
+/* the edit screen's photo branch — a picture and nothing else */
+.body-photo-shot {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+}
+
 .body-summary {
   margin: 0;
   max-width: 520px;
@@ -195,6 +241,7 @@
 
   .body-rail-label,
   .body-rail-row,
+  .body-rail-photos,
   .body-rail-progress {
     padding-left: 34px;
     padding-right: 34px;

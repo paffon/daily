@@ -76,6 +76,22 @@ describe('pull', () => {
     expect(localAdapter.get(PATH)).toBe('from another browser')
   })
 
+  it('never brings a photo down — the mirror is text, and shared with every entry', async () => {
+    const PHOTO = 'photos/2026-08-01.jpg'
+    remoteList.mockResolvedValue([
+      { path: PHOTO, modifiedTime: LISTED },
+      { path: PATH, modifiedTime: LISTED },
+    ])
+
+    await pull()
+
+    expect(localAdapter.get(PHOTO)).toBeNull()
+    expect(remote).toHaveBeenCalledTimes(1)
+    expect(remote).toHaveBeenCalledWith(PATH)
+    /* the entry line naming the photo still comes down with everything else */
+    expect(localAdapter.get(PATH)).toBe('from drive')
+  })
+
   it('forgets a file that has left Drive, so its name cannot be claimed later', async () => {
     await pull()
     remoteList.mockResolvedValue([])

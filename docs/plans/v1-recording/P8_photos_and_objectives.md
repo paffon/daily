@@ -210,6 +210,174 @@ Do not, even if it seems better:
   A count in the rail and the image on the entry is the whole feature.
 - No Monday week boundary anywhere, including in a test fixture.
 
+## Deviations
+
+Recorded as they happened. Nothing here was improvised around — each is a
+place where the doc and the repo disagreed.
+
+### Files touched outside the Touch list
+
+The Touch list named eight files. Ten more were needed. None of them is new
+scope; each is a consequence of something the doc ordered.
+
+| file | why |
+| :- | :- |
+| `src/data/sync.ts` | **Do-not-touch, and changed anyway** — see below |
+| `src/data/drive.ts` | `putBinary` has to call an upload that takes bytes, and P3's Incoming comment ordered the paging loop |
+| `src/data/drive.test.ts` | the paging loop is a data-loss path and needed a check |
+| `src/data/sync.test.ts` | the photo skip needed a check |
+| `src/main.tsx` | `#/objectives` routes to P1's stub **there**, not in `home.tsx` |
+| `src/seed/app.json` | `RULES.md` forbids a literal `1600`, `0.8`, or a starting target in source |
+| `src/screens/body.css`, `src/screens/objectives.css` | P1's convention: per-screen CSS beside the screen |
+| `src/data/photos.test.ts`, `src/screens/body.test.tsx` | T1's Verify asks for cases that had nowhere else to live |
+
+The doc's `src/screens/home.tsx` entry says *the `objectives →` link becomes
+live*. That link was already an `<a href="#/objectives">`; what was a stub is
+the route in `src/main.tsx`. `home.tsx` changed only to follow the
+`weightLine` → `bodyLine` rename.
+
+### `src/data/sync.ts` — photos would have been mirrored, and logging would stop
+
+The capsule says photos are not mirrored in `localStorage`. They would have
+been. `pull` walks every file `listFiles` returns, `photos` is already a
+resolved prefix in `drive.ts`, so each JPEG was fetched with `.text()` and
+written to the mirror as replacement characters. `localStorage` holds every
+entry ever logged in the same few megabytes; a handful of photos fills it and
+`setItem` then throws inside `putEntry`, which is recording — the product —
+stopping.
+
+`sync.ts` is on the Do-not-touch list, so this was put to the user before any
+code was written. They chose the one-line skip over blocking the phase. The
+guard is four words plus a comment, and `sync.test.ts` carries a case that was
+watched to fail without it.
+
+### `putBinary` needed `putFile` to take bytes
+
+The capsule says `putBinary` calls "`drive.ts`'s upload directly".
+`drive.ts`'s upload took a `string`. Widening it to `string | Blob` is one
+word and `fetch` reads the content type off the blob, so nothing else moved.
+`getBlob` was added beside it because the edit screen has to show a photo that
+is deliberately not in the mirror, and an `<img src>` cannot carry a bearer
+token.
+
+### The workout payload's body parts are this phase's invention
+
+The capsule says a body-part-scoped target "counts workouts containing at
+least one exercise whose `body_part` matches". P5 has not run, so no workout
+payload exists to read. `factFor` reads a flat `body_parts` array off the
+entry, and P5 has been told so in `PLAN.md`. Reading the *library* at render
+time was rejected on its merits, not just for convenience: nothing in a
+library is protected from being renamed or re-tagged, and an entry has to keep
+saying what was true when it happened.
+
+### `photoMonths` takes a locale
+
+The doc writes `photoMonths(entries)`. Month names need a locale, and the
+locale is config. It takes one.
+
+### Frame 4g's `changed 14 june` is not rendered
+
+The strip carries the back affordance and nothing on its right. The frame
+dates the objectives file, and the shape the capsule fixes —
+`{ statement, targets }` — has no field to date it from. Adding one would have
+been inventing storage the doc specified against. See open question 4.
+
+### `resize` is not directly tested
+
+jsdom has no canvas and no `createImageBitmap`, so `resize` cannot run under
+the suite. The arithmetic it draws with — `fit` — is exported and tested at
+the cap, above it and below it, and the cap is read from the seed rather than
+written twice. The canvas plumbing itself is covered only by the Exit
+criteria's manual pass.
+
+## Fresh review
+
+A subagent that did not implement this read the diff, this doc, and the
+over-engineering tags, and knew nothing else about the repo. Seventeen
+findings. Eleven were real and are fixed; the rest are recorded here.
+
+**Fixed.** A brand-new target read `nothing yet` where Exit criteria says
+`0 this week` — the reviewer caught that the suite was green against a
+violated exit item. `.obj-remove` wore `--danger`, which is a red state on the
+one screen that must not have one, and the markup scan T3 specifies could
+never have seen it because innerHTML holds no CSS. The decoded `ImageBitmap`
+was never closed. `photoMonths` deduped by month *name*, so April in two
+different years collapsed into one and the rail would name fewer months than
+it counted. `Math.max(...matched.map(…))` spread an unbounded array. A
+forward-dated entry produced `-3 days`. The body summary said "Nothing
+recorded yet." over a rail listing photos, and the progress line counted
+photos in a sentence about drawing a weight line. `Photo` kept a revoked
+object URL on screen for a frame. `+ objective` crashed the screen if
+`new_target` was emptied — and it is editable, so it can be.
+
+**Declined, with reasons.**
+
+- *The rail's `photos3 · april, may, july` is missing the Demo's separator.*
+  Frame 4f is two spans in a `space-between` row, exactly like the weight rows
+  above it, whose `textContent` reads `12 july 07:4073.1 kg` for the same
+  reason. The frame wins over the Demo's prose rendering of it.
+- *The Drive paging loop is out of scope.* It is ordered by P3's Incoming
+  comment in this phase's `PLAN.md` block — "Add the paging loop when you add
+  photos" — which amends this doc.
+- *`+ objective` persists a blank target immediately.* The screen has no save
+  button by design; everything commits on blur. A row held out of the file
+  until it is "finished" would need one.
+- *`putBinary` is a one-line alias for `putFile` with one caller.* Tagged
+  `yagni` by the lens and correct on the merits — but the capsule names it, so
+  it stays. Recorded here rather than fixed.
+
+**Also found, by walking the Exit criteria in a browser rather than by
+review:** writing the statement of intent and then pressing `+ objective`
+before the screen repainted wrote the statement back out. Every change is now
+a read-modify-write of the stored file, which also makes a sync pull landing
+mid-edit harmless. The first test written for it passed without the fix —
+`@testing-library` flushes renders between events, so it could not reproduce
+the condition — and was replaced by one that asserts the property directly and
+was watched to fail.
+
+**Two lens findings left standing, both with a reason:**
+
+- `settings()` in `objectives.tsx` is byte-for-byte the same idea as the one
+  in `photos.ts`: spread the seed's section under the stored file's section,
+  because `ensureSeeded` never backfills a key. The lens wants one helper in
+  `store.ts`. `store.ts` is Do-not-touch beyond `SEEDS`, and the duplication is
+  a symptom rather than the defect — see open question 2.
+- The stylesheet is not checked for `--danger` by any test. `?raw` hands back
+  an empty string under vitest's default `css: false`, so a check written that
+  way passes whatever the file says — which is how the vacuous version was
+  caught. Turning CSS on lives in `vite.config.ts`, which no module phase owns.
+
+## Open questions
+
+For the planner. In severity order.
+
+1. **The workout payload's `body_parts` is a contract P5 has not agreed to.**
+   If P5 records exercises as `{ exercises: [{ body_part: 'back' }] }` — which
+   is what the capsule describes — every body-part-scoped target reads
+   `0 this week` forever, with no error anywhere. P5 has an Incoming comment.
+   Someone should decide which shape is right before P5 writes it.
+2. **`ensureSeeded` still never backfills a key.** P2 raised this; this phase
+   added four more keys to `config/app.json` and had to defend two of them by
+   hand, because a browser holding an older file gets `undefined` where
+   TypeScript says a number is. Every later phase adding a config key inherits
+   the same workaround. Making the seed merge is a small change in a file only
+   P3's phase owns.
+3. **T4's Verify cannot pass as written.** It asks that `src/` contain no
+   `total`, `points` or `progressbar`. It contains all three: `home.tsx` says
+   *no counts, no progress, no totals*, `home.css` says *breakpoints*, and
+   `objectives.test.tsx` asserts against `[role="progressbar"]` because T3 told
+   it to. Every match is prose or an assertion forbidding the thing. The check
+   as specified is not satisfiable by a codebase that documents its own rules.
+4. **The objectives file is not dated, so frame 4g's `changed 14 june` cannot
+   be rendered.** One field on `config/objectives.json` would do it.
+5. **A deleted photo entry leaves its JPEG in Drive.** The tombstone is
+   correct and the file is orphaned. Clearing it needs a delete on the
+   `Adapter`, which is P4's open question 1 and the same missing primitive.
+6. **`fields.tsx` carries a threshold in source** — `60_000`, the distance
+   from now past which the timestamp box shows `· now 20:41`. `RULES.md` says
+   every threshold is editable data. P2 owns that file; it has an Incoming
+   comment.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -217,6 +385,98 @@ Updated), add a one-line reason to your Phase-notes block, then report to the
 user and stop. Do not guess, do not widen the file list, do not edit another
 phase's doc. To abandon work already done, roll back with
 `git reset --hard {baseline hash from PLAN.md's phase table}`.
+
+## Outcome
+
+**Objective:** finish the body module with photos, then build the objectives
+surface — a statement the app never parses over an editable list of targets.
+
+**HEAD:** `480fc26` | **Branch:** `claude/complex-plan-phase-8-88074f` |
+**Baseline:** `19c476f`
+
+**Files changed** (`git diff --name-only 19c476f..HEAD`):
+
+```txt
+docs/plans/v1-recording/PLAN.md
+src/data/drive.test.ts        src/data/photos.test.ts   src/main.tsx
+src/data/drive.ts             src/data/photos.ts        src/screens/body.css
+src/data/objectives.test.ts   src/data/store.ts         src/screens/body.test.tsx
+src/data/objectives.ts        src/data/sync.test.ts     src/screens/body.tsx
+src/seed/app.json             src/data/sync.ts          src/screens/home.tsx
+src/seed/objectives.json      src/screens/objectives.css
+src/screens/objectives.tsx    src/screens/objectives.test.tsx
+```
+
+**Commands run:**
+
+| command | result |
+| :- | :- |
+| `npm test` (entry) | exit 0, 6 files, 55 tests passed |
+| `npm test` (T1 → T4) | exit 0 at each commit; 66, 78, 87, 88 tests |
+| `npm test` (final) | exit 0, 10 files, **91 tests passed** |
+| `npm run typecheck` | exit 0, no output |
+| `npm run build` | exit 0, `dist/index.html` written, built in 138ms |
+| `npm run dev` | served, screens walked, no console errors |
+| `git status --porcelain` (entry) | empty |
+| T4 forbidden-term search | 3 matches, all prose or assertions — open question 3 |
+
+**Test status:** `npm test` → exit 0, 91 passed, 0 failed, 0 skipped. No test
+is left deliberately red by this phase, and none was inherited red.
+
+Three tests were watched to fail before their fix rather than merely written:
+the photo skip in `pull`, the Drive paging loop, and the read-modify-write of
+`config/objectives.json`. A fourth — a stylesheet scan for `--danger` — was
+found to pass vacuously and was removed rather than left as false comfort.
+
+**Assumptions:**
+
+1. A count target with no match this week but matches before it reads
+   `N days`; one that has never matched reads `0 this week`. That is the only
+   reading that satisfies both frame 4g's `9 days` and the Exit criteria's
+   `0 this week`, since the shape has no third kind for recency.
+2. A workout entry carries the body parts it touched as `payload.body_parts`.
+   See open question 1 — this is the assumption most likely to be wrong.
+3. `progress · N entries` in the rail counts weights, not all body entries.
+   Frame 4f shows `4 entries` beside four listed weights and three photos.
+4. The two `objectives` keys added to `app.json` are config because
+   `RULES.md` calls a starting number a hard-coded target. The doc's stated
+   shape for `config/objectives.json` — the user's own data — is untouched.
+
+**Open questions:** six, listed above under **Open questions**. Read 1 before
+P5 writes a workout payload.
+
+**Not verified, and why.** P5–P7 are `pending`, so four Exit-criteria items
+could not be walked as written. The user was asked and chose to run what was
+runnable and record the rest:
+
+- *add a photo → it lands in `daily/photos/`, longest edge at most 1600px* —
+  needs a real Google sign-in, which is the user's to give. The path either
+  side of the network is covered: `fit` is tested at the cap, the entry is
+  written with a `photo` payload and no weight, and the bytes are asserted
+  absent from the mirror.
+- *log a workout → the row shows `1 this week`* — there is no workout screen
+  yet. The transition was walked in the browser with the entry written through
+  the same store call P5 will use: `0 this week` → `1 this week`.
+- *log one entry in every module, reload, confirm home's `recent`* — four of
+  the five modules are still stubs.
+- *T4's whole-app pass* covered home, body, the edit screen and objectives.
+  The four unbuilt modules were not walked.
+
+**What was walked**, on `npm run dev` against a seeded mirror: body renders
+frame 4f — four weights listed, `photos 3 · april, may, july`,
+`progress · 4 entries, not enough to draw`, `4 weights since may`. Objectives
+stores the statement whole, survives a reload, and reads `0 this week` with
+nothing logged and `1 this week` with one workout. A DOM sweep of the
+objectives screen found no `progress`, `meter`, `[role=progressbar]`, `svg` or
+`canvas`, no `%` in its text, and — by computed style over every element — no
+colour anywhere in which red dominates. No console errors.
+
+**Next action:** **P5, and only P5.** Corrected when this branch was merged
+into `v1-implementation`, which had meanwhile recorded that P6 waits on P5 and
+P7 waits on P5 and P6 — each is forbidden to rebuild the shared controls the
+one before it ships. P8 was the last phase still hanging off P4 alone, which
+is what let it run out of order at all. When P7 lands, this plan is complete
+and `PLAN.md` → **On completion** applies.
 
 ## On completion
 

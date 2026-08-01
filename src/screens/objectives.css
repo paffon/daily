@@ -1,0 +1,176 @@
+/* Frame 4g. Narrow is the default arrangement and the wide one takes over at
+   760px, the breakpoint every other screen uses. Nothing here is allowed a
+   fill, a track or a colour that means behind — see the note in the screen. */
+
+.obj {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.obj-strip {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.obj-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.obj-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px 24px 0;
+  min-height: 0;
+}
+
+/* the statement of intent — the only first-person text in the product */
+
+.obj-statement {
+  width: 100%;
+  max-width: 740px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: 200 clamp(26px, 4vw, 33px) / 1.35 var(--family-serif);
+  color: var(--ink);
+  text-wrap: pretty;
+  resize: none;
+  outline: none;
+  /* grows with what is written where the browser supports it; elsewhere it
+     stays the two rows the markup asks for and scrolls */
+  field-sizing: content;
+}
+
+.obj-yours {
+  margin: 14px 0 0;
+  font: 400 11px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+/* the targets */
+
+.obj-targets {
+  display: flex;
+  flex-direction: column;
+  margin-top: 44px;
+  border-top: 1px solid var(--rule);
+}
+
+.obj-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.obj-row:hover {
+  background: var(--paper-hover);
+}
+
+.obj-label {
+  flex: 1;
+  font: 300 clamp(19px, 3vw, 23px) / 1.2 var(--family-serif);
+  color: var(--ink-body);
+}
+
+/* a fact, in the same weight as everything else measured in this app */
+.obj-fact {
+  font: 400 13px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.obj-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 0 24px;
+  border-bottom: 1px solid var(--rule-light);
+  background: var(--paper-panel);
+}
+
+.obj-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.obj-field-label {
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.obj-field input,
+.obj-field select {
+  height: var(--hit-min);
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  font: 400 15px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+/* Quiet, like every other control here. Danger is `delete this entry` on the
+   edit screen and nothing else in the app — and on this screen in particular
+   there is no red, because nothing on it is behind. */
+.obj-remove {
+  align-items: center;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--mono);
+  font: 400 13px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.obj-add {
+  align-items: center;
+  min-height: 60px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--steel-text);
+  font: 400 14.5px/1 var(--family-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.obj-note {
+  margin: auto 0 0;
+  padding: 36px 0;
+  max-width: 660px;
+  font: 300 19px/1.55 var(--family-serif);
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+
+@media (min-width: 760px) {
+  .obj-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .obj-body {
+    padding: 40px 120px 0;
+  }
+}

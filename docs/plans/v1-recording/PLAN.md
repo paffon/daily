@@ -129,7 +129,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | pending | | |
 | [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5, P6 | pending | | |
-| [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | pending | | |
+| [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | done | 19c476f | 2026-08-01 |
 
 P5 ships two shared controls — `src/components/segmented.tsx` and
 `src/components/library_picker.tsx` — that P6 and P7 reuse and are explicitly
@@ -210,6 +210,17 @@ being added — `npm run typecheck` is the static gate.
     criteria said nothing sits above the modules band, so it was left out
     rather than improvised. If home should have one, that is a planner
     decision — see open question 1 in `P1_toolchain_and_home.md`.
+  - *From P8, for the planner rather than for an executor — P2 is `done`.*
+    `src/components/fields.tsx` carries `60_000` in source: the distance from
+    now past which the timestamp box shows `· now 20:41` beside it. `RULES.md`
+    says every threshold is editable data, so this is the rule this plan calls
+    the easiest to break by accident, in the one file every module's fields go
+    through. P8 did not touch it — `fields.tsx` is not in its list. P8's open
+    question 6.
+  - *From P8.* `weightLine` in `src/screens/home.tsx`'s `detail()` is now
+    `bodyLine` — body has two entry types and the function answers for either,
+    returning `photo` for the one that is a photo. Payload knowledge stayed in
+    `body.tsx` where P4 put it; only the name and the call site moved.
 
 ### P3: drive_store_and_offline
 
@@ -250,6 +261,31 @@ being added — `npm run typecheck` is the static gate.
   - *From P2.* `tsconfig.json` carries `resolveJsonModule` because `SEEDS`
     imports `src/seed/app.json`. Any phase adding a seed follows the same
     import shape.
+  - *From P8, for the planner rather than for an executor — P3 is `done`.*
+    **P8 changed `src/data/sync.ts`, which its own doc lists as Do-not-touch.**
+    `pull` walked every file `listFiles` returned, and `photos` is a resolved
+    prefix in `drive.ts` — so each JPEG was fetched with `.text()` and written
+    into the `localStorage` mirror as replacement characters. That mirror
+    holds every entry ever logged in the same few megabytes; a handful of
+    photos fills it and `setItem` then throws inside `putEntry`, which is
+    recording stopping. The user was asked before any code was written and
+    chose the one-line skip over blocking the phase. `sync.test.ts` carries a
+    case watched to fail without it.
+  - *From P8.* Your `listFiles` paging comment is **closed out** — it follows
+    `nextPageToken` now, with a test in `src/data/drive.test.ts` watched to
+    fail without the loop. Your `findId` escaping comment needed nothing: every
+    photo path is built from a timestamp, not from anything typed. `drive.ts`
+    also gained `getBlob`, and `putFile` now takes `string | Blob` so
+    `putBinary` could call it — one word, and `fetch` reads the content type
+    off the blob.
+  - *From P8.* **`ensureSeeded` not backfilling is now four keys deep.** P8
+    added `body.photo_max_edge`, `body.photo_quality`, `objectives.directions`
+    and `objectives.new_target` to `config/app.json`, and had to defend two of
+    them by spreading the seed under the stored section in both `photos.ts` and
+    `objectives.tsx` — a browser holding an older file gets `undefined` where
+    TypeScript says a number is, and a canvas sized `NaN` uploads a photo
+    nothing can open. Every later phase adding a config key inherits that
+    workaround. P8's open question 2.
 
 ### P4: edit_and_delete_entries
 
@@ -295,6 +331,16 @@ being added — `npm run typecheck` is the static gate.
     duplicated entry is recoverable and a vanished one is not. `putEntry`'s
     read-modify-write of a whole file is also why a delete must stay a
     tombstone — a removed line looks identical to a stale mirror.
+  - *From P8, for the planner rather than for an executor — P4 is `done`.*
+    Your comment on P8's block said the not-built-yet branch becomes
+    unreachable the day the last renderer is registered. **It has not fired.**
+    P8 ran out of order, before P5–P7, and body was already registered — so
+    P8 added no new registration at all, and the branch still serves the four
+    unbuilt modules. Whoever runs the last of P5–P7 inherits that call.
+  - *From P8.* A deleted photo entry leaves its JPEG in Drive. The tombstone
+    is right and the file is orphaned, and clearing it needs the same
+    `Adapter` delete your open question 1 asks for — one primitive, two
+    callers now.
 
 ### P5: workout
 
@@ -330,6 +376,23 @@ being added — `npm run typecheck` is the static gate.
     (a number, a duration), keep the input **uncontrolled** — `defaultValue`,
     not `value` — or writing the parsed value back mid-keystroke will eat a
     decimal point as it is typed. `src/screens/body.tsx` shows the shape.
+  - *From P8, and read this before you design the payload.* Objectives already
+    counts your entries, and a body-part-scoped target
+    (`something for the back weekly`) reads **`payload.body_parts`, a flat
+    array of strings on the workout entry**. Nothing else in `src/` reads a
+    workout payload, so this is the whole contract. If you record body parts
+    somewhere else — `{ exercises: [{ body_part: 'back' }] }` is what the P8
+    capsule describes — every such target reads `0 this week` forever with no
+    error anywhere. Either populate `body_parts` at log time or change
+    `bodyParts()` in `src/data/objectives.ts`, which is four lines. Populating
+    it is the better call on its own merits: nothing in a library is protected
+    from being renamed or re-tagged, and an entry has to keep saying what was
+    true when it happened. This is P8's open question 1.
+  - *From P8.* `src/components/segmented.tsx` is yours to build and P8 needed
+    a choice control before it existed, so `src/screens/objectives.tsx` uses
+    plain `<select>` elements. They are not a precedent for the next-time mark
+    or for a level — those are what your segmented control is for. Do not
+    unify them.
 
 ### P6: nutrition
 
@@ -355,10 +418,31 @@ being added — `npm run typecheck` is the static gate.
 
 ### P8: photos_and_objectives
 
-- **For other phases:** last phase of this plan. Week arithmetic (Sunday to
+- **For other phases:** last phase of this plan **by number, not by order** —
+  it depends only on P4 and was run before P5–P7. Week arithmetic (Sunday to
   Saturday, boundary read from `config/app.json`) lands in
   `src/data/objectives.ts` and stays exported — the coach plan lifts it out.
-- **Notes:**
+- **Notes:** Done, out of order at the user's request. `weekBounds(date)` and
+  `factFor(target, entries)` are exported from `src/data/objectives.ts`;
+  `readObjectives`/`writeObjectives` are the only things that name
+  `config/objectives.json`. **A count target's fact is `N this week`, and
+  `N days` only once matches exist but none this week** — a target nothing has
+  ever matched reads `0 this week`, which is what Exit criteria requires and
+  what frame 4g's `9 days` had to be reconciled with. Photos are a body entry
+  whose payload is `{ photo: 'photos/YYYY-MM-DD.jpg' }`; `src/data/photos.ts`
+  owns the resize and the upload and is **the one module that writes outside
+  the store**. Three things every later phase should know. **`ensureSeeded`
+  still never backfills**, and this phase added four keys to
+  `config/app.json`, so it now defends them by spreading the seed under the
+  stored section in two places — the duplication is the symptom, not the
+  defect. **T4's forbidden-term search cannot return zero** while the code
+  documents the rules it follows. And **the workout payload's `body_parts` is
+  this phase's invention**, which is the one thing here most likely to be
+  wrong — see P5's Incoming comment and open question 1. Deviations, the fresh
+  review and six open questions are in `P8_photos_and_objectives.md` →
+  **Deviations**, **Fresh review**, **Open questions**, **Outcome**. Four Exit
+  items could not be walked because P5–P7 are pending; the Outcome names each
+  one and what covers it instead.
 - **Incoming comments:**
   - *From P4.* You register the last renderer, and the day you do, the edit
     screen's not-built-yet branch becomes unreachable — the read-only JSON and

@@ -3,15 +3,15 @@ import type { Entry } from '../data/entry'
 import { MODULES } from '../data/entry'
 import { lastTouched, readJson, recentEntries } from '../data/store'
 import { whenOf } from '../components/fields'
-import { weightLine } from './body'
+import { bodyLine } from './body'
 import appSeed from '../seed/app.json'
 import './home.css'
 
 /** What a recent row says about an entry. Only body records anything yet;
- *  P5–P8 bring the other four, and P4's renderer registry is where this
+ *  P5–P7 bring the other four, and P4's renderer registry is where this
  *  belongs once it exists. */
 function detail(entry: Entry, config: typeof appSeed): string {
-  return entry.module === 'body' ? weightLine(entry, config.body) : ''
+  return entry.module === 'body' ? bodyLine(entry, config.body) : ''
 }
 
 /** Home in its silent state: the modules, what was last recorded, and the way

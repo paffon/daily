@@ -1,15 +1,17 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson } from '../data/store'
+import { photoMonths, photoOf, photoUrl, putPhoto } from '../data/photos'
 import { Previous, Timestamp, dayTimeOf, monthOf } from '../components/fields'
 import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './body.css'
 
-/** A weight and a time. That is the whole of this half of the module —
- *  photos are P8. */
+/** A weight and a time, or a photo. That is the whole module — `DESIGN.md`
+ *  §8.5 considered tape measurements and declined them, and the third signal
+ *  is already free in the workout log. */
 
 type BodyConfig = typeof appSeed.body
 
@@ -22,20 +24,59 @@ const weightOf = (typed: string): number | null => {
 
 const weightText = (weight: unknown): string => (typeof weight === 'number' ? String(weight) : '')
 
-/** `72.4 kg`. Both the unit and how finely it is written are config, never
- *  literals, and home reuses this so payload knowledge stays in the module
- *  that owns the payload. */
-export function weightLine(entry: Entry, body: BodyConfig): string {
+/** `72.4 kg`, or `photo` for the module's other entry type. Both the unit and
+ *  how finely it is written are config, never literals, and home reuses this
+ *  so payload knowledge stays in the module that owns the payload. */
+export function bodyLine(entry: Entry, body: BodyConfig): string {
+  if (photoOf(entry.payload) !== null) return 'photo'
   const weight = entry.payload['weight']
   const written = typeof weight === 'number' ? weight.toFixed(body.weight_decimals) : '—'
   return `${written} ${body.weight_unit}`
 }
 
-/** Body's half of frame 4h. The box is uncontrolled on purpose: the payload
- *  holds the parsed number, and writing that number back mid-keystroke would
- *  swallow the dot the moment `72.` parses to 72. */
+/** The one thing on any screen that waits for the network: photos are not
+ *  mirrored, so there is nothing local to draw from. Until the bytes arrive —
+ *  or when they cannot — the path is shown, which still says which file the
+ *  entry names. */
+function Photo({ path }: { path: string }): VNode {
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let made = ''
+    let live = true
+    /* dropped before the next one is fetched — the URL below is revoked on the
+       way out, and holding it in the img would leave a dead src on screen */
+    setUrl(null)
+    void photoUrl(path).then((ready) => {
+      if (ready === null) return
+      if (live) {
+        made = ready
+        setUrl(ready)
+      } else URL.revokeObjectURL(ready)
+    })
+    return () => {
+      live = false
+      if (made !== '') URL.revokeObjectURL(made)
+    }
+  }, [path])
+
+  return url === null ? (
+    <p class="body-photo-path">{path}</p>
+  ) : (
+    <img class="body-photo-shot" src={url} alt={path} loading="lazy" />
+  )
+}
+
+/** Body's half of frame 4h. A photo entry has no field of its own — its
+ *  timestamp and its delete are the screen's — so it renders the picture and
+ *  nothing else. The weight box is uncontrolled on purpose: the payload holds
+ *  the parsed number, and writing that number back mid-keystroke would swallow
+ *  the dot the moment `72.` parses to 72. */
 registerEditor('body', (payload, onChange) => {
   const { body } = readJson('config/app.json', appSeed)
+  const path = photoOf(payload)
+  if (path !== null) return <Photo path={path} />
+
   return (
     <div class="body-weight">
       <input
@@ -58,6 +99,10 @@ export function Body(): VNode {
   const [entries, setEntries] = useState(() => readEntries('body'))
   const [weight, setWeight] = useState('')
   const [ts, setTs] = useState(() => toIso(new Date()))
+  const [trouble, setTrouble] = useState('')
+
+  const weights = entries.filter((entry) => photoOf(entry.payload) === null)
+  const photos = entries.filter((entry) => photoOf(entry.payload) !== null)
 
   const log = () => {
     putEntry(newEntry('body', { weight: weightOf(weight) }, ts))
@@ -66,11 +111,33 @@ export function Body(): VNode {
     setTs(toIso(new Date()))
   }
 
-  const oldest = entries[entries.length - 1]
+  /** The bytes go up before the entry is written, so nothing is ever recorded
+   *  pointing at a photo that is not there. Offline this is the one press in
+   *  the app that cannot work, and saying so beats doing nothing visibly. */
+  const addPhoto = async (picker: HTMLInputElement) => {
+    const file = picker.files?.[0]
+    /* cleared so choosing the same file again is still a change event */
+    picker.value = ''
+    if (file === undefined) return
+    setTrouble('')
+    try {
+      const path = await putPhoto(file, ts)
+      putEntry(newEntry('body', { photo: path }, ts))
+      setEntries(readEntries('body'))
+      setTs(toIso(new Date()))
+    } catch {
+      setTrouble('the photo did not reach drive — it is the one thing here that needs a signal.')
+    }
+  }
+
+  /* Both of these are about weights, because a line is what they are about
+     not being enough to draw. Photos are counted in the rail and nowhere
+     else. */
+  const oldest = weights[weights.length - 1]
   const summary =
     oldest === undefined
-      ? 'Nothing recorded yet.'
-      : `${entries.length} ${entries.length === 1 ? 'weight' : 'weights'} since ` +
+      ? 'No weights recorded yet.'
+      : `${weights.length} ${weights.length === 1 ? 'weight' : 'weights'} since ` +
         `${monthOf(oldest.ts, locale)}. Not enough to draw a line yet.`
 
   return (
@@ -85,14 +152,22 @@ export function Body(): VNode {
       <div class="body-split">
         <section class="body-rail">
           <h2 class="body-rail-label">recorded</h2>
-          {entries.map((entry) => (
+          {weights.map((entry) => (
             <div class="body-rail-row" key={entry.id}>
               <span class="body-rail-when">{dayTimeOf(entry.ts, locale)}</span>
-              <span class="body-rail-what">{weightLine(entry, config.body)}</span>
+              <span class="body-rail-what">{bodyLine(entry, config.body)}</span>
             </div>
           ))}
+          {photos.length > 0 && (
+            <div class="body-rail-photos">
+              <span class="body-rail-when">photos</span>
+              <span class="body-rail-what">
+                {`${photos.length} · ${photoMonths(photos, locale).join(', ')}`}
+              </span>
+            </div>
+          )}
           <p class="body-rail-progress">
-            {`progress · ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
+            {`progress · ${weights.length} ${weights.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
           </p>
         </section>
 
@@ -100,9 +175,9 @@ export function Body(): VNode {
           <h1 class="body-title">weight</h1>
 
           <Previous
-            entry={entries[0] ?? null}
+            entry={weights[0] ?? null}
             locale={locale}
-            render={(entry) => weightLine(entry, config.body)}
+            render={(entry) => bodyLine(entry, config.body)}
           />
 
           <div class="body-inputs">
@@ -128,7 +203,21 @@ export function Body(): VNode {
             <button type="button" class="body-log hit" onClick={log}>
               log it
             </button>
+            {/* a label over a hidden input is the file picker — no ref, no
+                synthetic click, and the whole control is the hit area */}
+            <label class="body-photo hit">
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                aria-label="add a photo instead"
+                onChange={(e) => void addPhoto(e.currentTarget)}
+              />
+              add a photo instead
+            </label>
           </div>
+
+          {trouble !== '' && <p class="body-trouble">{trouble}</p>}
 
           <p class="body-summary">{summary}</p>
         </section>

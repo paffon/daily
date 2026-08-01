@@ -1,7 +1,19 @@
-import { fireEvent, render } from '@testing-library/preact'
+/** Only the upload is faked — there is no Drive here and `resize` is a canvas
+ *  draw jsdom cannot do. Everything the screen decides on top of it is real. */
+vi.mock('../data/photos', async (original) => ({
+  ...(await original<typeof import('../data/photos')>()),
+  putPhoto: vi.fn(),
+  photoUrl: vi.fn(async () => null),
+}))
+
+import { fireEvent, render, waitFor } from '@testing-library/preact'
 import { Body } from './body'
-import { ensureSeeded, readEntries, readJson, writeJson } from '../data/store'
+import { putPhoto } from '../data/photos'
+import { newEntry } from '../data/entry'
+import { ensureSeeded, putEntry, readEntries, readJson, writeJson } from '../data/store'
 import appSeed from '../seed/app.json'
+
+const upload = vi.mocked(putPhoto)
 
 const logWeight = (container: Element, value: string) => {
   const input = container.querySelector<HTMLInputElement>('.body-weight-value')!
@@ -9,8 +21,15 @@ const logWeight = (container: Element, value: string) => {
   fireEvent.click(container.querySelector<HTMLButtonElement>('.body-log')!)
 }
 
+const choosePhoto = (container: Element) =>
+  fireEvent.change(container.querySelector<HTMLInputElement>('.body-photo input')!, {
+    target: { files: [new File(['jpeg bytes'], 'shot.jpg', { type: 'image/jpeg' })] },
+  })
+
 beforeEach(() => {
   localStorage.clear()
+  vi.clearAllMocks()
+  upload.mockResolvedValue('photos/2026-08-01.jpg')
   ensureSeeded()
 })
 
@@ -67,11 +86,54 @@ describe('the body screen', () => {
   it('draws no graph — the empty state is prose, and counts the data', () => {
     const { container } = render(<Body />)
     expect(container.querySelector('svg, canvas')).toBeNull()
-    expect(container.querySelector('.body-summary')?.textContent).toBe('Nothing recorded yet.')
+    expect(container.querySelector('.body-summary')?.textContent).toBe('No weights recorded yet.')
 
     logWeight(container, '72.4')
     expect(container.querySelector('.body-summary')?.textContent).toMatch(
       /^1 weight since \w+\. Not enough to draw a line yet\.$/,
     )
+  })
+
+  it('records a photo as a body entry naming the file, and not as a weight', async () => {
+    const { container } = render(<Body />)
+    choosePhoto(container)
+
+    await waitFor(() => expect(readEntries('body')).toHaveLength(1))
+    const stored = readEntries('body')[0]!
+    expect(stored.module).toBe('body')
+    expect(stored.payload['photo']).toBe('photos/2026-08-01.jpg')
+    expect(stored.payload['weight']).toBeUndefined()
+    /* the bytes are Drive's, never the store's — nothing under `photos/` is
+       allowed into the mirror every entry ever logged shares */
+    expect(localStorage.getItem('daily:photos/2026-08-01.jpg')).toBeNull()
+  })
+
+  it('counts photos in the rail with their months, rather than listing them', async () => {
+    putEntry(newEntry('body', { photo: 'photos/2026-04-06.jpg' }, '2026-04-06T08:00:00+03:00'))
+    putEntry(newEntry('body', { photo: 'photos/2026-05-02.jpg' }, '2026-05-02T08:00:00+03:00'))
+    putEntry(newEntry('body', { photo: 'photos/2026-07-04.jpg' }, '2026-07-04T08:00:00+03:00'))
+    putEntry(newEntry('body', { weight: 73.1 }, '2026-07-12T07:40:00+03:00'))
+
+    const { container } = render(<Body />)
+    expect(container.querySelector('.body-rail-photos')?.textContent).toBe(
+      'photos3 · april, may, july',
+    )
+    /* the weights are listed one by one; the photos are not */
+    expect(container.querySelectorAll('.body-rail-row')).toHaveLength(1)
+    expect(container.querySelector('.body-summary')?.textContent).toContain('1 weight since july')
+  })
+
+  it('says nothing about photos before there are any', () => {
+    const { container } = render(<Body />)
+    expect(container.querySelector('.body-rail-photos')).toBeNull()
+  })
+
+  it('records nothing when the upload fails, and says the press did not land', async () => {
+    upload.mockRejectedValue(new Error('offline'))
+    const { container } = render(<Body />)
+    choosePhoto(container)
+
+    await waitFor(() => expect(container.querySelector('.body-trouble')).not.toBeNull())
+    expect(readEntries('body')).toHaveLength(0)
   })
 })

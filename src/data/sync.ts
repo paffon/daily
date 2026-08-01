@@ -24,6 +24,9 @@ function save(paths: Set<string>): void {
  *  browser being closed, or every boot downloads everything again. */
 const PULLED_KEY = 'daily:pulled'
 
+/** The one prefix the mirror does not hold — see `pull`. */
+const PHOTOS = 'photos/'
+
 function pulled(): Record<string, string> {
   return JSON.parse(localStorage.getItem(PULLED_KEY) ?? '{}') as Record<string, string>
 }
@@ -102,6 +105,14 @@ export async function pull(): Promise<void> {
   const times: Record<string, string> = {}
 
   for (const file of await listFiles()) {
+    /* Photos are the one thing here with real size, and `localStorage` holds
+       every entry ever logged in the same few megabytes. A JPEG decoded as
+       text would be unusable anyway, and enough of them make every later
+       write throw — which is logging, the product, stopping. The entry line
+       naming the photo comes down with everything else; the bytes are read
+       from Drive when something actually shows them. */
+    if (file.path.startsWith(PHOTOS)) continue
+
     const held = known[file.path]
     if (skip.has(file.path)) {
       /* Not fetched, so the mirror still holds whatever it last took from
