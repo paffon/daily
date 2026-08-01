@@ -26,6 +26,19 @@
     "decimals": 0,
     "new_food": { "unit": "", "default_level": "normal" }
   },
+  "movement": {
+    "duration_start": 20,
+    "duration_step": 5,
+    "span_start": 8,
+    "sitting_start": 6,
+    "hours_step": 0.5
+  },
+  "dance": {
+    "duration_start": 60,
+    "duration_step": 15,
+    "common_durations": [60, 75, 90],
+    "recent_count": 4
+  },
   "objectives": {
     "directions": ["up", "stable", "down"],
     "new_target": [

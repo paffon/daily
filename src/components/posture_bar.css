@@ -1,0 +1,24 @@
+/* Frame 4d's three-part bar. Steel is the sat hours, weak steel the standing
+   ones, and the rule grey whatever the two leave — the same accent at two
+   strengths rather than two colours, because the parts are one quantity split
+   and not two categories. */
+
+.posture-bar {
+  display: flex;
+  overflow: hidden;
+  height: 12px;
+  width: 100%;
+  background: var(--rule);
+}
+
+.posture-bar-sitting {
+  background: var(--steel);
+}
+
+.posture-bar-standing {
+  background: var(--steel-weak);
+}
+
+.posture-bar-rest {
+  background: var(--rule);
+}

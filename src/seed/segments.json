@@ -1,0 +1,11 @@
+[
+  { "id": "to-work", "name": "to work", "distance_km": 2.8, "gradient": "mixed" },
+  { "id": "from-work", "name": "from work", "distance_km": 2.8, "gradient": "mixed" },
+  { "id": "to-the-station", "name": "to the station", "distance_km": 1.1, "gradient": "flat" },
+  { "id": "from-the-station", "name": "from the station", "distance_km": 1.1, "gradient": "flat" },
+  { "id": "out-to-lunch", "name": "out to lunch", "distance_km": 0.6, "gradient": "flat" },
+  { "id": "stairs-at-home", "name": "stairs at home", "distance_km": 0.05, "gradient": "rising" },
+  { "id": "park-loop", "name": "park loop", "distance_km": 3.4, "gradient": "flat" },
+  { "id": "supermarket-and-back", "name": "supermarket and back", "distance_km": 1.4, "gradient": "mixed" },
+  { "id": "evening-walk", "name": "evening walk", "distance_km": 2.0, "gradient": "rising" }
+]
