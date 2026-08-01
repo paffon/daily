@@ -51,9 +51,10 @@ export function AmountStepper({
             const next = e.currentTarget.value
             setTyped(next)
             /* an unreadable box reports nothing rather than a guess — what is
-               there stands until the number finishes being typed */
+               there stands until the number finishes being typed, and an
+               amount below nothing is unreadable the same way a word is */
             const parsed = Number(next)
-            if (next.trim() !== '' && !Number.isNaN(parsed)) onChange(parsed)
+            if (next.trim() !== '' && !Number.isNaN(parsed) && parsed >= 0) onChange(parsed)
           }}
         />
         <span class="stepper-unit">{unit}</span>

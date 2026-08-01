@@ -34,6 +34,13 @@ describe('a level is a multiplier', () => {
     expect(nutritionFor(named('apple'), 1, 'normal').protein).toBeNull()
   })
 
+  it('reads a written-out null in the library as the same unknown', () => {
+    // the library is a file the user edits, and `"kcal": null` is how a person
+    // writes down that there is no number
+    const written = { ...plain, kcal: null } as unknown as Food
+    expect(nutritionFor(written, 2, 'loaded').kcal).toBeNull()
+  })
+
   it('multiplies a fractional amount, because half a slice is an entry', () => {
     expect(nutritionFor(plain, 0.5, 'normal').kcal).toBe(100)
   })
@@ -103,6 +110,12 @@ describe('the amount stepper', () => {
   it('leaves the amount alone while the box is unreadable', () => {
     const { container } = render(<Stepper />)
     fireEvent.input(box(container), { target: { value: '' } })
+    expect(container.querySelector('output')?.textContent).toBe('1')
+  })
+
+  it('reads a typed negative as unreadable, the way the presses refuse one', () => {
+    const { container } = render(<Stepper />)
+    fireEvent.input(box(container), { target: { value: '-5' } })
     expect(container.querySelector('output')?.textContent).toBe('1')
   })
 })

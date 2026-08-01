@@ -17,7 +17,6 @@
 
 .level-examples {
   display: flex;
-  gap: 0;
 }
 
 /* serif, because it is prose about a plate of food rather than a value */

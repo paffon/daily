@@ -64,8 +64,11 @@ export function nutritionFor(food: Food, amount: number, level: string): Nutriti
      names no multiplier for one of its levels leaves the numbers alone */
   const factor = loadLevels()['nutrition']?.multipliers?.[level] ?? 1
   const { decimals } = nutritionConfig()
-  const scaled = (value: number | undefined): number | null =>
-    value === undefined ? null : Number((value * amount * factor).toFixed(decimals))
+  /* `== null` catches the written-out `"kcal": null` as well as the absent
+     key: the library is a file the user edits, and both spellings mean the
+     same unknown — where `null * amount` would quietly mean 0 */
+  const scaled = (value: number | undefined | null): number | null =>
+    value == null ? null : Number((value * amount * factor).toFixed(decimals))
 
   return { kcal: scaled(food.kcal), protein: scaled(food.protein) }
 }
@@ -73,13 +76,6 @@ export function nutritionFor(food: Food, amount: number, level: string): Nutriti
 /** `slices` past one, `cup` at one, `g` at either. */
 export function unitOf(library: FoodLibrary, food: Food, amount: number): string {
   return amount === 1 ? food.unit : (library.units[food.unit] ?? food.unit)
-}
-
-/** `2 slices · loaded`. The rail row, `Previous` and the entry being logged are
- *  the same sentence at three sizes, so they are one function. */
-export function foodLine(library: FoodLibrary, food: Food, amount: number, level: string): string {
-  const measure = [String(amount), unitOf(library, food, amount)].filter((part) => part !== '').join(' ')
-  return `${measure} · ${level}`
 }
 
 /** `570 kcal · 24 g protein`, and nothing where the food carries no numbers. */

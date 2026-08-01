@@ -5,7 +5,6 @@ import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson, writeJson } from '../data/store'
 import type { Food, FoodLibrary } from '../data/food'
 import {
-  foodLine,
   loadFoods,
   loadLevels,
   nutritionConfig,
@@ -35,10 +34,13 @@ const loggedIn = (entry: Entry): Logged => entry.payload as Logged
 const asFood = (id: string, library: FoodLibrary): Food =>
   library.foods.find((item) => item.id === id) ?? { id, name: id, unit: '', default_level: '' }
 
-/** `2 slices · loaded`, which is the same sentence the rail, `Previous` and the
- *  entry being logged all say. */
-const lineOf = (logged: Logged, library: FoodLibrary): string =>
-  foodLine(library, asFood(logged.food_id, library), logged.amount, logged.level)
+/** `2 slices · loaded`, which is the same sentence the rail and `Previous` both
+ *  say. The unit is blank where the food counts as itself, and then an apple
+ *  reads `1 · normal`. */
+const lineOf = ({ food_id, amount, level }: Logged, library: FoodLibrary): string => {
+  const measure = [String(amount), unitOf(library, asFood(food_id, library), amount)]
+  return `${measure.filter((part) => part !== '').join(' ')} · ${level}`
+}
 
 const scaleOf = (): string[] => loadLevels()['nutrition']?.scale ?? []
 
@@ -121,6 +123,9 @@ export function Nutrition(): VNode {
   const previousOf = (food_id: string): Entry | null =>
     past.find((entry) => loggedIn(entry).food_id === food_id) ?? null
 
+  /* the two move together — `asFood` always answers, so `food` is null exactly
+     when nothing has been picked, and the second test below is the type
+     checker's rather than a state the screen can be in */
   const food = picked === null ? null : asFood(picked.food_id, library)
   const nutrition = picked === null || food === null ? null : nutritionFor(food, picked.amount, picked.level)
 
