@@ -126,7 +126,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | done | 1811f3d | 2026-08-01 |
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | done | 7911067 | 2026-08-01 |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | done | b736ee8 | 2026-08-01 |
-| [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
+| [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | done | 19c476f | 2026-08-01 |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | pending | | |
 | [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5, P6 | pending | | |
 | [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | done | 19c476f | 2026-08-01 |
@@ -354,7 +354,35 @@ being added — `npm run typecheck` is the static gate.
   nothing in a seed is protected from rename or delete. Both are
   presentational: scales and lists are passed in, never read from config
   inside them. Resolves handoff open question 1 — see the doc.
-- **Notes:**
+- **Notes:** Done. Both shared controls are built to the spec above.
+  `Segmented` takes `options: {value, short?}[]`, `value`, `onChange`,
+  `tone: 'steel' | 'ink-select'` and `label`; it renders `short` on the phone
+  and `value` on the laptop from one markup, so **a scale with no glyph of its
+  own reads as the word at either width** — pass no `short` and nothing breaks.
+  `LibraryPicker` takes `items: {id, name, hint?}[]`, `onPick`, `onNew(name)`
+  and `newLabel`; the filter matches name *and* hint (workout passes the body
+  part, so `back` finds `lat pulldown`), **what is typed becomes the new
+  item's name**, and `+ new` disables itself when nothing is typed. Neither
+  control offers rename or delete — the spec's "nothing in a seed is
+  protected" was read as a statement about the data, not as required UI.
+  Three things every later phase needs. **`src/main.tsx` is in no module
+  phase's Touch list, but every module screen needs one route line there** —
+  added as a recorded deviation, and P6–P8 will each need the same.
+  **Register your editor at module scope in your own screen file**, never
+  inside `edit_entry.tsx` — the doc's literal wording would make that screen
+  import the module that imports it. And **a set field's separator is seed
+  data** (`sep`), which is how `42.5 × 10` and `5 km / 28 min` coexist with the
+  Anti-goal on kind logic; the next-time scale, its phone glyphs and its
+  fast-input signs all live in `src/seed/exercises.json`, not `levels.json`,
+  because the mark is workout-only. The fresh review caught two data bugs — a
+  lone `-` on the way to typing a negative weight was setting the mark to
+  `less` for good, and a workout logged for a past day stored an end time taken
+  from when save was pressed. Ten assumptions, six open questions and the full
+  record are in `P5_workout.md` → **Assumptions**, **Fresh review**, **Open
+  questions**. The one to read is question 1: **an exercise created inline gets
+  a blank body part and the library's first kind, permanently**, so a route
+  added as `run · park loop` gets a weight box and the coach loses the field
+  `DESIGN.md` calls the only reason it exists.
 - **Incoming comments:**
   - *From P4.* You are the first phase to build a module screen since the edit
     screen landed, and `src/screens/edit_entry.css` now duplicates `body.css`
@@ -401,6 +429,26 @@ being added — `npm run typecheck` is the static gate.
   `stroll / steady / brisk` and `marking / social / full-out` scales from it.
 - **Notes:**
 - **Incoming comments:**
+  - *From P5.* Both shared controls are built and their signatures are in P5's
+    Notes above — read them before writing a level control or a food picker.
+    For a level, pass `tone="ink-select"`: `steel` means "this is the live
+    one" and belongs to the next-time mark, and the two are deliberately not
+    unified. Your scale's entries need no `short`; the control falls back to
+    the word on the phone.
+  - *From P5.* `src/main.tsx` is in no module phase's Touch list, yet
+    `#/nutrition` renders P1's stub until one import and one route line are
+    added there. P5 added them for `#/workout` as a recorded deviation; do the
+    same and record it rather than assuming the omission was deliberate.
+  - *From P5.* Register your editor with a `registerEditor('nutrition', …)`
+    call **at module scope in `src/screens/nutrition.tsx`**, not inside
+    `edit_entry.tsx` — the Files line in your doc may say otherwise, but
+    putting it there creates an import cycle. P4's comment and P5's deviation 3
+    both cover this.
+  - *From P5.* The screen shell is now written three times — `body.css`,
+    `edit_entry.css` and `workout.css` all carry the same strip, back link,
+    field label and 760px breakpoint. Yours is the fourth. P4 asked that this
+    be raised before a third copy and P5 could not avoid it without touching
+    files no module phase owns; it is open question 4 in `P5_workout.md`.
 
 ### P7: movement_and_dance
 
@@ -415,6 +463,14 @@ being added — `npm run typecheck` is the static gate.
   Nothing else in the doc changes; every task works as written once P6 lands.
   Full record in `P7_movement_and_dance.md` → **Prior attempt**.
 - **Incoming comments:**
+  - *From P5.* The two shared controls are built; their signatures are in P5's
+    Notes above. Your two level scales (`stroll / steady / brisk` and
+    `marking / social / full-out`) both take `tone="ink-select"` — `steel` is
+    the next-time mark's alone, and movement and dance carry no mark at all.
+  - *From P5.* `src/main.tsx` needs one import and one route line per module
+    screen and is in no module phase's Touch list; register your editor at
+    module scope in your own screen file, not in `edit_entry.tsx`. Both are
+    recorded deviations in `P5_workout.md`, and P6 carries the same two.
 
 ### P8: photos_and_objectives
 
@@ -444,6 +500,10 @@ being added — `npm run typecheck` is the static gate.
   items could not be walked because P5–P7 are pending; the Outcome names each
   one and what covers it instead.
 - **Incoming comments:**
+  - *From P5.* `src/main.tsx` needs one import and one route line for
+    `#/objectives`, and it is in no phase's Touch list — a recorded deviation
+    in `P5_workout.md`, and P6 and P7 hit it too. Register any editor at module
+    scope in your own screen file rather than in `edit_entry.tsx`.
   - *From P4.* You register the last renderer, and the day you do, the edit
     screen's not-built-yet branch becomes unreachable — the read-only JSON and
     the line saying a module's editor is not built. P4's doc ordered it as the

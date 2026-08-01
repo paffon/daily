@@ -1,0 +1,68 @@
+/* Frame 4b's next-time control, and the shape every level scale reuses.
+   Square corners: the segments are one control, and a radius would cut each
+   of them loose. */
+
+.segmented {
+  display: flex;
+}
+
+.segmented button {
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  background: var(--paper-control);
+  color: var(--mono);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+/* one border per boundary, whatever the scale's length */
+.segmented button:not(:first-child) {
+  border-left: none;
+}
+
+/* the chosen one carries its own left edge back, so its outline closes — and
+   the one before it gives its right edge up, so the seam stays a single line */
+.segmented button[aria-pressed='true'] {
+  border-left: 1px solid;
+}
+
+.segmented button:has(+ button[aria-pressed='true']) {
+  border-right: none;
+}
+
+.segmented-steel button[aria-pressed='true'] {
+  border-color: var(--steel);
+  background: var(--steel);
+  color: var(--paper);
+}
+
+.segmented-ink-select button[aria-pressed='true'] {
+  border-color: var(--ink-select);
+  background: var(--ink-select);
+  color: var(--paper);
+}
+
+.segmented-word {
+  display: none;
+}
+
+@media (min-width: 760px) {
+  /* frame 4b draws these 66 × 42, but 42 is under the app's own hit floor and
+     `.hit` is the weaker selector — so the width is the frame's and the height
+     stays the floor's */
+  .segmented button {
+    min-width: 66px;
+    font-size: 12.5px;
+  }
+
+  .segmented-word {
+    display: inline;
+  }
+
+  .segmented-short {
+    display: none;
+  }
+}

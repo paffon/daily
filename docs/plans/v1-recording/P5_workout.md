@@ -219,6 +219,156 @@ Do not, even if it seems better:
 - No renaming the mark: not difficulty, effort, RPE, or `hard/easy`.
 - No 1RM estimate, volume total, tonnage, PR badge, or running count.
 
+## Deviations
+
+Three, all recorded rather than silently adapted.
+
+1. **`src/main.tsx` is not in the Touch list, and the phase cannot be
+   demonstrated without it.** `#/workout` rendered P1's stub, so nothing in
+   the Exit criteria's `npm run dev` walk was reachable. Added exactly one
+   import and one route line — the same two lines P2 needed for `#/body`.
+   Every remaining module phase will need the same, so the Touch list of a
+   module phase should name `main.tsx`.
+2. **Four CSS files sit outside the Touch list**, following P1's recorded
+   convention that per-screen and per-control CSS lives beside its module:
+   `src/screens/workout.css`, `src/components/set_table.css`,
+   `src/components/segmented.css`, `src/components/library_picker.css`. The
+   doc named the `.tsx` files only.
+3. **`src/screens/edit_entry.tsx` was not edited**, though the Touch list says
+   "edit: one `registerEditor('workout', ...)` call". P4's Incoming comment in
+   `PLAN.md` amends this: the call goes at module scope in the module's own
+   screen file, which is how `body.tsx` does it. Written the doc's literal way,
+   `edit_entry.tsx` would have to import `workout.tsx`, which imports
+   `registerEditor` from `edit_entry.tsx` — a cycle. The registration lives at
+   the top of `src/screens/workout.tsx`.
+
+## Assumptions
+
+1. **The optional second field** of `bodyweight`, `hold` and `machine` renders
+   always visible with the `steel-weak` border and no reveal affordance —
+   recorded here as the capsule instructed when it resolved handoff open
+   question 1.
+2. **The rail's order is frame 4b's**, not the capsule's sentence. The capsule
+   lists `today` / `history` / `this workout` / `progress →`; the frame draws
+   `this workout` at the top with `+ exercise` under it, and `PLAN.md`'s
+   Context pins only that `progress →` ends the rail. So: `this workout`,
+   `+ exercise`, `today`, `history`, `progress`. `today` and `history` list
+   past workout entries as links to `#/entry/{id}`, and each label is hidden
+   while its group is empty.
+3. **`progress →` is one honest line, not a navigable list** — the shape
+   `body.tsx` established in P2 (`progress · 1 workout, not enough to draw`).
+   `PLAN.md`'s Goal puts progress views in a separate later plan, and P1's
+   note forbids inventing routes, so no `#/workout/progress` was added.
+4. **Segmented geometry.** `PLAN.md`'s "58–66px tall" appears to fuse two
+   numbers frame 4b keeps apart: the segment is 66px wide and the set row is
+   58px high. The control is built 66px wide, and its height is `--hit-min`
+   (44px) rather than the frame's 42px, which is under the app's own hit floor
+   and would have silently beaten `.hit` on specificity.
+5. **"Adjacent borders do not double" is implemented as a general rule** —
+   every segment but the first drops its left border, the selected one takes
+   its left edge back, and the segment before it drops its right — rather than
+   as the literal `border-left:none; border-right:none` on the middle child.
+   The stated purpose holds at any scale length; the literal form only works
+   at exactly three, and P6 or P7 may want more.
+6. **The separator between two set fields is seed data** (`sep` on a field).
+   `DESIGN.md` §8.1 writes `42.5 × 10`, `5 km / 28 min`, `20 min @ 8` and
+   `12 +10` — four separators. In source that is a switch on kind, which the
+   Anti-goals forbid, so it went into `exercises.json` beside the field it
+   precedes.
+7. **The next-time scale lives in `src/seed/exercises.json`**, not in
+   `levels.json`. It is workout-only by `CONTEXT.md`, and `levels.json` is
+   P6's to ship. Each mark carries its `value`, its phone `short` glyph and
+   the `sign` its fast input is typed with; `parseMark` derives the notation's
+   character set from those signs, so nothing about the scale is a literal.
+8. **`ended` is left out of the payload rather than guessed** — see Fresh
+   review, finding 3. The capsule marks it optional.
+9. **A new exercise made inline** takes the name that was typed to filter for
+   it, a blank body part, and the library's first kind. See Open questions 1.
+10. **`+ set` has no inverse.** No remove affordance was specified, and a row
+    left blank is a valid set. See Open questions 2.
+
+## Fresh review
+
+A subagent given only `git diff 19c476f..HEAD`, this doc, and the
+over-engineering tag definitions. Six findings fixed in `c890609`, two of them
+data bugs; the rest recorded below.
+
+**Fixed:**
+
+1. **The lone `-` on the way to typing `-20` set the mark to `less`, and
+   nothing put it back.** The fast input fired on any text ending in a sign, so
+   the first keystroke of a negative weight was read as an instruction about
+   next time; every later keystroke had no trailing sign and so never restored
+   it. A counterweight typed into `dips yellow machine` silently corrupted the
+   one field this phase exists for. The gate now needs a real number *and* a
+   mark other than the default, and the test was watched failing against the
+   old gate.
+2. **A workout logged for a past day stored an `ended` taken from when save
+   was pressed** — a four-day session in the payload. `ended` is now omitted.
+3. **`Previous` returned the first block of an exercise in the last workout,
+   not the last** — an exercise repeated as a burnout handed back the opening
+   sets.
+4. **The selected segment's seam drew two borders**, which is the one thing
+   the shared-control spec names; and its 42px height sat under `--hit-min`.
+5. **`+ new exercise` silently ignored a press** when nothing was typed. It
+   now disables itself and says so.
+6. **The sign characters were hard-coded in a regex** while the seed already
+   carried them as data, so editing one would have changed the lookup and not
+   the parse. Both halves now read the seed.
+
+**Left standing, over-engineering lens, because this doc ordered them:**
+
+- `tone` on `Segmented` has one live value today (`steel`). `PLAN.md`'s P5
+  block requires both and says `steel` and `ink-select` must not be unified;
+  P6 and P7 supply the second.
+- `newLabel` on `LibraryPicker` has one caller today, for the same reason —
+  the control is specified as shared.
+- `asExercise`'s synthesised fallback for a library item that no longer exists
+  is unreachable through today's UI, since nothing renames or deletes one.
+  Kept deliberately: `library/exercises.json` is a plain file in the user's
+  Drive that the design expects to be readable and editable without the app,
+  and without the fallback a hand-edited or another device's id would blank
+  out numbers that are still in the file.
+
+**Test gap noted, not closed:** `+ set` and the fast input are covered on the
+module screen but only a reps correction is covered inside the edit screen.
+
+## Open questions
+
+For the planner. None blocked this phase.
+
+1. **A new exercise has no body part and a kind nobody chose.** `+ new
+   exercise` is the only way to add one, and there is no library-editing
+   surface anywhere in `src/`, so both stay wrong permanently. `DESIGN.md`
+   §8.1 calls body part "the only reason the field exists" — it is what lets
+   the coach notice three weeks without a back exercise — and kind decides the
+   fields, so a route added as `run · park loop` gets a weight box, against
+   `RULES.md`'s "Never show a field the thing does not have." Not fixed here
+   because the fix is UI the capsule does not specify. Smallest version: a
+   native `<select>` over the kinds map and a text box for body part, both in
+   the exercise header, which would also satisfy §8.1's "the field list of any
+   individual exercise is editable".
+2. **`+ set` cannot be undone.** A mis-tap leaves a row that can be blanked but
+   not removed — including on the edit screen, which uses the same table.
+   Is a blank row the intended answer, or should the table have a remove
+   affordance?
+3. **An unreadable box stores `null` while still showing what was typed.**
+   `47..5` is recorded as blank, which "blanks are valid" allows, but the box
+   goes on showing `47..5` until the entry is reopened, so a dropped value and
+   a deliberate blank look identical at the moment it matters.
+4. **The screen shell is now written three times** — `body.css`,
+   `edit_entry.css` and `workout.css` carry the same strip, back link, field
+   label and breakpoint. P4 predicted this and asked that it be raised before
+   a third copy; there was no way to avoid it without touching files no module
+   phase owns. P6, P7 and P8 make it six.
+5. **`loadExercises()` re-reads and re-parses the library on every call**,
+   including once per keystroke. Immaterial at 32 exercises; worth knowing
+   before a library gets large.
+6. **Should the fast input's signs be data at all?** They are now the single
+   authority, which is rule-clean, but the notation is a fixed keyboard
+   grammar rather than a tunable. Either reading is defensible; it is recorded
+   so it is a decision rather than an accident.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -247,4 +397,61 @@ Test status: {suite command + observed result}
 Assumptions: {numbered, or "none"}
 Open questions: {numbered, or "none"}
 Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
+```
+
+## Outcome
+
+```txt
+Objective: the workout module — the exercise library and its kinds, the set
+table, the next-time mark with its fast input, and comments that carry forward.
+
+HEAD: c890609 | Branch: claude/complex-plan-phase-5-3c63d7
+
+Files changed (14, +1596/-2):
+  src/seed/exercises.json          kinds, the mark scale, 32 exercises
+  src/data/exercise.ts             library reads, fieldsFor, parseMark, setLine
+  src/components/segmented.tsx/css shared, reused by P6 and P7
+  src/components/library_picker.tsx/css  shared, reused by P6 and P7
+  src/components/set_table.tsx/css per-kind rows, + set, the fast input
+  src/screens/workout.tsx/css      the module screen and the editor renderer
+  src/screens/workout.test.tsx     24 cases
+  src/data/store.ts                one SEEDS row
+  src/main.tsx                     the #/workout route (deviation 1)
+  docs/plans/v1-recording/PLAN.md  status, notes, incoming comments
+
+Commands run:
+  T1  npm test              exit 0, 62 passed — the four parseMark cases green
+  T2  npm run typecheck     exit 0, no output
+  T3  npm test              exit 0, 68 passed — copy-row, and the field list
+                            proved by a loaded exercise with no distance box
+                            and a distance exercise with no weight box.
+                            The mark-preservation case was watched failing
+                            against a deliberately broken gate first.
+  T4  npm test              exit 0, 74 passed
+  T5  npm test              exit 0, 76 passed
+  gate 1  npm test          exit 0, 79 passed
+  gate 2  npm run typecheck exit 0, no output
+  gate 3  fresh review      6 findings fixed, 3 lens objections recorded
+  exit    npm run build     exit 0, dist/index.html written
+  exit    grep -rniE "difficulty|effort|rpe" src/   0 matches
+  exit    npm run dev       the demo, driven in the browser:
+                            chest press → 47.5 and 10 → + set ×2 → three
+                            identical rows; row 3 weight `47.5+` → its mark
+                            reads more while rows 1 and 2 stay same; comment
+                            30°; end workout. Stored payload holds three sets
+                            with mark more on the third and the comment, and
+                            no ended. Reopening chest press: Previous reads
+                            `47.5 kg × 10 same / same / more` and `30°`.
+                            run · river path → distance, duration, incline
+                            (optional, standing open) and no weight box.
+                            No console errors.
+
+Test status: npm test → exit 0, 79 passed (7 files). No test is deliberately
+             left red by this phase, and none was inherited red.
+
+Assumptions: 10, above.
+Open questions: 6, above. Question 1 is the one to read.
+Next action: P6, P7 and P8 are all eligible — each depends only on P4, and
+             P5 blocked none of them. P6 is next in DESIGN.md §13's value
+             order and inherits both shared controls.
 ```

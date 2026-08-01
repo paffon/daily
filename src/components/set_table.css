@@ -1,0 +1,120 @@
+/* Frame 4b's geometry. The row is a grid so the head and the rows keep one set
+   of columns whatever the field list is — the columns come from the data, and
+   the CSS never counts them. */
+
+.sets {
+  display: flex;
+  flex-direction: column;
+}
+
+.set-head,
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.set-head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.set-row {
+  min-height: 58px;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+.set-index {
+  flex: none;
+  width: 28px;
+  font: 400 13px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+.set-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.set-input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0 10px;
+  border: 1.5px solid var(--steel);
+  background: var(--paper-input);
+  font: 400 21px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.set-input:focus {
+  outline: none;
+  border-color: var(--steel-hover);
+}
+
+/* an optional field stands open like the rest and says so in its border,
+   because a reveal affordance costs a tap to find out there is nothing there */
+.set-input-optional {
+  border-color: var(--steel-weak);
+}
+
+.set-unit {
+  flex: none;
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.set-next {
+  display: flex;
+  flex: none;
+  margin-left: auto;
+}
+
+.set-add {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 52px;
+}
+
+.set-add-press {
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 14.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.set-add-note {
+  font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+@media (min-width: 760px) {
+  .set-head,
+  .set-row {
+    gap: 14px;
+  }
+
+  .set-index {
+    width: 40px;
+  }
+
+  .set-cell {
+    flex: none;
+    width: 132px;
+  }
+
+  .set-input {
+    font-size: 21px;
+  }
+}

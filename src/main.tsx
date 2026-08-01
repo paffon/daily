@@ -7,6 +7,7 @@ import { ensureSeeded, readText } from './data/store'
 import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
+import { Workout } from './screens/workout'
 import { Objectives } from './screens/objectives'
 import { EditEntry } from './screens/edit_entry'
 import { SignIn, SignInBand } from './screens/signin'
@@ -34,6 +35,7 @@ Object.assign(ROUTES, {
   '#/': () => <Home />,
   '#/objectives': () => <Objectives />,
   '#/body': () => <Body />,
+  '#/workout': () => <Workout />,
 })
 
 /** Hash to screen. An id-carrying route is matched before the table;
