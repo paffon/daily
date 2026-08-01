@@ -11,7 +11,7 @@ vi.mock('./drive', () => ({
 
 import { getFile, listFiles, putFile, token } from './drive'
 import { localAdapter } from './store'
-import { driveAdapter, pull, push, syncNow } from './sync'
+import { driveAdapter, onPass, pull, push, syncNow } from './sync'
 
 const remote = vi.mocked(getFile)
 const upload = vi.mocked(putFile)
@@ -24,15 +24,21 @@ const adapter = driveAdapter(localAdapter)
 
 const PATH = 'entries/body-2026-08.jsonl'
 
+/** Drive's own change token. Nothing reads it, so any two distinct strings
+ *  do — what matters is only whether the remote one still matches the one the
+ *  mirror was filled from. */
+const LISTED = 'listed-time'
+const UPLOADED = 'uploaded-time'
+
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   /* Signed out by default, so a write marks its path and fires nothing — each
      test then drives `push` and `pull` itself. */
   signedInAs.mockReturnValue('')
-  remoteList.mockResolvedValue([PATH])
+  remoteList.mockResolvedValue([{ path: PATH, modifiedTime: LISTED }])
   remote.mockResolvedValue('from drive')
-  upload.mockResolvedValue(undefined)
+  upload.mockResolvedValue(UPLOADED)
 })
 
 describe('pull', () => {
@@ -52,6 +58,36 @@ describe('pull', () => {
     await pull()
     expect(localAdapter.get(PATH)).toBe('from drive')
   })
+
+  it('does not fetch a file whose remote copy has not moved', async () => {
+    await pull()
+    expect(remote).toHaveBeenCalledTimes(1)
+
+    await pull()
+    expect(remote).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches it again the moment the remote copy does move', async () => {
+    await pull()
+    remoteList.mockResolvedValue([{ path: PATH, modifiedTime: 'moved' }])
+    remote.mockResolvedValue('from another browser')
+
+    await pull()
+    expect(localAdapter.get(PATH)).toBe('from another browser')
+  })
+
+  it('forgets a file that has left Drive, so its name cannot be claimed later', async () => {
+    await pull()
+    remoteList.mockResolvedValue([])
+    await pull()
+
+    /* Same path, same time, but nothing was skipped on its behalf while it was
+       absent — a file appearing under that name again is fetched. */
+    remoteList.mockResolvedValue([{ path: PATH, modifiedTime: LISTED }])
+    remote.mockResolvedValue('written somewhere else')
+    await pull()
+    expect(localAdapter.get(PATH)).toBe('written somewhere else')
+  })
 })
 
 describe('push', () => {
@@ -67,7 +103,9 @@ describe('push', () => {
   it('keeps holding a path that was written again while its upload was in flight', async () => {
     adapter.set(PATH, 'one weight')
     let landed: () => void = () => {}
-    upload.mockImplementationOnce(() => new Promise<void>((done) => (landed = done)))
+    upload.mockImplementationOnce(
+      () => new Promise<string>((done) => (landed = () => done(UPLOADED))),
+    )
 
     const sending = push()
     adapter.set(PATH, 'one weight\nand a second')
@@ -130,7 +168,9 @@ describe('syncNow', () => {
     signedInAs.mockReturnValue('a-token')
 
     let landed: () => void = () => {}
-    upload.mockImplementationOnce(() => new Promise<void>((done) => (landed = done)))
+    upload.mockImplementationOnce(
+      () => new Promise<string>((done) => (landed = () => done(UPLOADED))),
+    )
 
     const pass = syncNow()
     adapter.set(PATH, 'one weight\nand a second')
@@ -149,6 +189,35 @@ describe('syncNow', () => {
 
     signedInAs.mockReturnValue('')
     expect(await syncNow()).toBe(false)
+  })
+
+  it('does not fetch back the file it just uploaded', async () => {
+    adapter.set(PATH, 'written here')
+    signedInAs.mockReturnValue('a-token')
+    /* Drive reports what the upload just wrote, because the list query runs
+       after it. */
+    remoteList.mockResolvedValue([{ path: PATH, modifiedTime: UPLOADED }])
+
+    await syncNow()
+
+    expect(upload).toHaveBeenCalledTimes(1)
+    expect(remote).not.toHaveBeenCalled()
+    expect(localAdapter.get(PATH)).toBe('written here')
+  })
+
+  it('says when a pass has ended, so the app can repaint', async () => {
+    const repaint = vi.fn()
+    onPass(repaint)
+    signedInAs.mockReturnValue('a-token')
+
+    await syncNow()
+    expect(repaint).toHaveBeenCalledTimes(1)
+
+    remoteList.mockRejectedValueOnce(new Error('offline'))
+    await syncNow()
+    expect(repaint).toHaveBeenCalledTimes(2)
+
+    onPass(() => {})
   })
 
   it('does nothing while signed out, and keeps the write for later', async () => {

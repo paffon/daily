@@ -490,6 +490,70 @@ cover. In severity order.
    the key is cleared by hand. The capsule ordered the cache to keep boot to one
    lookup. **Doc ordered this.**
 
+## Planner decisions
+
+All four settled by the user after the phase, and built in one pass. `store.ts`
+and `entry.ts` were not touched — P4 is written against the same signatures P2
+left. Numbers match the questions above.
+
+### 1 and 2: the app opens without a token, and a band says nothing is syncing
+
+**Decided:** a browser whose mirror already holds `config/app.json` renders the
+app, token or no token. Only an empty mirror still waits at the sign-in screen —
+that is the one state with nothing to show and nothing safe to seed. Above
+whatever screen is showing, whenever `token()` is empty, a band reads
+`not syncing · sign in`.
+
+One element answers both questions, because both are the same state: writes are
+landing in the mirror and Drive is not seeing them. The band is also the only
+re-prompt the capsule's promise can have — a token request is a popup and a
+popup needs a gesture, so it has to be something the user presses. Offline the
+line still shows and the button does not: the GIS script is unreachable, so a
+press could only fail silently, which is the failure mode the T1 deviation
+already recorded.
+
+`main.tsx` gained the branch and `sync.ts` an `onPass` hook, so a pass that
+pulls entries logged elsewhere — or that drops the token on a 401 — repaints
+without a screen having to know. The band lives in `signin.tsx` beside the
+screen; that file now owns every door in.
+
+**What this costs.** Dirty-wins now spans reloads rather than one session: a
+browser can sit offline for days holding a dirty month file and will overwrite
+the remote copy whole on the next sign-in. That was always the policy — the
+Anti-goals forbid a merge — but the window is wider. Still one user, so the
+losing side is a second browser left open, not a second person.
+
+**Not built:** a signal for a live token whose network has dropped. `token()` is
+still set, so the band stays away; the writes are safe in the mirror and go up by
+themselves. Nothing for the user to do is nothing worth saying.
+
+### 3: the pull now fetches only what moved
+
+**Decided:** optimise now, not after P4. `listFiles` returns `modifiedTime` with
+each path, `pull` skips any file whose remote time matches the one the mirror was
+filled from, and `putFile` hands back the time it just wrote so a pass does not
+download its own upload. The times live in `daily:pulled`, beside the dirty set
+and rebuilt from each listing, so a file that leaves Drive leaves the map with
+it.
+
+Logging a weight was a list query plus one GET per file — about 65 round trips,
+one per month file and growing. It is now the list query and the upload. P4 makes
+writes more frequent, not less: every edit and every delete is a write.
+
+### 4: the folder-id cache is gone rather than invalidated
+
+**Decided:** delete it. `daily:_folders.json` is not written any more; `daily/`
+and its four subfolders are resolved on the first Drive call of each session and
+held in memory only. Two queries — one for the root, one listing its subfolders —
+against the five the cache existed to avoid, and no write ever pays for a lookup.
+
+Invalidating it properly is harder than not having it: Drive accepts writes into
+a *trashed* folder without an error, so a 404 hook would not catch the case the
+question names. A cache that cannot outlive a reload cannot go stale past one, so
+trashing `daily/` now costs a reload instead of a hand-cleared key. This also
+voids the third unrecorded deviation above — there is no longer a `_folders.json`
+written outside the store, because there is no `_folders.json`.
+
 ## Outcome
 
 Objective: Google sign-in, Drive as the durable store, an offline shell and a
@@ -536,7 +600,9 @@ Assumptions:
 Open questions: the four in **Fresh review → Open questions for the planner**,
 in severity order. The first — that the app cannot be entered offline, which
 partly defeats this phase's own Goal — is the one that should be settled before
-P4.
+P4. All four were settled by the user immediately after this record was written
+and built in one pass; see **Planner decisions** above for what was decided and
+what it changed.
 
 Next action: **P4: edit_and_delete_entries**, whose only dependency is P3.
 Objective: {phase goal, one line}

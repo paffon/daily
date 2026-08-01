@@ -2,11 +2,12 @@ import { render } from 'preact'
 import type { VNode } from 'preact'
 import './styles/tokens.css'
 import { MODULES } from './data/entry'
+import { token } from './data/drive'
 import { ensureSeeded, readText } from './data/store'
-import { syncNow } from './data/sync'
+import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
-import { SignIn } from './screens/signin'
+import { SignIn, SignInBand } from './screens/signin'
 
 /** Every route but home renders one of these until its phase builds it. */
 function Stub({ name }: { name: string }): VNode {
@@ -43,31 +44,53 @@ function screen(hash: string): VNode {
 }
 
 const mount = document.getElementById('app')!
-const paint = () => render(screen(location.hash || '#/'), mount)
 
-/** Nothing renders until there is a token: every read goes through the store,
- *  and the mirror is not populated before sign-in. Every page load starts
- *  here — the token is memory-only and a token request needs a user gesture,
- *  so there is no boot path that skips the press. */
-async function start(): Promise<void> {
-  /* Seeding before the first pull would write defaults over a config this
-     browser has simply never seen, and then push them up over the real one.
-     So an empty mirror waits for Drive — it has nothing to paint anyway —
-     while one that already holds a copy paints from it and syncs behind. */
-  let heard = true
-  if (readText('config/app.json') === null) heard = await syncNow()
-  else void syncNow().then(paint)
+/** The band sits above whatever screen is showing, so a session that has
+ *  stopped reaching Drive says so from wherever the app was opened, rather
+ *  than only on the way in. */
+function paint(): void {
+  render(
+    <>
+      {token() === '' && <SignInBand onDone={() => void catchUp()} />}
+      {screen(location.hash || '#/')}
+    </>,
+    mount,
+  )
+}
 
-  /* Only seed once Drive has actually answered. A pass that failed cannot be
-     told apart from an empty Drive, and seeding on a failure is the same
-     clobber by a slower route. Nothing is lost by waiting: every screen reads
-     config through `readJson`, which falls back to the seed in memory, so an
-     unseeded boot renders identically — it just writes nothing. */
-  if (heard) ensureSeeded()
-
-  addEventListener('hashchange', paint)
-  addEventListener('online', syncNow)
+/** A pass, and then the seeds — but only once Drive has actually answered. A
+ *  pass that failed cannot be told apart from an empty Drive, and seeding on a
+ *  failure writes this browser's defaults over the real config by the slower
+ *  route. Nothing is lost by waiting: every screen reads config through
+ *  `readJson`, which falls back to the seed in memory, so an unseeded boot
+ *  renders identically — it just writes nothing. */
+async function catchUp(): Promise<void> {
+  if (await syncNow()) ensureSeeded()
   paint()
 }
 
-render(<SignIn onDone={start} />, mount)
+/** An empty mirror is the one state with nothing to show and nothing safe to
+ *  seed, so it — and only it — waits at the sign-in screen. Every other boot
+ *  opens the app: the mirror holds every entry ever logged, which is what makes
+ *  the app work in a basement, and a token is needed to *sync* rather than to
+ *  read. Without one, writes pile up in the dirty set and the next sign-in
+ *  carries them up. */
+const cold = readText('config/app.json') === null
+
+function enter(): void {
+  addEventListener('hashchange', paint)
+  addEventListener('online', () => {
+    paint()
+    void catchUp()
+  })
+  addEventListener('offline', paint)
+  onPass(paint)
+
+  /* A cold boot has nothing to paint, so it waits for the pull. A warm one
+     paints from the mirror and syncs behind it. */
+  if (!cold) paint()
+  void catchUp()
+}
+
+if (cold) render(<SignIn onDone={enter} />, mount)
+else enter()

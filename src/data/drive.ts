@@ -87,12 +87,10 @@ const ROOT = 'daily'
  *  Structure, not a setting: renaming one orphans the data under it. */
 const PREFIXES = ['entries', 'library', 'config', 'photos']
 
-/** Drive ids for the folder cache. Bookkeeping about Drive, not app data, so
- *  it is kept beside the mirror rather than in it — nothing should ever try to
- *  sync this file back to Drive, where it does not exist. */
-const FOLDERS_KEY = 'daily:_folders.json'
-
-/** prefix → folder id, `''` for `daily/` itself. */
+/** prefix → folder id, `''` for `daily/` itself. Memory only, like the file
+ *  ids below: an id that outlives the session cannot tell that the folder it
+ *  names was trashed, and Drive accepts a write into a trashed folder without
+ *  complaint. Resolved once per session instead, which costs two queries. */
 let folders: Record<string, string> = {}
 
 /** path → file id. In memory only: `listFiles` refills it on every boot, and a
@@ -143,27 +141,32 @@ async function create(name: string, parent: string | null, folder: boolean): Pro
   return made.id
 }
 
-/** Resolves `daily/` and its subfolders, creating any that are missing, and
- *  caches the ids so a boot costs one lookup rather than five per write.
- *  Idempotent, and every call below funnels through it, so no caller has to
- *  remember to sequence it first. */
+/** The folders directly inside one folder, by name. One query for all four,
+ *  which is what makes resolving them every session cheap enough that nothing
+ *  has to be remembered across one. */
+async function subfolders(parent: string): Promise<Map<string, string>> {
+  const clauses = [`'${parent}' in parents`, `mimeType='${FOLDER_MIME}'`, 'trashed=false']
+  const query = encodeURIComponent(clauses.join(' and '))
+  const found = await (await api(`/drive/v3/files?q=${query}&fields=files(id,name)`)).json()
+  return new Map((found.files as { id: string; name: string }[]).map((f) => [f.name, f.id]))
+}
+
+/** Resolves `daily/` and its subfolders, creating any that are missing. Two
+ *  queries, held for the rest of the session, so no write pays for a lookup —
+ *  and nothing is held past a reload, so trashing `daily/` costs one reload
+ *  rather than a hand-cleared key. Idempotent, and every call below funnels
+ *  through it, so no caller has to remember to sequence it first. */
 export async function ensureFolders(): Promise<Record<string, string>> {
   if (Object.keys(folders).length > 0) return folders
 
-  const cached = localStorage.getItem(FOLDERS_KEY)
-  if (cached !== null) {
-    folders = JSON.parse(cached) as Record<string, string>
-    return folders
-  }
-
   const root = (await findId(ROOT, null, true)) ?? (await create(ROOT, null, true))
+  const inside = await subfolders(root)
   const resolved: Record<string, string> = { '': root }
   for (const prefix of PREFIXES) {
-    resolved[prefix] = (await findId(prefix, root, true)) ?? (await create(prefix, root, true))
+    resolved[prefix] = inside.get(prefix) ?? (await create(prefix, root, true))
   }
 
   folders = resolved
-  localStorage.setItem(FOLDERS_KEY, JSON.stringify(resolved))
   return folders
 }
 
@@ -183,35 +186,50 @@ export async function getFile(path: string): Promise<string | null> {
   return (await api(`/drive/v3/files/${id}?alt=media`)).text()
 }
 
-/** Whole-file write — one user, tiny files, and no append API to reach for. */
-export async function putFile(path: string, text: string): Promise<void> {
+/** Whole-file write — one user, tiny files, and no append API to reach for.
+ *  Hands back the file's new `modifiedTime`, which is how the pull that
+ *  follows tells this browser's own upload from a change made elsewhere. */
+export async function putFile(path: string, text: string): Promise<string> {
   let id = await fileId(path)
   if (id === null) {
     const [prefix, name] = path.split('/')
     id = await create(name, (await ensureFolders())[prefix], false)
     fileIds.set(path, id)
   }
-  await api(`/upload/drive/v3/files/${id}?uploadType=media`, { method: 'PATCH', body: text })
+  const written = await (
+    await api(`/upload/drive/v3/files/${id}?uploadType=media&fields=modifiedTime`, {
+      method: 'PATCH',
+      body: text,
+    })
+  ).json()
+  return written.modifiedTime as string
 }
+
+/** One file in Drive as the store sees it. `modifiedTime` is Drive's own
+ *  change token: the pull compares it and downloads only what moved. */
+export type DriveFile = { path: string; modifiedTime: string }
 
 /** Every file the app has ever written, as store paths. One query, because
  *  the `drive.file` scope means Drive shows this app nothing it did not
  *  create — so "all files" already means "all of daily's files". */
-export async function listFiles(): Promise<string[]> {
+export async function listFiles(): Promise<DriveFile[]> {
   const known = await ensureFolders()
   const prefixOf = new Map(Object.entries(known).map(([prefix, id]) => [id, prefix]))
   const query = encodeURIComponent(`trashed=false and mimeType!='${FOLDER_MIME}'`)
   const found = await (
-    await api(`/drive/v3/files?q=${query}&fields=files(id,name,parents)&pageSize=1000`)
+    await api(
+      `/drive/v3/files?q=${query}&fields=files(id,name,parents,modifiedTime)&pageSize=1000`,
+    )
   ).json()
 
-  const paths: string[] = []
-  for (const file of found.files as { id: string; name: string; parents?: string[] }[]) {
+  const files: DriveFile[] = []
+  type Listed = { id: string; name: string; parents?: string[]; modifiedTime: string }
+  for (const file of found.files as Listed[]) {
     const prefix = prefixOf.get(file.parents?.[0] ?? '')
     if (prefix === undefined || prefix === '') continue
     const path = `${prefix}/${file.name}`
     fileIds.set(path, file.id)
-    paths.push(path)
+    files.push({ path, modifiedTime: file.modifiedTime })
   }
-  return paths
+  return files
 }
