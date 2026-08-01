@@ -204,6 +204,129 @@ Do not, even if it seems better:
 - No `deleted` line removal, ever, including a "compact old files" pass.
 - No second use of `danger` anywhere. It marks this one control.
 
+## Deviations
+
+Recorded as they happened. None of them stopped the doc working as written.
+
+1. **`src/main.tsx` is not on the Touch list, and T2 requires it.** The route
+   table lives there (P1 hand-rolled the hash router inside it), so "wire the
+   screen onto `#/entry/{id}`, replacing P1's stub" cannot be done anywhere
+   else. Two lines changed: the import, and the stub swapped for `<EditEntry>`.
+2. **`src/screens/edit_entry.css` is not on the Touch list.** P1's convention —
+   recorded in its `PLAN.md` notes — is that per-screen CSS lives beside the
+   screen as `src/screens/{screen}.css` and `tokens.css` does not grow. The
+   Touch list named only the `.tsx`.
+3. **`src/components/fields.css` is not on the Touch list.** Same shape: the
+   doc orders a danger button in `fields.tsx`, and its one style block has to
+   live in that file's CSS sibling.
+4. **`src/screens/home.tsx` needed no edit.** T3 asks for `recent` rows to link
+   to `#/entry/{id}`; they already did, since P1. Rather than touch
+   `home.test.tsx` — also not on the Touch list, and nothing there pinned the
+   href — the link is asserted from `edit_entry.test.tsx`, which is on it. It
+   is the only way onto this screen, so it is this phase's to hold.
+5. **One revision helper, not two.** The doc asks for "the `rev` and tombstone
+   helpers" in `entry.ts`. `revise(entry, changes)` does both jobs; the
+   tombstone is `revise(entry, { deleted: true })` at its single call site. A
+   named one-line wrapper around that would have been an abstraction with one
+   caller.
+6. **The screen's title is the module name.** Frame 4h titles the entry — `chest
+   press`, `pizza` — with a module chip beside it. A body entry has no name,
+   and deriving one per module inside `edit_entry.tsx` would break "P5–P8 each
+   call `registerEditor` once; that is their only edit to this file". So the
+   title is the module, and anything module-specific belongs inside the
+   renderer. P5–P8 should know this before they build theirs.
+
+## Fresh review
+
+A subagent that did not implement the phase reviewed `git diff b736ee8..HEAD`
+against this doc plus the over-engineering lens. Compliance came back PASS on
+every capsule item and every Anti-goal but one, and it found two real bugs.
+
+**Fixed:**
+
+- **An edit screen reused between two entry hashes kept the first entry's
+  timestamp and payload, and `save changes` wrote them onto the second.**
+  `useState` initialisers run once per instance, and `main.tsx` returns
+  `<EditEntry>` at a fixed position, so a hash change from one entry to another
+  reuses the instance. Silent, and it moved the second entry to the first one's
+  month. Every in-app exit goes via `#/`, which unmounts the screen — so this
+  needed an external navigation today, and would have become trivially
+  reachable the moment any of P5–P8 links entry to entry. The screen is now
+  keyed by id.
+- **A tombstone moved across a month boundary had its line removed from the old
+  file** — the Anti-goal *No `deleted` line removal, ever*. Reached by pressing
+  back onto the hash of an entry just deleted, which rendered it as a live
+  editable entry, then moving its date. A device still holding the live line
+  would have resurrected the entry. Two guards: the store never removes a
+  tombstone line (it accepts a second tombstone in the old month, which every
+  read already drops), and the screen treats a deleted entry as nothing to
+  edit — offering it back would be the restore surface the Anti-goals rule out.
+
+Both fixes were watched failing before they were written.
+
+**Lens findings taken:** one screen shell instead of a duplicated one for the
+empty state; `Danger` carries its own label rather than taking a prop with one
+call site; `EditorRenderer` is no longer exported (P5–P8 get it by contextual
+typing from `registerEditor`).
+
+**Lens findings declined, with reasons:**
+
+- *`clockOf` is a one-line adapter with one caller; export `timeOf` instead.*
+  `fields.tsx` keeps a deliberate boundary — `dayOf`, `weekdayOf` and `timeOf`
+  are private and take `Date`; every exported formatter (`monthOf`,
+  `dayTimeOf`, `whenOf`) takes a `ts` string. `clockOf` is the fourth of those.
+  Exporting the `Date` one saves two lines and breaks the boundary P2 set.
+- *`edit_entry.css` duplicates `body.css`'s strip, back link, label and media
+  rules; promote them into `tokens.css`.* Real, and it grows with every module
+  screen — but P1 recorded the opposite convention ("per-screen CSS lives
+  beside the screen — grow that, not `tokens.css`"), and the fix would touch
+  two files this phase must not. Left for the planner; see Open questions and
+  the Incoming comment on P5.
+
+**Lens findings on things this doc ordered — recorded, not fixed:**
+
+- The registry is an indirection with one registration and one lookup today; it
+  earns its keep on the second consumer, which is its stated purpose.
+- The not-built-yet branch is code for a state that stops existing the day P8
+  registers the last renderer. The doc orders it as the proof the registry
+  works before P5–P8 exist. **It becomes dead code at the end of this plan** —
+  worth a deliberate decision then rather than an accident.
+- `Danger` lives in `src/components/fields.tsx`, a shared-components file it
+  will never be shared from, since the doc says danger marks this one control
+  and nothing else in the app.
+- `variant` has two states and one caller passing the non-default.
+
+## Open questions
+
+Numbered for the planner; none of them blocked this phase.
+
+1. **A vacated month file is left behind as a bare newline.** When the last
+   entry moves out of a month, the store writes `"\n"` rather than dropping the
+   path — `Adapter` has `get`, `set` and `list`, and no delete. Reads filter it
+   out, so nothing is wrong; but the path stays in `list()`, is marked dirty,
+   is uploaded, and is pulled by every other device from then on. Fixing it
+   means adding a delete to the adapter, which lives in `src/data/sync.ts` and
+   `src/data/drive.ts` — both on this phase's **Do not touch** list.
+2. **`updateEntry`'s two writes reach Drive in the dirty set's order, not the
+   call order.** P3's Incoming comment asked for the destination to be written
+   before the source is cleared, and it is — locally the two land together, so
+   the month move is never half-applied on this device. But `sync.ts` pushes
+   dirty paths in insertion order, so if the source month was already dirty
+   from an earlier offline write, it can be uploaded first and a failure before
+   the destination leaves Drive briefly holding zero copies. It self-heals on
+   the next pass. The comment in the store no longer claims otherwise; making
+   it true would mean ordering the push, which is `sync.ts`'s business.
+3. **The registry does not cover home's `recent` rows** — answering P2's
+   Incoming comment. `home.tsx` keeps its private `detail(entry, config)`
+   switch, and P5–P8 register one editor each, not two functions. A recent row
+   is one line of text and an editor is a set of fields; nothing yet suggests a
+   module wants them derived from the same function, and a second registration
+   per module is speculative until one does. If a module ever disagrees, that
+   is the moment to unify them.
+4. **The provenance line shows a time and no date** — `recorded 19:44`, straight
+   from frame 4h. On an entry recorded months ago it says less than it looks
+   like it says. The frame is explicit, so it was built as drawn.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -233,3 +356,92 @@ Assumptions: {numbered, or "none"}
 Open questions: {numbered, or "none"}
 Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
 ```
+
+## Outcome
+
+Objective: frame 4h — the one screen that edits and deletes every module's
+entries, timestamp included, and the registry P5–P8 plug into with one call.
+
+HEAD: cd846e8 | Branch: v1-implementation | Baseline: b736ee8
+
+Files changed:
+
+```txt
+docs/plans/v1-recording/PLAN.md
+src/components/fields.css
+src/components/fields.tsx
+src/data/entry.ts
+src/data/store.test.ts
+src/data/store.ts
+src/main.tsx
+src/screens/body.tsx
+src/screens/edit_entry.css
+src/screens/edit_entry.test.tsx
+src/screens/edit_entry.tsx
+```
+
+Commands run:
+
+- `npm test` → exit 0, 55 passed / 6 files (44 after T1, 53 after T4, 55 after
+  the review fixes). Entry criteria run: 40 passed.
+- `npm run typecheck` → exit 0, no output. Run after T2 and again at the gate.
+- `npm run build` → exit 0, `dist/index.html` written (plus `sw.js`, 4 precache
+  entries).
+- `git status --porcelain` → empty at entry and at exit.
+- Fresh review: subagent on `git diff b736ee8..HEAD` against this doc plus the
+  over-engineering lens. Two bugs found and fixed, three lens findings taken,
+  two declined with reasons, four recorded as doc-ordered. See **Fresh review**.
+- Mutation checks: four times, an implementation guard was removed and the test
+  covering it watched to fail — the month move (both its store test and its
+  screen test), the tombstone-survives-a-move guard, and the screen's
+  deleted-entry guard. Each was restored and the suite re-run green.
+
+Test status: `npm test` → exit 0, 55 passed, 0 failed, 0 skipped. No test is
+left deliberately red by this phase, and none was inherited red.
+
+Demo, driven in the running app (`npm run dev`, dev server on 5174 — see
+Assumption 2), against a mirror seeded with two body entries:
+
+- Opened the 07:35 entry from a `recent` row; the screen showed its date, its
+  time, its stored weight in the box, and `recorded 07:35 · unchanged since`.
+- Moved the date from `2026-08-01` to `2026-07-31` and pressed `save changes`:
+  `entries/body-2026-07.jsonl` holds it at `rev` 2 with `recorded_at`
+  unmoved, `entries/body-2026-08.jsonl` no longer holds it — exactly one copy
+  across the two. Home's row for it changed from `today 07:35` to `fri 07:35`.
+- Pressed `delete this entry` on the other: the first press armed the control
+  (`press again`) and stored nothing; the second removed it from home and left
+  its line in `entries/body-2026-08.jsonl` with `"deleted":true` at `rev` 2.
+- Navigated back onto the deleted entry's hash: `nothing here / no entry is
+  stored under that id.`, with no actions and no danger control.
+
+Assumptions:
+
+1. **The Drive half of the Exit criteria was not run by the executor.** The
+   criteria ask for sign-in and for the two *Drive* month files to hold one
+   copy. Signing in needs the user's own Google account, so the Demo above was
+   driven against the local mirror instead — which is the same code path, since
+   P3's adapter writes the mirror and marks the path dirty, and the sync pass
+   carries it up unchanged. The store operations are the phase's own work and
+   are fully covered; what is unverified is P3's push, which P3 verified
+   against real Drive. **The user should confirm once, signed in.**
+2. The dev server ran on 5174, not 5173: another session held 5173. Vite
+   ignores the harness's assigned port (`npm run dev` is a bare `vite`, and
+   Vite does not read `PORT`), so it auto-incremented. `.claude/launch.json`
+   was set to `autoPort` for the run and restored afterwards — the repo carries
+   P1's version. A real sign-in test must use 5173, since that is the origin
+   the OAuth client authorises.
+3. `Danger` asks for a second press rather than raising a dialog. The capsule
+   permits a confirmation and rules out modal ceremony; with no restore UI
+   anywhere, a mis-tap would read as loss.
+4. The weight box inside the edit screen is uncontrolled (`defaultValue`). The
+   payload holds the parsed number, and writing that number back on every
+   keystroke would swallow the dot the moment `72.` parses to `72`.
+
+Open questions: four, in the **Open questions** section above — the vacated
+month file left as a bare newline (1), the dirty-set push order behind
+`updateEntry`'s two writes (2), whether the registry should cover home's
+`recent` rows (3, answered: no), and the provenance line's missing date (4).
+
+Next action: **P5, P6, P7 and P8 are all eligible** — every one of them depends
+only on P4, and they are independent of each other. `PLAN.md` numbers them in
+`DESIGN.md` §13's value order, so P5 (workout) unless the user says otherwise.

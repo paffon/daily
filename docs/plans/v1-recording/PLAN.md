@@ -125,7 +125,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | done | a596d41 | 2026-08-01 |
 | [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | done | 1811f3d | 2026-08-01 |
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | done | 7911067 | 2026-08-01 |
-| [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | in progress | b736ee8 | 2026-08-01 |
+| [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | done | b736ee8 | 2026-08-01 |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4 | pending | | |
 | [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4 | pending | | |
@@ -254,7 +254,26 @@ being added — `npm run typecheck` is the static gate.
   `src/screens/edit_entry.tsx`. Also adds `updateEntry` and `deleteEntry` to
   the store, including moving an entry between month files when its `ts`
   crosses a month boundary.
-- **Notes:**
+- **Notes:** Done. `registerEditor(module, renderer)` is exported from
+  `src/screens/edit_entry.tsx`; call it **once at module scope** in your
+  screen file — importing the screen registers it, and `src/main.tsx` already
+  imports every screen it routes to. The renderer is
+  `(payload, onChange) => VNode` and owns only the module's own fields: the
+  strip, the title, the when boxes, the three actions and the provenance line
+  are the screen's. **The title is the module name**, not the entry's — frame
+  4h titles it `chest press`, but naming an entry needs payload knowledge, and
+  that lives in your renderer, so render the name there if you want it.
+  `getEntry`, `updateEntry` and `deleteEntry` joined the store; log and edit
+  through them and the month move, the tombstone and sync all come for free.
+  Two data bugs were caught by the fresh review and fixed — a screen instance
+  reused between two entry hashes saved the first entry's values onto the
+  second, and a tombstone moved across a month boundary lost its old line,
+  which is the resurrection tombstones exist to prevent. Deviations, four open
+  questions and the full record are in
+  `P4_edit_and_delete_entries.md` → **Deviations**, **Fresh review**,
+  **Open questions**. The one to read is question 1: a month file emptied by a
+  move is left behind as a bare newline, and clearing it needs a delete on the
+  `Adapter` that only P3's files can add.
 - **Incoming comments:**
   - *From P2.* `src/screens/home.tsx` has a private `detail(entry, config)`
     that switches on `entry.module` to write a `recent` row's text — today it
@@ -286,6 +305,26 @@ being added — `npm run typecheck` is the static gate.
   inside them. Resolves handoff open question 1 — see the doc.
 - **Notes:**
 - **Incoming comments:**
+  - *From P4.* You are the first phase to build a module screen since the edit
+    screen landed, and `src/screens/edit_entry.css` now duplicates `body.css`
+    almost rule for rule — the 52/56px strip, the back link, the uppercase
+    field label, and both `@media (min-width: 760px)` blocks. P1's convention
+    says per-screen CSS lives beside its screen and `tokens.css` does not grow,
+    so P4 followed it rather than hoisting. If workout copies the same shell
+    again it will be the third copy, and the fourth through sixth are P6–P8.
+    Worth raising with the planner before you write yours — the fix crosses
+    files no single module phase owns.
+  - *From P4.* Registering an editor is one call at module scope:
+    `registerEditor('workout', (payload, onChange) => …)`. Do not add anything
+    else to `src/screens/edit_entry.tsx`. Your renderer draws only the module's
+    own fields — the timestamp boxes, the actions and the provenance line are
+    already there — and the screen's title is the module name, so if a workout
+    entry should read `chest press`, render that inside your own renderer.
+  - *From P4.* A payload field edited on that screen flows back through
+    `onChange` and is saved verbatim. If your renderer parses what is typed
+    (a number, a duration), keep the input **uncontrolled** — `defaultValue`,
+    not `value` — or writing the parsed value back mid-keystroke will eat a
+    decimal point as it is typed. `src/screens/body.tsx` shows the shape.
 
 ### P6: nutrition
 
@@ -309,6 +348,11 @@ being added — `npm run typecheck` is the static gate.
   `src/data/objectives.ts` and stays exported — the coach plan lifts it out.
 - **Notes:**
 - **Incoming comments:**
+  - *From P4.* You register the last renderer, and the day you do, the edit
+    screen's not-built-yet branch becomes unreachable — the read-only JSON and
+    the line saying a module's editor is not built. P4's doc ordered it as the
+    proof the registry works before P5–P8 existed. Deleting it is a planner
+    decision, not yours to make silently; raise it when you finish.
   - *From P3.* You add the photos, and photos are what make the file count
     grow. `listFiles` in `src/data/drive.ts` asks for `pageSize=1000` and does
     **not** follow `nextPageToken`, so past a thousand files a pull silently
