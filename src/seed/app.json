@@ -1,0 +1,19 @@
+{
+  "locale": "en-GB",
+  "week": {
+    "starts": "sunday"
+  },
+  "day_zones": {
+    "morning": 5,
+    "work": 9,
+    "afternoon": 13,
+    "evening": 18,
+    "bedtime": 22
+  },
+  "body": {
+    "weight_unit": "kg"
+  },
+  "home": {
+    "recent_count": 6
+  }
+}
