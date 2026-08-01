@@ -491,6 +491,54 @@ cover. In severity order.
    lookup. **Doc ordered this.**
 
 ## Outcome
+
+Objective: Google sign-in, Drive as the durable store, an offline shell and a
+sync pass — with P2's store API unchanged.
+
+HEAD: 8e92843 | Branch: v1-implementation | Baseline: 7911067
+
+Files changed (excluding `package-lock.json`):
+
+```txt
+index.html                 package.json               vite.config.ts
+src/data/drive.ts          src/data/sync.ts           src/data/sync.test.ts
+src/data/store.ts          src/main.tsx
+src/screens/signin.tsx     src/screens/signin.css
+docs/plans/v1-recording/P3_drive_store_and_offline.md
+docs/plans/v1-recording/PLAN.md
+```
+
+Commands run:
+
+| command | result |
+| :- | :- |
+| `npm test` | exit 0 — 32 passed, 4 files |
+| `npm run typecheck` | exit 0, no output |
+| `npm run build` | exit 0 — `dist/index.html`, `dist/sw.js` written |
+| notification scan of `dist/` | 0 matches for `addEventListener("push")`, `pushManager`, `showNotification`, `Notification`, `requestPermission`, `periodicSync`, `backgroundSync` |
+| T1 sign-in, by the user | consent granted, home rendered |
+| T2 `putFile`/`getFile`/`listFiles`, by the user | round-tripped; `daily/config/probe.json` legible in Drive, then deleted |
+| Exit: log a weight → Drive | one JSON line, legible without the app |
+| Exit: offline log, reconnect, reload | two lines in `entries/body-2026-08.jsonl` |
+
+Test status: `npm test` → exit 0, 32 passed. No test is deliberately red,
+none was inherited red, and none is left red for a later phase.
+
+Assumptions:
+
+1. One press per page load is accepted for now. Removing it requires
+   persisting a credential, which the Anti-goals forbid — see Deviations, T1.
+2. The four subfolder names are storage structure rather than an editable
+   default, so they stay a source constant. The capsule names them literally.
+3. `pageSize=1000` without paging is enough until photos land — roughly three
+   years on entries alone. Recorded as an Incoming comment for P8.
+
+Open questions: the four in **Fresh review → Open questions for the planner**,
+in severity order. The first — that the app cannot be entered offline, which
+partly defeats this phase's own Goal — is the one that should be settled before
+P4.
+
+Next action: **P4: edit_and_delete_entries**, whose only dependency is P3.
 Objective: {phase goal, one line}
 HEAD: {git rev-parse --short HEAD} | Branch: {git branch --show-current}
 Files changed: {git diff --name-only <baseline>..HEAD output}

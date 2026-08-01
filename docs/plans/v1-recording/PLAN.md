@@ -124,7 +124,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | - | - | - | - | - | - |
 | [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | done | a596d41 | 2026-08-01 |
 | [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | done | 1811f3d | 2026-08-01 |
-| [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | in progress | 7911067 | 2026-08-01 |
+| [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | done | 7911067 | 2026-08-01 |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | pending | | |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4 | pending | | |
@@ -213,9 +213,23 @@ being added — `npm run typecheck` is the static gate.
   P4–P8 are written against P2's signatures. Any phase shipping a new
   `src/seed/*.json` registers it in the `SEEDS` list in `src/data/store.ts` —
   that is the one edit later phases make to that file.
-- **Notes:** highest-risk phase; needs the user's OAuth client ID (see
-  Context). If sign-in cannot be completed the phase is blocked, not improvised
-  around.
+- **Notes:** Done, and verified against real Drive — a weight logged offline
+  reaches `entries/body-2026-08.jsonl` after reconnecting. The store's public
+  signatures are unchanged, so P4–P8 are unaffected: the swap really was the
+  one line P2 predicted. `src/data/sync.ts` owns the mirror, the dirty set and
+  the pass; `src/data/drive.ts` owns auth and the REST calls. **Log through
+  `putEntry` as before and sync happens by itself** — `set` marks the path
+  dirty and fires a pass without being awaited, and reads stay synchronous.
+  Two things every later phase should know. **There is no silent sign-in** —
+  GIS token clients have no silent mode, so every page load renders the
+  sign-in screen and needs one press; `trySilentSignIn` does not exist. And
+  **the app cannot be entered offline at all**, which partly defeats this
+  phase's own Goal: the fix is small and breaks no Anti-goal, but it needs a
+  planner decision about what a signed-out app shows. That plus three smaller
+  ones are in `P3_drive_store_and_offline.md` → **Fresh review → Open
+  questions**, in severity order; the full deviation record is in the same doc.
+  The fresh review caught two data-loss paths in the first cut of the sync
+  pass, both fixed with tests that were watched to fail without the fix.
 - **Incoming comments:**
   - *From P2.* The adapter swap is literally one line —
     `const adapter: Adapter = localAdapter` near the top of
