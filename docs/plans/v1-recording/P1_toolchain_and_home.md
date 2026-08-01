@@ -297,7 +297,7 @@ Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
 Objective: stand up the toolchain and the visual system, then render home in
 its silent state with every route reachable.
 
-HEAD: `4d9a2fb` | Branch: `v1-implementation` | Baseline: `a596d41`
+HEAD: `eb6b827` | Branch: `v1-implementation` | Baseline: `a596d41`
 
 Files changed:
 
