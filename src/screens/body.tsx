@@ -4,6 +4,7 @@ import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson } from '../data/store'
 import { Previous, Timestamp, dayTimeOf, monthOf } from '../components/fields'
+import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './body.css'
 
@@ -11,6 +12,15 @@ import './body.css'
  *  photos are P8. */
 
 type BodyConfig = typeof appSeed.body
+
+/** Blanks are valid entries, so an empty or unreadable box records `null`
+ *  rather than refusing the entry. */
+const weightOf = (typed: string): number | null => {
+  const value = Number(typed)
+  return typed.trim() === '' || Number.isNaN(value) ? null : value
+}
+
+const weightText = (weight: unknown): string => (typeof weight === 'number' ? String(weight) : '')
 
 /** `72.4 kg`. Both the unit and how finely it is written are config, never
  *  literals, and home reuses this so payload knowledge stays in the module
@@ -21,6 +31,26 @@ export function weightLine(entry: Entry, body: BodyConfig): string {
   return `${written} ${body.weight_unit}`
 }
 
+/** Body's half of frame 4h. The box is uncontrolled on purpose: the payload
+ *  holds the parsed number, and writing that number back mid-keystroke would
+ *  swallow the dot the moment `72.` parses to 72. */
+registerEditor('body', (payload, onChange) => {
+  const { body } = readJson('config/app.json', appSeed)
+  return (
+    <div class="body-weight">
+      <input
+        class="body-weight-value"
+        type="text"
+        inputMode="decimal"
+        aria-label="weight"
+        defaultValue={weightText(payload['weight'])}
+        onInput={(e) => onChange({ ...payload, weight: weightOf(e.currentTarget.value) })}
+      />
+      <span class="body-weight-unit">{body.weight_unit}</span>
+    </div>
+  )
+})
+
 export function Body(): VNode {
   const config = readJson('config/app.json', appSeed)
   const locale = config.locale
@@ -30,9 +60,7 @@ export function Body(): VNode {
   const [ts, setTs] = useState(() => toIso(new Date()))
 
   const log = () => {
-    const typed = Number(weight)
-    const recorded = weight.trim() === '' || Number.isNaN(typed) ? null : typed
-    putEntry(newEntry('body', { weight: recorded }, ts))
+    putEntry(newEntry('body', { weight: weightOf(weight) }, ts))
     setEntries(readEntries('body'))
     setWeight('')
     setTs(toIso(new Date()))
