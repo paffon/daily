@@ -73,3 +73,151 @@ export function signIn(): Promise<boolean> {
    window nobody can complete or is refused. With the token held in memory and
    no refresh token, both by design, a press per page load is the cost of that
    design rather than something to work around. `signIn` is the only door. */
+
+/* ── Drive ─────────────────────────────────────────────────────────────────
+   Paths are always `{prefix}/{name}` — `entries/body-2026-08.jsonl`,
+   `config/app.json`. Two segments, never more, which is why nothing here
+   walks a tree. */
+
+const API = 'https://www.googleapis.com'
+const FOLDER_MIME = 'application/vnd.google-apps.folder'
+const ROOT = 'daily'
+
+/** The four subfolders of `daily/`, from the storage layout in `PLAN.md`.
+ *  Structure, not a setting: renaming one orphans the data under it. */
+const PREFIXES = ['entries', 'library', 'config', 'photos']
+
+/** Drive ids for the folder cache. Bookkeeping about Drive, not app data, so
+ *  it is kept beside the mirror rather than in it — nothing should ever try to
+ *  sync this file back to Drive, where it does not exist. */
+const FOLDERS_KEY = 'daily:_folders.json'
+
+/** prefix → folder id, `''` for `daily/` itself. */
+let folders: Record<string, string> = {}
+
+/** path → file id. In memory only: `listFiles` refills it on every boot, and a
+ *  stale id is worse than an absent one. */
+const fileIds = new Map<string, string>()
+
+async function api(path: string, init?: RequestInit): Promise<Response> {
+  const response = await fetch(API + path, {
+    ...init,
+    headers: { ...init?.headers, Authorization: `Bearer ${accessToken}` },
+  })
+  if (!response.ok) throw new Error(`drive ${response.status} on ${path}`)
+  return response
+}
+
+/** The id of the one file or folder with this name in this parent, or `null`.
+ *  Names in a prefix are unique by construction, so the first hit is the hit. */
+async function findId(name: string, parent: string | null, folder: boolean): Promise<string | null> {
+  const clauses = [`name='${name}'`, 'trashed=false']
+  if (folder) clauses.push(`mimeType='${FOLDER_MIME}'`)
+  if (parent !== null) clauses.push(`'${parent}' in parents`)
+  const query = encodeURIComponent(clauses.join(' and '))
+  const found = await (await api(`/drive/v3/files?q=${query}&fields=files(id)`)).json()
+  return found.files[0]?.id ?? null
+}
+
+/** Metadata only — no content. Creating a file this way and then writing it
+ *  with the same `PATCH` every later write uses costs one extra round trip on
+ *  a file's first write, and saves assembling a multipart body by hand. */
+async function create(name: string, parent: string | null, folder: boolean): Promise<string> {
+  const metadata = {
+    name,
+    ...(folder ? { mimeType: FOLDER_MIME } : {}),
+    ...(parent === null ? {} : { parents: [parent] }),
+  }
+  const made = await (
+    await api('/drive/v3/files?fields=id', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metadata),
+    })
+  ).json()
+  return made.id
+}
+
+/** Resolves `daily/` and its subfolders, creating any that are missing, and
+ *  caches the ids so a boot costs one lookup rather than five per write.
+ *  Idempotent, and every call below funnels through it, so no caller has to
+ *  remember to sequence it first. */
+export async function ensureFolders(): Promise<Record<string, string>> {
+  if (Object.keys(folders).length > 0) return folders
+
+  const cached = localStorage.getItem(FOLDERS_KEY)
+  if (cached !== null) {
+    folders = JSON.parse(cached) as Record<string, string>
+    return folders
+  }
+
+  const root = (await findId(ROOT, null, true)) ?? (await create(ROOT, null, true))
+  const resolved: Record<string, string> = { '': root }
+  for (const prefix of PREFIXES) {
+    resolved[prefix] = (await findId(prefix, root, true)) ?? (await create(prefix, root, true))
+  }
+
+  folders = resolved
+  localStorage.setItem(FOLDERS_KEY, JSON.stringify(resolved))
+  return folders
+}
+
+function split(path: string): [string, string] {
+  const cut = path.indexOf('/')
+  return [path.slice(0, cut), path.slice(cut + 1)]
+}
+
+async function fileId(path: string): Promise<string | null> {
+  const known = fileIds.get(path)
+  if (known !== undefined) return known
+  const [prefix, name] = split(path)
+  const id = await findId(name, (await ensureFolders())[prefix], false)
+  if (id !== null) fileIds.set(path, id)
+  return id
+}
+
+/** `null` when the file has never been written. */
+export async function getFile(path: string): Promise<string | null> {
+  const id = await fileId(path)
+  if (id === null) return null
+  return (await api(`/drive/v3/files/${id}?alt=media`)).text()
+}
+
+/** Whole-file write — one user, tiny files, and no append API to reach for. */
+export async function putFile(path: string, text: string): Promise<void> {
+  let id = await fileId(path)
+  if (id === null) {
+    const [prefix, name] = split(path)
+    id = await create(name, (await ensureFolders())[prefix], false)
+    fileIds.set(path, id)
+  }
+  await api(`/upload/drive/v3/files/${id}?uploadType=media`, { method: 'PATCH', body: text })
+}
+
+/** Every file the app has ever written, as store paths. One query, because
+ *  the `drive.file` scope means Drive shows this app nothing it did not
+ *  create — so "all files" already means "all of daily's files". */
+export async function listFiles(): Promise<string[]> {
+  const known = await ensureFolders()
+  const prefixOf = new Map(Object.entries(known).map(([prefix, id]) => [id, prefix]))
+  const query = encodeURIComponent(`trashed=false and mimeType!='${FOLDER_MIME}'`)
+  const found = await (
+    await api(`/drive/v3/files?q=${query}&fields=files(id,name,parents)&pageSize=1000`)
+  ).json()
+
+  const paths: string[] = []
+  for (const file of found.files as { id: string; name: string; parents?: string[] }[]) {
+    const prefix = prefixOf.get(file.parents?.[0] ?? '')
+    if (prefix === undefined || prefix === '') continue
+    const path = `${prefix}/${file.name}`
+    fileIds.set(path, file.id)
+    paths.push(path)
+  }
+  return paths
+}
+
+/* Reachable from the devtools console in `npm run dev`, and nowhere else —
+   this phase's Drive calls can only be checked by hand, against real Drive. */
+if (import.meta.env.DEV) {
+  Object.assign(window, { drive: { ensureFolders, getFile, putFile, listFiles, token } })
+}

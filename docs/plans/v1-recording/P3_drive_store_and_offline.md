@@ -289,6 +289,33 @@ lives beside the screen as `src/screens/{screen}.css`, and P2 followed it; the
 button needs a `:hover` rule, which an inline style cannot carry. Four rules,
 no shared control extracted — two screens is not a pattern yet.
 
+### T2: files are created with metadata, not multipart
+
+**The doc asked for** `upload/drive/v3/files?uploadType=multipart` with a
+metadata part naming the parent.
+
+**What is built:** a plain `POST /drive/v3/files` carrying only metadata, then
+the same `PATCH …?uploadType=media` that every later write to that file uses.
+
+**Why:** it costs one extra round trip the first time a file is ever written,
+and saves assembling a multipart body with boundary strings by hand. Creation
+and update share one code path instead of two. Verified against real Drive.
+
+### T2: `listFiles` does not walk folders
+
+The capsule scopes queries with `'{parent}' in parents`. `listFiles` does not:
+the `drive.file` scope means Drive shows the app only files it created itself,
+so one unscoped query for non-folders already returns exactly daily's files.
+Parent ids are still read back, to turn each file into a `{prefix}/{name}`
+store path.
+
+### T2: a dev-only console hook
+
+`drive.ts` ends with an `import.meta.env.DEV` block assigning `window.drive`.
+Not in the doc, but T2's Verify says *"in the browser console call the exported
+`putFile`"* — and a Vite module's exports are not reachable from the console
+without it. Absent from `npm run build` output.
+
 ### T1: `.gitignore` needed no edit
 
 Listed under Touch as *"ensure `.env.local` and `dist/` are ignored"*. Both were
