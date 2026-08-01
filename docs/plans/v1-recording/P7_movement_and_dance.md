@@ -227,14 +227,19 @@ user and stop. Do not guess, do not widen the file list, do not edit another
 phase's doc. To abandon work already done, roll back with
 `git reset --hard {baseline hash from PLAN.md's phase table}`.
 
-## Blocked
+## Prior attempt
 
-**2026-08-01, baseline `19c476f`.** Stopped before touching code. Entry criteria
+**Resolved.** `PLAN.md`'s table now reads `Depends on: P4, P5, P6` and this
+phase is `pending`, waiting its turn. Nothing below asks for a change to this
+doc — every task works as written once P6 lands. Kept as the record of why the
+column says what it says.
+
+**2026-08-01, at `19c476f`.** Stopped before touching code. Entry criteria
 all passed — P4 `done`, `npm test` exit 0 (6 files, 55 tests), tree clean — and
 the drift scan since P4's baseline `b736ee8` found nothing that collides. The
-block is in this doc's own dependency assumption.
+block was in this doc's own dependency assumption.
 
-The phase table says **Depends on: P4**, and says P5–P8 are independent of each
+The phase table said **Depends on: P4**, and said P5–P8 were independent of each
 other. This doc is not. Its capsule reuses four things that P5 and P6 build,
 and its **Do not touch** list names all four, so they cannot be supplied here:
 
@@ -264,13 +269,17 @@ also close to independent (span field, sitting field, the bar, `same as
 yesterday` — no picker, no stepper, no scale), but T2 also owns the segment
 form and the two-type switch, so the task cannot complete.
 
-**Suggested fix, for the planner.** Cheapest is the true one: P7's **Depends
-on** is wrong, not its content. Set it to `P4, P5, P6` and run this phase after
-P6 — which is already the numbered order — and every task works as written with
-no other change. Two alternatives, both worse: reassign the three shared
-components and `levels.json` to whichever of P5/P6/P7 runs first, which moves
-ownership out of the phase whose capsule specifies them; or split T1 into a
-standalone phase, which buys one commit and leaves the same dependency behind.
+**The fix, applied.** Cheapest was the true one: P7's **Depends on** was wrong,
+not its content. It now reads `P4, P5, P6`, so this phase runs after P6 — which
+is already the numbered order — and every task works as written with no other
+change. Two alternatives were considered and rejected: reassigning the three
+shared components and `levels.json` to whichever of P5/P6/P7 runs first, which
+moves ownership out of the phase whose capsule specifies them; and splitting T1
+into a standalone phase, which buys one commit and leaves the dependency behind.
+
+A parallel session reached the same finding independently at `c28cc1d` on
+branch `claude/complex-plan-phase-7-18b155`. Same conclusion, same four
+artifacts; that branch was dropped rather than merged, to keep one record.
 
 ## On completion
 
