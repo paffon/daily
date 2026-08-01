@@ -45,6 +45,13 @@ export function newEntry(module: Module, payload: Record<string, unknown>, ts?: 
   }
 }
 
+/** Every edit is a new revision, tombstoning included — a merge is
+ *  last-write-wins on the higher `rev`, so a change that leaves `rev` alone is
+ *  a change the other device can quietly win. `recorded_at` never moves. */
+export function revise(entry: Entry, changes: Partial<Entry> = {}): Entry {
+  return { ...entry, ...changes, rev: entry.rev + 1 }
+}
+
 /** `2026-08`, read straight off the timestamp. `ts` carries its own offset, so
  *  its date part already is the local date — 23:30 on 31 August in Israel
  *  stays in August's file wherever the app is later opened from. */

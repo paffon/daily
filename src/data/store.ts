@@ -2,7 +2,7 @@
  *  through `putEntry` and reads config and libraries through `readJson`. */
 
 import type { Entry, Module } from './entry'
-import { entryPath } from './entry'
+import { entryPath, revise } from './entry'
 import { driveAdapter } from './sync'
 import appSeed from '../seed/app.json'
 
@@ -63,6 +63,13 @@ function readLines(path: string): Entry[] {
     .map((line) => JSON.parse(line) as Entry)
 }
 
+function writeLines(path: string, lines: Entry[]): void {
+  writeText(path, lines.map((line) => JSON.stringify(line)).join('\n') + '\n')
+}
+
+/** Every line the app holds, tombstones included. */
+const allLines = (): Entry[] => adapter.list('entries/').flatMap(readLines)
+
 /** Compared as instants, not as text — the offset in a timestamp shifts with
  *  daylight saving, so the strings do not sort in the order the clocks ran. */
 const byNewest = (a: Entry, b: Entry) => Date.parse(b.ts) - Date.parse(a.ts)
@@ -88,14 +95,43 @@ export function putEntry(entry: Entry): void {
   const at = lines.findIndex((line) => line.id === entry.id)
   if (at === -1) lines.push(entry)
   else lines[at] = entry
-  writeText(path, lines.map((line) => JSON.stringify(line)).join('\n') + '\n')
+  writeLines(path, lines)
+}
+
+/** Any entry by id, across every module's month files and including the
+ *  tombstoned — the edit screen is reachable by id alone. */
+export function getEntry(id: string): Entry | null {
+  return allLines().find((entry) => entry.id === id) ?? null
+}
+
+/** A revision of an entry already stored. An edited `ts` can name a different
+ *  month than the one holding the line, and then the entry has to move: write
+ *  the destination first, because each write syncs on its own and a duplicate
+ *  survives a failure between them where a vanished entry does not. */
+export function updateEntry(entry: Entry): void {
+  const stored = getEntry(entry.id)
+  const next = revise(entry)
+  putEntry(next)
+
+  if (stored === null) return
+  const was = entryPath(stored.module, stored.ts)
+  if (was === entryPath(next.module, next.ts)) return
+  writeLines(
+    was,
+    readLines(was).filter((line) => line.id !== next.id),
+  )
+}
+
+/** A tombstone, never a removed line: a line taken out of a file looks exactly
+ *  like a mirror that has not caught up, so the delete would not propagate. */
+export function deleteEntry(id: string): void {
+  const stored = getEntry(id)
+  if (stored !== null) putEntry(revise(stored, { deleted: true }))
 }
 
 /** The newest `n` entries across every module. */
 export function recentEntries(n: number): Entry[] {
-  return adapter
-    .list('entries/')
-    .flatMap(readLines)
+  return allLines()
     .filter((entry) => !entry.deleted)
     .sort(byNewest)
     .slice(0, n)

@@ -1,13 +1,16 @@
 import { entryPath, monthKey, newEntry, toIso } from './entry'
 import type { Entry } from './entry'
 import {
+  deleteEntry,
   ensureSeeded,
+  getEntry,
   lastTouched,
   putEntry,
   readEntries,
   readJson,
   readText,
   recentEntries,
+  updateEntry,
   writeJson,
 } from './store'
 import appSeed from '../seed/app.json'
@@ -92,6 +95,50 @@ describe('the store', () => {
     putEntry(at('2026-08-01T07:35:00+03:00', 72.4))
     expect(lastTouched('body')).toBe('2026-08-01T07:35:00+03:00')
     expect(lastTouched('dance')).toBeNull()
+  })
+
+  it('moves an entry to the month its new timestamp names, leaving one copy', () => {
+    const entry = at('2026-08-31T23:30:00+03:00', 72.4)
+    putEntry(entry)
+    updateEntry({ ...entry, ts: '2026-07-31T23:30:00+03:00' })
+
+    expect(localStorage.getItem('daily:entries/body-2026-08.jsonl')).not.toContain(entry.id)
+    expect(localStorage.getItem('daily:entries/body-2026-07.jsonl')).toContain(entry.id)
+    expect(readEntries('body')).toHaveLength(1)
+    expect(readEntries('body')[0]?.rev).toBe(2)
+  })
+
+  it('deletes by writing a tombstone over the line, never by removing it', () => {
+    const entry = at('2026-08-01T07:35:00+03:00', 72.4)
+    putEntry(entry)
+    deleteEntry(entry.id)
+
+    const file = localStorage.getItem('daily:entries/body-2026-08.jsonl')!
+    expect(file).toContain(entry.id)
+    expect(file).toContain('"deleted":true')
+    expect(getEntry(entry.id)?.rev).toBe(2)
+  })
+
+  it('stops returning a deleted entry from the reads home is built on', () => {
+    const entry = at('2026-08-01T07:35:00+03:00', 72.4)
+    putEntry(entry)
+    deleteEntry(entry.id)
+
+    expect(readEntries('body')).toHaveLength(0)
+    expect(recentEntries(6)).toHaveLength(0)
+    expect(lastTouched('body')).toBeNull()
+  })
+
+  it('finds an entry by id across month files, deleted or not', () => {
+    const july = at('2026-07-12T07:40:00+03:00', 73.1)
+    const august = at('2026-08-01T07:35:00+03:00', 72.4)
+    putEntry(july)
+    putEntry(august)
+    deleteEntry(august.id)
+
+    expect(getEntry(july.id)?.payload['weight']).toBe(73.1)
+    expect(getEntry(august.id)?.deleted).toBe(true)
+    expect(getEntry('a-lost-id')).toBeNull()
   })
 
   it('seeds config once and never over an edited copy', () => {
