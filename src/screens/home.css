@@ -116,7 +116,7 @@
 .home-objectives {
   margin-top: auto;
   padding-top: 40px;
-  font: 400 12px/1 var(--family-mono);
+  font: 400 11.5px/1 var(--family-mono);
   color: var(--mono);
   text-decoration: none;
 }
@@ -180,5 +180,9 @@
 
   .home-module::before {
     content: none;
+  }
+
+  .home-objectives {
+    font-size: 12px;
   }
 }

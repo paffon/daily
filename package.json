@@ -1,7 +1,5 @@
 {
   "name": "daily",
-  "version": "1.0.0",
-  "description": "A single-user body-recomposition log",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +8,6 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "license": "ISC",
   "dependencies": {
     "preact": "^10.29.8"
   },

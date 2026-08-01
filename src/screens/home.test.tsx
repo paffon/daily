@@ -17,9 +17,9 @@ describe('home, silent state', () => {
     const { container } = render(<Home />)
     expect(container.querySelector('[class*="coach"]')).toBeNull()
     expect(container.querySelector('[class*="dash"]')).toBeNull()
-    for (const el of container.querySelectorAll('*')) {
-      expect(el.getAttribute('style') ?? '').not.toContain('steel')
-    }
+    // steel means "this is the live one" and home has nothing live to mark,
+    // so the accent must not reach the markup by class or by inline style
+    expect(container.innerHTML).not.toMatch(/coach|dash|steel/i)
   })
 
   it('reads out no progress', () => {

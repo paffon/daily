@@ -83,10 +83,10 @@ textarea {
   font-family: inherit;
 }
 
-/* every tappable thing, on either surface */
+/* every tappable thing, on either surface. Sizes only — alignment stays with
+   whatever is using it, so the utility never fights a screen's own layout. */
 .hit {
+  display: flex;
   min-height: var(--hit-min);
   min-width: var(--hit-min);
-  display: flex;
-  align-items: center;
 }
