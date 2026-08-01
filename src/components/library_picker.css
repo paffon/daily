@@ -1,0 +1,69 @@
+/* The list is the point, so it scrolls and the two affordances around it stay
+   put — a long library must not push `+ new` off the bottom. */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+}
+
+.picker-filter {
+  flex: none;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  background: var(--paper-input);
+  font: 400 18px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.picker-filter:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 46vh;
+}
+
+.picker-item {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker-item:hover {
+  background: var(--paper-hover);
+}
+
+.picker-name {
+  font: 400 16px/1 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.picker-hint {
+  font: 400 11px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+.picker-new {
+  align-items: center;
+  flex: none;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 14.5px/1 var(--family-mono);
+  cursor: pointer;
+}
