@@ -7,6 +7,7 @@ import { ensureSeeded, readText } from './data/store'
 import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
+import { EditEntry } from './screens/edit_entry'
 import { SignIn, SignInBand } from './screens/signin'
 
 /** Every route but home renders one of these until its phase builds it. */
@@ -38,7 +39,7 @@ Object.assign(ROUTES, {
  *  anything unrecognised falls back to home. */
 function screen(hash: string): VNode {
   const entry = /^#\/entry\/(.+)$/.exec(hash)
-  if (entry) return <Stub name={`entry ${entry[1]}`} />
+  if (entry) return <EditEntry id={entry[1]!} />
   const route = ROUTES[hash]
   return route ? route() : <Home />
 }

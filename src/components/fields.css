@@ -37,6 +37,19 @@
   color: var(--mono-faint);
 }
 
+/* the one control in the app that wears danger. Alignment stays with whatever
+   is using it, as with .hit. */
+.field-danger {
+  align-items: center;
+  justify-content: center;
+  padding: 14px 22px;
+  border: 1px solid var(--danger-border);
+  background: transparent;
+  color: var(--danger);
+  font: 400 13px/1 var(--family-mono);
+  cursor: pointer;
+}
+
 .field-previous {
   display: flex;
   align-items: baseline;

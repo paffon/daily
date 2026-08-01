@@ -20,6 +20,9 @@ const weekdayOf = (at: Date, locale: string) => format(at, locale, { weekday: 's
 export const monthOf = (ts: string, locale: string) =>
   format(new Date(ts), locale, { month: 'long' })
 
+/** `19:44` — the provenance line on the edit screen. */
+export const clockOf = (ts: string, locale: string) => timeOf(new Date(ts), locale)
+
 /** `12 july 07:40` — the module rail and `Previous`. */
 export function dayTimeOf(ts: string, locale: string): string {
   const at = new Date(ts)
@@ -42,17 +45,24 @@ export function whenOf(ts: string, locale: string, weekdayWithinDays: number): s
 
 /** The entry's own timestamp, editable. Logging the apple from an hour ago is
  *  the normal case, so a value away from now reads as information rather than
- *  a warning: the box says what it says and `· now 20:41` sits beside it. */
+ *  a warning: the box says what it says and `· now 20:41` sits beside it.
+ *
+ *  `expanded` is the edit screen: the two fields stand open from the start
+ *  because moving an entry to when it happened is why that screen was opened,
+ *  and the distance from now is the point there rather than a remark on it. */
 export function Timestamp({
   value,
   onChange,
   locale,
+  variant = 'collapsed',
 }: {
   value: string
   onChange: (ts: string) => void
   locale: string
+  variant?: 'collapsed' | 'expanded'
 }): VNode {
   const [open, setOpen] = useState(false)
+  const expanded = variant === 'expanded'
   const now = new Date()
   const at = new Date(value)
   const adrift = Math.abs(at.getTime() - now.getTime()) > 60_000
@@ -77,7 +87,7 @@ export function Timestamp({
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false)
       }}
     >
-      {open ? (
+      {open || expanded ? (
         <div class="field-stamp-edit">
           <input type="date" value={day} onInput={(e) => edit(e.currentTarget.value, time)} />
           <input type="time" value={time} onInput={(e) => edit(day, e.currentTarget.value)} />
@@ -87,8 +97,25 @@ export function Timestamp({
           {`${weekdayOf(at, locale)} ${dayOf(at, locale)} · ${timeOf(at, locale)}`}
         </button>
       )}
-      {adrift && <span class="field-stamp-now">{`· now ${timeOf(now, locale)}`}</span>}
+      {adrift && !expanded && <span class="field-stamp-now">{`· now ${timeOf(now, locale)}`}</span>}
     </div>
+  )
+}
+
+/** `delete this entry`, and nothing else in the app wears danger. Two presses
+ *  instead of a modal: the tombstone is invisible and there is no restore, so
+ *  a mis-tap reads as loss — but a dialog to dismiss is ceremony for one user
+ *  editing their own log. */
+export function Danger({ label, onClick }: { label: string; onClick: () => void }): VNode {
+  const [armed, setArmed] = useState(false)
+  return (
+    <button
+      type="button"
+      class="field-danger hit"
+      onClick={() => (armed ? onClick() : setArmed(true))}
+    >
+      {armed ? 'press again' : label}
+    </button>
   )
 }
 
