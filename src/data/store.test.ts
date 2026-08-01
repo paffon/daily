@@ -108,6 +108,18 @@ describe('the store', () => {
     expect(readEntries('body')[0]?.rev).toBe(2)
   })
 
+  it('leaves the tombstone behind when a deleted entry is moved to another month', () => {
+    const entry = at('2026-08-31T23:30:00+03:00', 72.4)
+    putEntry(entry)
+    deleteEntry(entry.id)
+    updateEntry({ ...entry, rev: 2, deleted: true, ts: '2026-07-31T23:30:00+03:00' })
+
+    // a device still holding the live August line has to keep meeting a
+    // tombstone there, or it puts the entry back
+    expect(localStorage.getItem('daily:entries/body-2026-08.jsonl')).toContain('"deleted":true')
+    expect(readEntries('body')).toHaveLength(0)
+  })
+
   it('deletes by writing a tombstone over the line, never by removing it', () => {
     const entry = at('2026-08-01T07:35:00+03:00', 72.4)
     putEntry(entry)

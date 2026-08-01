@@ -115,6 +115,20 @@ describe('editing an entry', () => {
     expect(container.querySelector('.edit-actions')).toBeNull()
   })
 
+  it('offers nothing to edit on an entry already deleted', () => {
+    const entry = weight('2026-08-01T07:35:00+03:00', 72.4)
+    const { container } = render(<EditEntry id={entry.id} />)
+    press(container, '.field-danger')
+    press(container, '.field-danger')
+
+    // back onto the same hash: the tombstone is not an entry, and offering it
+    // for editing would be the restore surface the app does without
+    const back = render(<EditEntry id={entry.id} />)
+    expect(back.container.textContent).toContain('no entry is stored under that id')
+    expect(back.container.querySelector('.edit-actions')).toBeNull()
+    expect(back.container.querySelector('.field-danger')).toBeNull()
+  })
+
   it('is what home opens a recent row onto', () => {
     const entry = weight('2026-08-01T07:35:00+03:00', 72.4)
     const { container } = render(<Home />)

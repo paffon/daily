@@ -13,7 +13,7 @@ import './edit_entry.css'
 
 type Payload = Entry['payload']
 
-export type EditorRenderer = (payload: Payload, onChange: (next: Payload) => void) => VNode
+type EditorRenderer = (payload: Payload, onChange: (next: Payload) => void) => VNode
 
 const editors: Partial<Record<Module, EditorRenderer>> = {}
 
@@ -37,27 +37,15 @@ export function EditEntry({ id }: { id: string }): VNode {
   const [payload, setPayload] = useState<Payload>(stored?.payload ?? {})
 
   const locale = readJson('config/app.json', appSeed).locale
+  const editor = stored === null ? undefined : editors[stored.module]
   const home = () => {
     location.hash = '#/'
   }
 
-  if (stored === null) {
-    return (
-      <main class="edit">
-        <header class="edit-strip">
-          <a class="edit-back hit" href="#/">
-            ← &nbsp;recent
-          </a>
-        </header>
-        <div class="edit-body">
-          <h1 class="edit-title">nothing here</h1>
-          <p class="edit-line">no entry is stored under that id.</p>
-        </div>
-      </main>
-    )
-  }
-
-  const editor = editors[stored.module]
+  /* A tombstone is not an entry. This is reached by pressing back onto the hash
+     of something just deleted, and a screen that let it be edited would be the
+     restore surface the app deliberately does without. */
+  const gone = stored === null || stored.deleted
 
   return (
     <main class="edit">
@@ -65,51 +53,57 @@ export function EditEntry({ id }: { id: string }): VNode {
         <a class="edit-back hit" href="#/">
           ← &nbsp;recent
         </a>
-        <span>editing</span>
+        {!gone && <span>editing</span>}
       </header>
 
-      <div class="edit-body">
-        <h1 class="edit-title">{stored.module}</h1>
-
-        <div class="edit-field">
-          <span class="edit-label">when</span>
-          <Timestamp value={ts} onChange={setTs} locale={locale} variant="expanded" />
+      {stored === null || stored.deleted ? (
+        <div class="edit-body">
+          <h1 class="edit-title">nothing here</h1>
+          <p class="edit-line">no entry is stored under that id.</p>
         </div>
+      ) : (
+        <div class="edit-body">
+          <h1 class="edit-title">{stored.module}</h1>
 
-        {editor === undefined ? (
           <div class="edit-field">
-            <pre class="edit-payload">{JSON.stringify(payload, null, 2)}</pre>
-            <p class="edit-line">{`the ${stored.module} editor is not built yet.`}</p>
+            <span class="edit-label">when</span>
+            <Timestamp value={ts} onChange={setTs} locale={locale} variant="expanded" />
           </div>
-        ) : (
-          <div class="edit-field">{editor(payload, setPayload)}</div>
-        )}
 
-        <div class="edit-actions">
-          <button
-            type="button"
-            class="edit-save hit"
-            onClick={() => {
-              updateEntry({ ...stored, ts, payload })
-              home()
-            }}
-          >
-            save changes
-          </button>
-          <button type="button" class="edit-discard hit" onClick={home}>
-            discard
-          </button>
-          <Danger
-            label="delete this entry"
-            onClick={() => {
-              deleteEntry(stored.id)
-              home()
-            }}
-          />
+          {editor === undefined ? (
+            <div class="edit-field">
+              <pre class="edit-payload">{JSON.stringify(payload, null, 2)}</pre>
+              <p class="edit-line">{`the ${stored.module} editor is not built yet.`}</p>
+            </div>
+          ) : (
+            <div class="edit-field">{editor(payload, setPayload)}</div>
+          )}
+
+          <div class="edit-actions">
+            <button
+              type="button"
+              class="edit-save hit"
+              onClick={() => {
+                updateEntry({ ...stored, ts, payload })
+                home()
+              }}
+            >
+              save changes
+            </button>
+            <button type="button" class="edit-discard hit" onClick={home}>
+              discard
+            </button>
+            <Danger
+              onClick={() => {
+                deleteEntry(stored.id)
+                home()
+              }}
+            />
+          </div>
+
+          <p class="edit-provenance">{provenance(stored, locale)}</p>
         </div>
-
-        <p class="edit-provenance">{provenance(stored, locale)}</p>
-      </div>
+      )}
     </main>
   )
 }

@@ -38,8 +38,10 @@ Object.assign(ROUTES, {
 /** Hash to screen. An id-carrying route is matched before the table;
  *  anything unrecognised falls back to home. */
 function screen(hash: string): VNode {
+  /* keyed, so moving between two entry hashes builds a new screen rather than
+     leaving the previous entry's timestamp and payload in the fields */
   const entry = /^#\/entry\/(.+)$/.exec(hash)
-  if (entry) return <EditEntry id={entry[1]!} />
+  if (entry) return <EditEntry key={entry[1]} id={entry[1]!} />
   const route = ROUTES[hash]
   return route ? route() : <Home />
 }

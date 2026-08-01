@@ -106,7 +106,7 @@ export function Timestamp({
  *  instead of a modal: the tombstone is invisible and there is no restore, so
  *  a mis-tap reads as loss — but a dialog to dismiss is ceremony for one user
  *  editing their own log. */
-export function Danger({ label, onClick }: { label: string; onClick: () => void }): VNode {
+export function Danger({ onClick }: { onClick: () => void }): VNode {
   const [armed, setArmed] = useState(false)
   return (
     <button
@@ -114,7 +114,7 @@ export function Danger({ label, onClick }: { label: string; onClick: () => void 
       class="field-danger hit"
       onClick={() => (armed ? onClick() : setArmed(true))}
     >
-      {armed ? 'press again' : label}
+      {armed ? 'press again' : 'delete this entry'}
     </button>
   )
 }

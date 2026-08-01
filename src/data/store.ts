@@ -105,9 +105,11 @@ export function getEntry(id: string): Entry | null {
 }
 
 /** A revision of an entry already stored. An edited `ts` can name a different
- *  month than the one holding the line, and then the entry has to move: write
- *  the destination first, because each write syncs on its own and a duplicate
- *  survives a failure between them where a vanished entry does not. */
+ *  month than the one holding the line, and then the entry has to move. The
+ *  destination is written first: locally both writes land together, and if the
+ *  process dies between them a duplicate is recoverable where a vanished entry
+ *  is not. Which of the two dirty paths reaches Drive first is the sync pass's
+ *  business, not settled here. */
 export function updateEntry(entry: Entry): void {
   const stored = getEntry(entry.id)
   const next = revise(entry)
@@ -116,6 +118,10 @@ export function updateEntry(entry: Entry): void {
   if (stored === null) return
   const was = entryPath(stored.module, stored.ts)
   if (was === entryPath(next.module, next.ts)) return
+  /* A tombstone is the one line that never leaves a file — taking it out would
+     let a device still holding the live line resurrect the entry. It costs a
+     second tombstone in the old month, which every read already drops. */
+  if (stored.deleted) return
   writeLines(
     was,
     readLines(was).filter((line) => line.id !== next.id),
