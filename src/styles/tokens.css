@@ -1,0 +1,88 @@
+/* Design tokens — the whole palette, from the handoff README's colour table.
+   Every colour stays in oklch(); hex conversion loses the shared
+   lightness/chroma relationships the three families are built on.
+   Where the README gives a range, the value below is its midpoint. */
+
+:root {
+  /* paper — near-white neutrals at hue 255 */
+  --paper: oklch(0.963 0.005 255);
+  --paper-panel: oklch(0.932 0.006 255);
+  --paper-panel-sel: oklch(0.951 0.006 255);
+  --paper-quote: oklch(0.941 0.006 255);
+  --paper-input: oklch(0.995 0.002 255);
+  --paper-control: oklch(0.99 0.003 255);
+
+  /* ink — dark neutrals at hue 265 */
+  --ink: oklch(0.19 0.014 265);
+  --ink-body: oklch(0.23 0.014 265);
+  --ink-quiet: oklch(0.28 0.014 265);
+
+  /* mono — the greys everything measured is set in */
+  --mono: oklch(0.54 0.012 260);
+  --mono-faint: oklch(0.65 0.012 260);
+
+  /* steel — the one accent, hue 200. Steel means "this is the live one". */
+  --steel: oklch(0.45 0.05 200);
+  --steel-hover: oklch(0.38 0.055 200);
+  --steel-text: oklch(0.43 0.055 200);
+  --steel-weak: oklch(0.72 0.03 200);
+
+  /* a level's selection is a recorded property, not a live target —
+     it uses ink-select and must never be unified with steel */
+  --ink-select: oklch(0.35 0.012 260);
+
+  /* lines */
+  --rule: oklch(0.87 0.006 255);
+  --rule-light: oklch(0.915 0.005 255);
+
+  /* delete this entry, and nothing else */
+  --danger: oklch(0.5 0.03 25);
+  --danger-border: oklch(0.82 0.03 25);
+
+  /* geometry */
+  --radius-control: 2px;
+  --hit-min: 44px;
+
+  /* families. serif is language, mono is data; sans is library item names
+     in lists. Never mix within one span. */
+  --family-serif: Newsreader, Georgia, serif;
+  --family-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --family-sans: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--family-sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+.serif {
+  font-family: var(--family-serif);
+}
+
+.mono {
+  font-family: var(--family-mono);
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: var(--radius-control);
+  font-family: inherit;
+}
+
+/* every tappable thing, on either surface */
+.hit {
+  min-height: var(--hit-min);
+  min-width: var(--hit-min);
+  display: flex;
+  align-items: center;
+}
