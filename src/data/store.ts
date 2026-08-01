@@ -6,6 +6,8 @@ import { entryPath, revise } from './entry'
 import { driveAdapter } from './sync'
 import appSeed from '../seed/app.json'
 import exercisesSeed from '../seed/exercises.json'
+import foodsSeed from '../seed/foods.json'
+import levelsSeed from '../seed/levels.json'
 import objectivesSeed from '../seed/objectives.json'
 
 /** Three methods, and P3 supplies a Drive-backed second implementation. */
@@ -155,6 +157,8 @@ export function lastTouched(module: Module): string | null {
 const SEEDS: [string, unknown][] = [
   ['config/app.json', appSeed],
   ['library/exercises.json', exercisesSeed],
+  ['library/foods.json', foodsSeed],
+  ['config/levels.json', levelsSeed],
   /* Empty on purpose: a shipped objective would be exactly the hard-coded
      target `RULES.md` forbids. The user writes their own or has none. */
   ['config/objectives.json', objectivesSeed],

@@ -20,6 +20,11 @@
     "recent_count": 6,
     "weekday_within_days": 7
   },
+  "nutrition": {
+    "amount_start": 1,
+    "amount_step": 1,
+    "decimals": 0
+  },
   "objectives": {
     "directions": ["up", "stable", "down"],
     "new_target": [
