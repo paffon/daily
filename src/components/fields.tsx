@@ -1,6 +1,7 @@
 import { useState } from 'preact/hooks'
 import type { ComponentChildren, VNode } from 'preact'
 import type { Entry } from '../data/entry'
+import { toIso } from '../data/entry'
 import './fields.css'
 
 /** Controls shared by every module. Presentational only — they take values and
@@ -9,8 +10,7 @@ import './fields.css'
 const format = (at: Date, locale: string, opts: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat(locale, opts).format(at).toLowerCase()
 
-const timeOf = (at: Date, locale: string) =>
-  format(at, locale, { hour: '2-digit', minute: '2-digit', hour12: false })
+const timeOf = (at: Date, locale: string) => format(at, locale, { hour: '2-digit', minute: '2-digit' })
 
 const dayOf = (at: Date, locale: string) => format(at, locale, { day: 'numeric', month: 'long' })
 
@@ -26,14 +26,17 @@ export function dayTimeOf(ts: string, locale: string): string {
   return `${dayOf(at, locale)} ${timeOf(at, locale)}`
 }
 
-const WEEK = 7 * 86_400_000
+const DAY = 86_400_000
 
-/** `today 18:10`, `wed 19:40`, `12 july` — home's last-touched line. Seven days
- *  is a calendar fact rather than a target, so it stays in source. */
-export function whenOf(ts: string, locale: string, now: Date = new Date()): string {
+/** `today 18:10`, `wed 19:40`, `12 july` — home's last-touched line. How long
+ *  a weekday stays useful is a preference, so it arrives from config. */
+export function whenOf(ts: string, locale: string, weekdayWithinDays: number): string {
   const at = new Date(ts)
+  const now = new Date()
   if (at.toDateString() === now.toDateString()) return `today ${timeOf(at, locale)}`
-  if (now.getTime() - at.getTime() < WEEK) return `${weekdayOf(at, locale)} ${timeOf(at, locale)}`
+  if (now.getTime() - at.getTime() < weekdayWithinDays * DAY) {
+    return `${weekdayOf(at, locale)} ${timeOf(at, locale)}`
+  }
   return dayOf(at, locale)
 }
 
@@ -54,14 +57,26 @@ export function Timestamp({
   const at = new Date(value)
   const adrift = Math.abs(at.getTime() - now.getTime()) > 60_000
 
-  // ts carries its own offset, so date and time can be swapped in by slice
+  // ts carries its own offset, so its date and time parts read off directly
   const day = value.slice(0, 10)
   const time = value.slice(11, 16)
-  const edit = (nextDay: string, nextTime: string) =>
-    onChange(`${nextDay}T${nextTime}:00${value.slice(19)}`)
+
+  /** A native date or time input reports an empty value while a segment is
+   *  being retyped. Half a timestamp is not a timestamp — wait for the rest. */
+  const edit = (nextDay: string, nextTime: string) => {
+    if (nextDay === '' || nextTime === '') return
+    const [y, m, d] = nextDay.split('-').map(Number)
+    const [h, min] = nextTime.split(':').map(Number)
+    onChange(toIso(new Date(y!, m! - 1, d!, h!, min!)))
+  }
 
   return (
-    <div class="field-stamp">
+    <div
+      class="field-stamp"
+      onFocusOut={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false)
+      }}
+    >
       {open ? (
         <div class="field-stamp-edit">
           <input type="date" value={day} onInput={(e) => edit(e.currentTarget.value, time)} />

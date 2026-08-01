@@ -6,6 +6,7 @@ import {
   putEntry,
   readEntries,
   readJson,
+  readText,
   recentEntries,
   writeJson,
 } from './store'
@@ -94,7 +95,9 @@ describe('the store', () => {
   })
 
   it('seeds config once and never over an edited copy', () => {
+    expect(readText('config/app.json')).toBeNull()
     ensureSeeded()
+    expect(readText('config/app.json')).not.toBeNull()
     expect(readJson('config/app.json', appSeed).body.weight_unit).toBe('kg')
 
     writeJson('config/app.json', { ...appSeed, body: { weight_unit: 'lb' } })

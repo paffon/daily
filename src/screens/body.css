@@ -52,11 +52,6 @@
   color: var(--mono);
 }
 
-.body-rail-list {
-  display: flex;
-  flex-direction: column;
-}
-
 .body-rail-row {
   display: flex;
   justify-content: space-between;
@@ -126,14 +121,11 @@
   font: 400 40px/1 var(--family-mono);
   color: var(--ink);
   outline: none;
-  /* the box is the field; the browser's own spinners are not part of it */
-  appearance: textfield;
 }
 
-.body-weight-value::-webkit-outer-spin-button,
-.body-weight-value::-webkit-inner-spin-button {
-  appearance: none;
-  margin: 0;
+.body-weight-unit {
+  font: 400 14px/1 var(--family-mono);
+  color: var(--mono);
 }
 
 .body-when {

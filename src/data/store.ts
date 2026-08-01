@@ -62,7 +62,9 @@ function readLines(path: string): Entry[] {
     .map((line) => JSON.parse(line) as Entry)
 }
 
-const byNewest = (a: Entry, b: Entry) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)
+/** Compared as instants, not as text — the offset in a timestamp shifts with
+ *  daylight saving, so the strings do not sort in the order the clocks ran. */
+const byNewest = (a: Entry, b: Entry) => Date.parse(b.ts) - Date.parse(a.ts)
 
 /** Newest first, tombstones dropped. `months` narrows to specific month keys;
  *  without it every month file the module has is read. */

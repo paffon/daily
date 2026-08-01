@@ -1,5 +1,6 @@
 import { render } from '@testing-library/preact'
-import { Home, MODULES } from './home'
+import { MODULES } from '../data/entry'
+import { Home } from './home'
 
 describe('home, silent state', () => {
   it('names all five modules', () => {

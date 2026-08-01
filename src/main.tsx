@@ -1,8 +1,9 @@
 import { render } from 'preact'
 import type { VNode } from 'preact'
 import './styles/tokens.css'
+import { MODULES } from './data/entry'
 import { ensureSeeded } from './data/store'
-import { Home, MODULES } from './screens/home'
+import { Home } from './screens/home'
 import { Body } from './screens/body'
 
 /** Every route but home renders one of these until its phase builds it. */
@@ -22,12 +23,13 @@ function Stub({ name }: { name: string }): VNode {
   )
 }
 
-const ROUTES: Record<string, () => VNode> = {
+const ROUTES: Record<string, () => VNode> = {}
+for (const module of MODULES) ROUTES[`#/${module}`] = () => <Stub name={module} />
+Object.assign(ROUTES, {
   '#/': () => <Home />,
   '#/objectives': () => <Stub name="objectives" />,
-}
-for (const module of MODULES) ROUTES[`#/${module}`] = () => <Stub name={module} />
-ROUTES['#/body'] = () => <Body />
+  '#/body': () => <Body />,
+})
 
 /** Hash to screen. An id-carrying route is matched before the table;
  *  anything unrecognised falls back to home. */

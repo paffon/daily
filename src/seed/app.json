@@ -11,9 +11,11 @@
     "bedtime": 22
   },
   "body": {
-    "weight_unit": "kg"
+    "weight_unit": "kg",
+    "weight_decimals": 1
   },
   "home": {
-    "recent_count": 6
+    "recent_count": 6,
+    "weekday_within_days": 7
   }
 }

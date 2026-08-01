@@ -28,9 +28,8 @@ export function toIso(at: Date): string {
   const offset = -at.getTimezoneOffset()
   const sign = offset < 0 ? '-' : '+'
   const abs = Math.abs(offset)
-  const date = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`
-  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}:${pad(at.getSeconds())}`
-  return `${date}T${time}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+  const local = new Date(at.getTime() + offset * 60_000).toISOString().slice(0, 19)
+  return `${local}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
 }
 
 export function newEntry(module: Module, payload: Record<string, unknown>, ts?: string): Entry {

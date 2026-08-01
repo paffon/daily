@@ -1,26 +1,28 @@
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
-import { newEntry } from '../data/entry'
+import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson } from '../data/store'
 import { Previous, Timestamp, dayTimeOf, monthOf } from '../components/fields'
-import { toIso } from '../data/entry'
 import appSeed from '../seed/app.json'
 import './body.css'
 
 /** A weight and a time. That is the whole of this half of the module —
  *  photos are P8. */
 
-/** `72.4 kg`. The unit is config, never a literal, and home reuses this so
- *  payload knowledge stays in the module that owns the payload. */
-export function weightLine(entry: Entry, unit: string): string {
+type BodyConfig = typeof appSeed.body
+
+/** `72.4 kg`. Both the unit and how finely it is written are config, never
+ *  literals, and home reuses this so payload knowledge stays in the module
+ *  that owns the payload. */
+export function weightLine(entry: Entry, body: BodyConfig): string {
   const weight = entry.payload['weight']
-  return `${typeof weight === 'number' ? weight : '—'} ${unit}`
+  const written = typeof weight === 'number' ? weight.toFixed(body.weight_decimals) : '—'
+  return `${written} ${body.weight_unit}`
 }
 
 export function Body(): VNode {
   const config = readJson('config/app.json', appSeed)
-  const unit = config.body.weight_unit
   const locale = config.locale
 
   const [entries, setEntries] = useState(() => readEntries('body'))
@@ -28,7 +30,9 @@ export function Body(): VNode {
   const [ts, setTs] = useState(() => toIso(new Date()))
 
   const log = () => {
-    putEntry(newEntry('body', { weight: weight === '' ? null : Number(weight) }, ts))
+    const typed = Number(weight)
+    const recorded = weight.trim() === '' || Number.isNaN(typed) ? null : typed
+    putEntry(newEntry('body', { weight: recorded }, ts))
     setEntries(readEntries('body'))
     setWeight('')
     setTs(toIso(new Date()))
@@ -53,14 +57,12 @@ export function Body(): VNode {
       <div class="body-split">
         <section class="body-rail">
           <h2 class="body-rail-label">recorded</h2>
-          <div class="body-rail-list">
-            {entries.map((entry) => (
-              <div class="body-rail-row" key={entry.id}>
-                <span class="body-rail-when">{dayTimeOf(entry.ts, locale)}</span>
-                <span class="body-rail-what">{weightLine(entry, unit)}</span>
-              </div>
-            ))}
-          </div>
+          {entries.map((entry) => (
+            <div class="body-rail-row" key={entry.id}>
+              <span class="body-rail-when">{dayTimeOf(entry.ts, locale)}</span>
+              <span class="body-rail-what">{weightLine(entry, config.body)}</span>
+            </div>
+          ))}
           <p class="body-rail-progress">
             {`progress · ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
           </p>
@@ -72,21 +74,20 @@ export function Body(): VNode {
           <Previous
             entry={entries[0] ?? null}
             locale={locale}
-            render={(entry) => weightLine(entry, unit)}
+            render={(entry) => weightLine(entry, config.body)}
           />
 
           <div class="body-inputs">
             <div class="body-weight">
               <input
                 class="body-weight-value"
-                type="number"
-                step="any"
+                type="text"
                 inputMode="decimal"
                 aria-label="weight"
                 value={weight}
                 onInput={(e) => setWeight(e.currentTarget.value)}
               />
-              <span class="body-weight-unit">{unit}</span>
+              <span class="body-weight-unit">{config.body.weight_unit}</span>
             </div>
 
             <div class="body-when">

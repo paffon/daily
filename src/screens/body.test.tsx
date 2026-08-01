@@ -26,13 +26,25 @@ describe('the body screen', () => {
     expect(entries[0]?.rev).toBe(1)
   })
 
-  it('shows the weight before this one in Previous', () => {
+  it('shows the weight before this one in Previous, written as it was typed', () => {
     const first = render(<Body />)
     logWeight(first.container, '74.0')
     first.unmount()
 
     const { container } = render(<Body />)
-    expect(container.querySelector('.field-previous')?.textContent).toContain('74 kg')
+    expect(container.querySelector('.field-previous')?.textContent).toContain('74.0 kg')
+  })
+
+  it('survives a date segment being cleared mid-edit', () => {
+    const { container } = render(<Body />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.field-stamp-box')!)
+
+    const date = container.querySelector<HTMLInputElement>('.field-stamp-edit input[type=date]')!
+    expect(() => fireEvent.input(date, { target: { value: '' } })).not.toThrow()
+    expect(container.querySelector('.body-strip')?.textContent).not.toContain('invalid')
+
+    fireEvent.input(date, { target: { value: '2026-07-12' } })
+    expect(container.querySelector('.body-strip')?.textContent).toContain('12 july')
   })
 
   it('says nothing recorded yet rather than rendering an empty Previous', () => {
@@ -43,7 +55,7 @@ describe('the body screen', () => {
   })
 
   it('takes the unit from config rather than from source', () => {
-    writeJson('config/app.json', { ...appSeed, body: { weight_unit: 'st' } })
+    writeJson('config/app.json', { ...appSeed, body: { ...appSeed.body, weight_unit: 'st' } })
     const { container } = render(<Body />)
     logWeight(container, '11.4')
 
