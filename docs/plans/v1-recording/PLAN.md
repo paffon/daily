@@ -127,11 +127,13 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | done | 7911067 | 2026-08-01 |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | done | b736ee8 | 2026-08-01 |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
-| [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4 | pending | | |
-| [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4 | pending | | |
+| [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | pending | | |
+| [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5 | pending | | |
 | [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | pending | | |
 
-P5 through P8 are independent of each other and all hang off P4. They are
+P5 ships two shared controls — `src/components/segmented.tsx` and
+`src/components/library_picker.tsx` — that P6 and P7 reuse and are explicitly
+forbidden to rebuild, so both wait on it. P8 hangs off P4 alone. They are
 numbered in `DESIGN.md` §13's order, which is value order — follow it unless
 the user says otherwise.
 
