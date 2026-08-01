@@ -1,0 +1,127 @@
+{
+  "kinds": {
+    "loaded": [
+      { "name": "weight", "unit": "kg" },
+      { "name": "reps", "unit": "", "sep": "×" }
+    ],
+    "bodyweight": [
+      { "name": "reps", "unit": "" },
+      { "name": "weight", "unit": "kg", "optional": true }
+    ],
+    "hold": [
+      { "name": "duration", "unit": "s" },
+      { "name": "weight", "unit": "kg", "optional": true }
+    ],
+    "distance": [
+      { "name": "distance", "unit": "km" },
+      { "name": "duration", "unit": "min", "sep": "/" },
+      { "name": "incline", "unit": "%", "optional": true, "sep": "@" }
+    ],
+    "machine": [
+      { "name": "duration", "unit": "min" },
+      { "name": "level", "unit": "", "sep": "@" },
+      { "name": "distance", "unit": "km", "optional": true, "sep": "/" }
+    ]
+  },
+  "marks": [
+    { "value": "less", "short": "−", "sign": "-" },
+    { "value": "same", "short": "·", "sign": "" },
+    { "value": "more", "short": "+", "sign": "+" }
+  ],
+  "exercises": [
+    {
+      "id": "chest-press",
+      "name": "chest press",
+      "body_part": "chest",
+      "kind": "loaded",
+      "rep_scheme": "12-11-10-9",
+      "notes": "seat 4, handles at nipple height"
+    },
+    {
+      "id": "incline-press",
+      "name": "incline press",
+      "body_part": "chest",
+      "kind": "loaded",
+      "rep_scheme": "12-11-10-9"
+    },
+    { "id": "pec-deck", "name": "pec deck", "body_part": "chest", "kind": "loaded" },
+    {
+      "id": "dips-yellow-machine",
+      "name": "dips yellow machine",
+      "body_part": "chest",
+      "kind": "loaded",
+      "notes": "pin 3 is the counterweight, not the load"
+    },
+    { "id": "push-ups", "name": "push ups", "body_part": "chest", "kind": "bodyweight" },
+    {
+      "id": "lat-pulldown",
+      "name": "lat pulldown",
+      "body_part": "back",
+      "kind": "loaded",
+      "rep_scheme": "12-11-10-9"
+    },
+    { "id": "seated-row", "name": "seated row", "body_part": "back", "kind": "loaded" },
+    { "id": "pull-ups", "name": "pull ups", "body_part": "back", "kind": "bodyweight" },
+    { "id": "back-extension", "name": "back extension", "body_part": "back", "kind": "bodyweight" },
+    { "id": "shoulder-press", "name": "shoulder press", "body_part": "shoulders", "kind": "loaded" },
+    { "id": "lateral-raise", "name": "lateral raise", "body_part": "shoulders", "kind": "loaded" },
+    { "id": "face-pull", "name": "face pull", "body_part": "shoulders", "kind": "loaded" },
+    { "id": "biceps-curl", "name": "biceps curl", "body_part": "hands", "kind": "loaded" },
+    { "id": "hammer-curl", "name": "hammer curl", "body_part": "hands", "kind": "loaded" },
+    { "id": "triceps-rope", "name": "triceps rope", "body_part": "hands", "kind": "loaded" },
+    { "id": "farmer-carry", "name": "farmer carry", "body_part": "hands", "kind": "hold" },
+    {
+      "id": "leg-press",
+      "name": "leg press",
+      "body_part": "legs",
+      "kind": "loaded",
+      "rep_scheme": "12-11-10-9"
+    },
+    { "id": "leg-extension", "name": "leg extension", "body_part": "legs", "kind": "loaded" },
+    { "id": "leg-curl", "name": "leg curl", "body_part": "legs", "kind": "loaded" },
+    { "id": "calf-raise", "name": "calf raise", "body_part": "legs", "kind": "loaded" },
+    { "id": "squat", "name": "squat", "body_part": "legs", "kind": "loaded" },
+    { "id": "wall-sit", "name": "wall sit", "body_part": "legs", "kind": "hold" },
+    {
+      "id": "plank",
+      "name": "plank",
+      "body_part": "abdomen",
+      "kind": "hold",
+      "rep_scheme": "60-60-45-40"
+    },
+    { "id": "side-plank", "name": "side plank", "body_part": "abdomen", "kind": "hold" },
+    {
+      "id": "hanging-knee-raise",
+      "name": "hanging knee raise",
+      "body_part": "abdomen",
+      "kind": "bodyweight"
+    },
+    { "id": "ab-wheel", "name": "ab wheel", "body_part": "abdomen", "kind": "bodyweight" },
+    {
+      "id": "run-river-path",
+      "name": "run · river path",
+      "body_part": "heartrate",
+      "kind": "distance"
+    },
+    { "id": "treadmill", "name": "treadmill", "body_part": "heartrate", "kind": "machine" },
+    { "id": "elliptical", "name": "elliptical", "body_part": "heartrate", "kind": "machine" },
+    {
+      "id": "stationary-bike",
+      "name": "stationary bike",
+      "body_part": "heartrate",
+      "kind": "machine"
+    },
+    {
+      "id": "rowing-machine",
+      "name": "rowing machine",
+      "body_part": "heartrate",
+      "kind": "machine",
+      "fields": [
+        { "name": "distance", "unit": "m" },
+        { "name": "duration", "unit": "min", "sep": "/" },
+        { "name": "level", "unit": "", "optional": true, "sep": "@" }
+      ]
+    },
+    { "id": "jump-rope", "name": "jump rope", "body_part": "heartrate", "kind": "hold" }
+  ]
+}
