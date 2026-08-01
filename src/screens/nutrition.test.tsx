@@ -1,3 +1,8 @@
+import { fireEvent, render } from '@testing-library/preact'
+import { useState } from 'preact/hooks'
+import type { VNode } from 'preact'
+import { AmountStepper } from '../components/amount_stepper'
+import { LevelControl } from '../components/level_control'
 import { loadFoods, loadLevels, nutritionFor } from '../data/food'
 import type { Food } from '../data/food'
 import { ensureSeeded, writeJson } from '../data/store'
@@ -44,6 +49,101 @@ describe('a level is a multiplier', () => {
 
   it('leaves the numbers alone for a level the scale gives no multiplier', () => {
     expect(nutritionFor(plain, 1, 'invented').kcal).toBe(200)
+  })
+})
+
+describe('the amount stepper', () => {
+  function Stepper({ unit = 'slice', step = 1 }: { unit?: string; step?: number }): VNode {
+    const [amount, setAmount] = useState(1)
+    return (
+      <>
+        <AmountStepper value={amount} unit={unit} step={step} onChange={setAmount} label="amount" />
+        <output>{amount}</output>
+      </>
+    )
+  }
+
+  const box = (container: Element) =>
+    container.querySelector<HTMLInputElement>('[aria-label="amount"]')!
+
+  const press = (container: Element, label: string) =>
+    fireEvent.click(container.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!)
+
+  it('carries the food’s own unit beside the number', () => {
+    const { container } = render(<Stepper unit="cup" />)
+    expect(container.querySelector('.stepper-unit')?.textContent).toBe('cup')
+  })
+
+  it('takes a fractional amount typed straight into it, dot and all', () => {
+    const { container } = render(<Stepper />)
+
+    fireEvent.input(box(container), { target: { value: '3.' } })
+    expect(box(container).value).toBe('3.')
+
+    fireEvent.input(box(container), { target: { value: '3.5' } })
+    expect(container.querySelector('output')?.textContent).toBe('3.5')
+  })
+
+  it('steps by what it was given rather than by a number of its own', () => {
+    const { container } = render(<Stepper step={50} />)
+    press(container, 'amount up')
+    expect(container.querySelector('output')?.textContent).toBe('51')
+    expect(box(container).value).toBe('51')
+  })
+
+  it('stops at nothing rather than stepping into a negative amount', () => {
+    const { container } = render(<Stepper />)
+    press(container, 'amount down')
+    press(container, 'amount down')
+    expect(container.querySelector('output')?.textContent).toBe('0')
+  })
+
+  it('leaves the amount alone while the box is unreadable', () => {
+    const { container } = render(<Stepper />)
+    fireEvent.input(box(container), { target: { value: '' } })
+    expect(container.querySelector('output')?.textContent).toBe('1')
+  })
+})
+
+describe('the level control', () => {
+  const scale = ['lean', 'normal', 'loaded']
+  const examples = { lean: 'thin crust', normal: 'standard slice', loaded: 'thick crust' }
+
+  const drawn = (props: { examples?: Record<string, string> }) =>
+    render(
+      <LevelControl scale={scale} value="normal" onChange={() => {}} label="level" {...props} />,
+    ).container
+
+  it('shows all three examples at once, because comparing is the point', () => {
+    const container = drawn({ examples })
+    const prose = [...container.querySelectorAll('.level-example')].map((p) => p.textContent)
+    expect(prose).toEqual(['thin crust', 'standard slice', 'thick crust'])
+  })
+
+  it('renders no prose at all for a food that has none', () => {
+    expect(drawn({}).querySelector('.level-examples')).toBeNull()
+    expect(drawn({}).querySelectorAll('.level-example')).toHaveLength(0)
+  })
+
+  it('draws identical buttons whether or not there are examples', () => {
+    const withProse = drawn({ examples }).querySelector('.segmented')!.outerHTML
+    const without = drawn({}).querySelector('.segmented')!.outerHTML
+    expect(withProse).toBe(without)
+  })
+
+  it('wears ink-select, because a level is not the live one', () => {
+    const control = drawn({}).querySelector('.segmented')!
+    expect(control.className).toContain('segmented-ink-select')
+    expect(control.className).not.toContain('segmented-steel')
+  })
+
+  it('reports the level pressed', () => {
+    const picked: string[] = []
+    const { container } = render(
+      <LevelControl scale={scale} value="normal" onChange={(l) => picked.push(l)} label="level" />,
+    )
+    fireEvent.click(container.querySelectorAll('.segmented button')[2]!)
+    expect(picked).toEqual(['loaded'])
   })
 })
 

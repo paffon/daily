@@ -1,0 +1,75 @@
+/* Frame 4c's amount box. Narrow first: the box takes the width that is left
+   between the two presses, and the laptop pins it to the frame's 150px. */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.stepper-press {
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 70px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--paper-control);
+  color: var(--ink-quiet);
+  font: 400 22px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.stepper-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  height: 70px;
+  padding-top: 20px;
+  border: 1.5px solid var(--steel);
+  background: var(--paper-input);
+}
+
+/* the number and its unit are one thing centred in the box, so each half takes
+   the space beside the seam between them */
+.stepper-box input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font: 400 32px/1 var(--family-mono);
+  text-align: right;
+}
+
+.stepper-box input:focus {
+  outline: none;
+}
+
+/* the unit belongs to the food and is never chosen per entry, so it sits in
+   the box as a label rather than beside it as a field */
+.stepper-unit {
+  flex: 1;
+  font: 400 13px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+@media (min-width: 760px) {
+  .stepper-press {
+    width: 52px;
+    height: 64px;
+  }
+
+  .stepper-box {
+    flex: none;
+    width: 150px;
+    height: 64px;
+    padding-top: 16px;
+  }
+
+  .stepper-box input {
+    font-size: 30px;
+  }
+}
