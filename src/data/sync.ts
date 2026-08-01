@@ -24,8 +24,7 @@ function save(paths: Set<string>): void {
  *  browser being closed, or every boot downloads everything again. */
 const PULLED_KEY = 'daily:pulled'
 
-/** The one prefix the mirror does not hold — see `pull`. Structure, not a
- *  setting: it is the folder name the storage layout fixes. */
+/** The one prefix the mirror does not hold — see `pull`. */
 const PHOTOS = 'photos/'
 
 function pulled(): Record<string, string> {

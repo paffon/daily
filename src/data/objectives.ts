@@ -66,9 +66,9 @@ export function weekBounds(date: Date): { start: Date; end: Date } {
  *  them up in `library/exercises.json` at read time: nothing in a library is
  *  protected from being renamed or re-tagged later, and an entry has to keep
  *  saying what was true when it happened. */
-const bodyParts = (payload: Entry['payload']): string[] => {
+const bodyParts = (payload: Entry['payload']): unknown[] => {
   const parts = payload['body_parts']
-  return Array.isArray(parts) ? parts.filter((part) => typeof part === 'string') : []
+  return Array.isArray(parts) ? parts : []
 }
 
 const matches = (target: CountTarget, entry: Entry): boolean =>
@@ -83,18 +83,23 @@ export function factFor(target: Target, entries: Entry[]): string {
   if (target.kind === 'direction') return 'direction'
 
   const matched = entries.filter((entry) => matches(target, entry))
-  if (matched.length === 0) return 'nothing yet'
-
   const { start, end } = weekBounds(new Date())
   const inside = matched.filter((entry) => {
     const at = Date.parse(entry.ts)
     return at >= start.getTime() && at < end.getTime()
   })
-  if (inside.length > 0) return `${inside.length} this week`
+  /* A target nothing has ever matched reads `0 this week` rather than anything
+     softer: it is the plainest true thing, and it is what a target says on the
+     day it is written. */
+  if (inside.length > 0 || matched.length === 0) return `${inside.length} this week`
 
   /* Nothing this week, so how long it has been is the useful thing to say.
-     Counted midnight to midnight, so it does not change under the reader. */
-  const newest = Math.max(...matched.map((entry) => midnight(new Date(entry.ts))))
-  const days = Math.round((midnight(new Date()) - newest) / 86_400_000)
+     Counted midnight to midnight, so it does not change under the reader, and
+     reduced rather than spread — `matched` is every entry the module ever
+     recorded, which is more arguments than a call can take. */
+  const newest = matched.reduce((latest, entry) => Math.max(latest, midnight(new Date(entry.ts))), 0)
+  /* A timestamp is editable, so the newest match can sit in the future. Then
+     there is no elapsed time to state, and `0 days` beats a negative. */
+  const days = Math.max(0, Math.round((midnight(new Date()) - newest) / 86_400_000))
   return `${days} ${days === 1 ? 'day' : 'days'}`
 }

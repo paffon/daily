@@ -6,6 +6,7 @@
  *  offline. */
 
 import type { Entry } from './entry'
+import { monthKey } from './entry'
 import { getBlob, putFile } from './drive'
 import { readJson } from './store'
 import { monthOf } from '../components/fields'
@@ -33,11 +34,17 @@ export function fit(width: number, height: number, max: number): { width: number
 export async function resize(file: Blob): Promise<Blob> {
   const { photo_max_edge, photo_quality } = settings()
   const source = await createImageBitmap(file)
-  const { width, height } = fit(source.width, source.height, photo_max_edge)
   const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  canvas.getContext('2d')!.drawImage(source, 0, 0, width, height)
+  try {
+    const { width, height } = fit(source.width, source.height, photo_max_edge)
+    canvas.width = width
+    canvas.height = height
+    canvas.getContext('2d')!.drawImage(source, 0, 0, width, height)
+  } finally {
+    /* the decoded bitmap is the large thing here — several times the file it
+       came from — and it is held until it is closed */
+    source.close()
+  }
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => (blob === null ? reject(new Error('the photo could not be read')) : resolve(blob)),
@@ -68,10 +75,16 @@ export const photoOf = (payload: Entry['payload']): string | null =>
   typeof payload['photo'] === 'string' ? payload['photo'] : null
 
 /** `april, may, july` — the months named beside the rail's count, oldest first
- *  and each month said once however many photos it holds. */
+ *  and each month said once however many photos it holds. Kept apart by month
+ *  key rather than by name, or April this year and April the next would
+ *  collapse into one and the rail would name fewer months than it counts. */
 export function photoMonths(entries: Entry[], locale: string): string[] {
   const shot = entries.filter((entry) => photoOf(entry.payload) !== null)
-  return [...new Set(shot.reverse().map((entry) => monthOf(entry.ts, locale)))]
+  const named = shot.reverse().map((entry): [string, string] => [
+    monthKey(entry.ts),
+    monthOf(entry.ts, locale),
+  ])
+  return [...new Map(named).values()]
 }
 
 /** An object URL for a stored photo, or `null` when Drive cannot be reached.

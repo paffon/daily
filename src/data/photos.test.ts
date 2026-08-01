@@ -59,6 +59,11 @@ describe('photoMonths', () => {
     expect(photoMonths(entries, appSeed.locale)).toEqual(['april', 'may', 'july'])
   })
 
+  it('keeps the same month in two years apart, rather than naming it once', () => {
+    const across = [photo('2027-04-11T08:00:00+03:00'), photo('2026-04-06T08:00:00+03:00')]
+    expect(photoMonths(across, appSeed.locale)).toEqual(['april', 'april'])
+  })
+
   it('ignores weights, and leaves the caller’s array in the order it came', () => {
     const mixed = [entries[0]!, entry('2026-06-01T08:00:00+03:00', { weight: 73.1 }), entries[3]!]
     expect(photoMonths(mixed, appSeed.locale)).toEqual(['april', 'july'])

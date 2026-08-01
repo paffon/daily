@@ -129,13 +129,16 @@
   color: var(--ink);
 }
 
+/* Quiet, like every other control here. Danger is `delete this entry` on the
+   edit screen and nothing else in the app — and on this screen in particular
+   there is no red, because nothing on it is behind. */
 .obj-remove {
   align-items: center;
   padding: 0 16px;
-  border: 1px solid var(--danger-border);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-control);
   background: transparent;
-  color: var(--danger);
+  color: var(--mono);
   font: 400 13px/1 var(--family-mono);
   cursor: pointer;
 }

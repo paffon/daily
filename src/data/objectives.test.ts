@@ -106,8 +106,14 @@ describe('factFor', () => {
     expect(factFor(THREE_A_WEEK, [workout(SUNDAY_MORNING)])).toBe('1 this week')
   })
 
-  it('says nothing yet rather than zero, where nothing has happened', () => {
-    expect(factFor(THREE_A_WEEK, [])).toBe('nothing yet')
+  it('reads zero on the day it is written, rather than anything softer', () => {
+    expect(factFor(THREE_A_WEEK, [])).toBe('0 this week')
+    expect(factFor(FOR_THE_BACK, [workout(WEDNESDAY)])).toBe('0 this week')
+  })
+
+  it('states no elapsed time for a match dated into the future', () => {
+    /* the timestamp is editable, so this is reachable by a mistyped year */
+    expect(factFor(THREE_A_WEEK, [workout(new Date(2027, 0, 6, 7, 0))])).toBe('0 days')
   })
 
   it('gives a direction target no number, because it has none', () => {

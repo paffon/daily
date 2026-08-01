@@ -86,7 +86,7 @@ describe('the body screen', () => {
   it('draws no graph — the empty state is prose, and counts the data', () => {
     const { container } = render(<Body />)
     expect(container.querySelector('svg, canvas')).toBeNull()
-    expect(container.querySelector('.body-summary')?.textContent).toBe('Nothing recorded yet.')
+    expect(container.querySelector('.body-summary')?.textContent).toBe('No weights recorded yet.')
 
     logWeight(container, '72.4')
     expect(container.querySelector('.body-summary')?.textContent).toMatch(

@@ -44,6 +44,9 @@ function Photo({ path }: { path: string }): VNode {
   useEffect(() => {
     let made = ''
     let live = true
+    /* dropped before the next one is fetched — the URL below is revoked on the
+       way out, and holding it in the img would leave a dead src on screen */
+    setUrl(null)
     void photoUrl(path).then((ready) => {
       if (ready === null) return
       if (live) {
@@ -127,10 +130,13 @@ export function Body(): VNode {
     }
   }
 
+  /* Both of these are about weights, because a line is what they are about
+     not being enough to draw. Photos are counted in the rail and nowhere
+     else. */
   const oldest = weights[weights.length - 1]
   const summary =
     oldest === undefined
-      ? 'Nothing recorded yet.'
+      ? 'No weights recorded yet.'
       : `${weights.length} ${weights.length === 1 ? 'weight' : 'weights'} since ` +
         `${monthOf(oldest.ts, locale)}. Not enough to draw a line yet.`
 
@@ -161,7 +167,7 @@ export function Body(): VNode {
             </div>
           )}
           <p class="body-rail-progress">
-            {`progress · ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
+            {`progress · ${weights.length} ${weights.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
           </p>
         </section>
 

@@ -47,7 +47,7 @@ describe('the objectives screen', () => {
 
     expect(readObjectives().targets).toHaveLength(1)
     expect(container.querySelector('.obj-label')?.textContent).toBe('3 workouts a week')
-    expect(container.querySelector('.obj-fact')?.textContent).toBe('nothing yet')
+    expect(container.querySelector('.obj-fact')?.textContent).toBe('0 this week')
   })
 
   it('counts what has been logged, and says so as a fact', () => {
@@ -123,4 +123,12 @@ describe('the objectives screen', () => {
     /* the fact says what happened, and never what is left of the target */
     expect(container.querySelector('.obj-fact')?.textContent).toBe('1 this week')
   })
+
 })
+
+/* There is no runnable check that the *stylesheet* carries no `--danger`,
+   which is where a red state would actually be reached for — the scan above
+   sees only markup. `?raw` hands back an empty string under vitest's default
+   `css: false`, so a check written that way passes whatever the file says.
+   Turning it on lives in `vite.config.ts`, which no module phase owns; the
+   note in `P8_photos_and_objectives.md` says so. */

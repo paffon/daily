@@ -148,9 +148,14 @@ export function Objectives(): VNode {
   const put = (at: number, target: Target) =>
     save({ ...stored, targets: stored.targets.map((held, i) => (i === at ? target : held)) })
 
+  /* `new_target` is editable like everything else, so it can be emptied. Then
+     there is no shape to start from and the press does nothing, rather than
+     writing an undefined target that the next render reads. */
   const add = () => {
+    const blank = blanksOf()[0]
+    if (blank === undefined) return
     setOpen(stored.targets.length)
-    save({ ...stored, targets: [...stored.targets, blanksOf()[0]!] })
+    save({ ...stored, targets: [...stored.targets, blank] })
   }
 
   const remove = (at: number) => {
