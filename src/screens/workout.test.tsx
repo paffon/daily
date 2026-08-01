@@ -4,7 +4,8 @@ import type { VNode } from 'preact'
 import { fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
 import type { Exercise, Performed, SetRow } from '../data/exercise'
 import { SetTable } from '../components/set_table'
-import { ensureSeeded, readEntries } from '../data/store'
+import { ensureSeeded, getEntry, readEntries } from '../data/store'
+import { EditEntry } from './edit_entry'
 import { Workout } from './workout'
 
 const named = (name: string): Exercise => {
@@ -249,5 +250,39 @@ describe('the workout screen', () => {
     expect(container.querySelector('.workout-rail-progress')?.textContent).toBe(
       'progress · 0 workouts, not enough to draw',
     )
+  })
+})
+
+describe('editing a past workout', () => {
+  const logged = () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+    return readEntries('workout')[0]!.id
+  }
+
+  it('opens it with the fields it was logged with, marks included', () => {
+    const { container } = render(<EditEntry id={logged()} />)
+
+    expect(container.querySelector('.workout-edit-name')?.textContent).toBe('chest press')
+    expect(container.querySelectorAll('.set-row')).toHaveLength(3)
+    expect(box(container, 'set 3 weight')?.value).toBe('47.5')
+    expect(box(container, 'set 1 distance')).toBeNull()
+    expect(markOf(container, 2)).toBe('more')
+    expect(markOf(container, 0)).toBe('same')
+    expect(box(container, 'comment')?.value).toBe('30°')
+  })
+
+  it('writes a corrected set back through the store', () => {
+    const id = logged()
+    const { container } = render(<EditEntry id={id} />)
+
+    type(container, 'set 1 reps', '8')
+    press(container, '.edit-save')
+
+    const sets = (getEntry(id)?.payload['exercises'] as Performed[])[0]?.sets
+    expect(sets?.[0]).toMatchObject({ weight: 47.5, reps: 8 })
+    expect(sets?.[2]).toMatchObject({ mark: 'more' })
+    expect(getEntry(id)?.rev).toBe(2)
   })
 })
