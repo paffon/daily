@@ -23,9 +23,14 @@
   border-left: none;
 }
 
-/* the chosen one carries its own left edge back, so its outline closes */
+/* the chosen one carries its own left edge back, so its outline closes — and
+   the one before it gives its right edge up, so the seam stays a single line */
 .segmented button[aria-pressed='true'] {
   border-left: 1px solid;
+}
+
+.segmented button:has(+ button[aria-pressed='true']) {
+  border-right: none;
 }
 
 .segmented-steel button[aria-pressed='true'] {
@@ -45,9 +50,11 @@
 }
 
 @media (min-width: 760px) {
+  /* frame 4b draws these 66 × 42, but 42 is under the app's own hit floor and
+     `.hit` is the weaker selector — so the width is the frame's and the height
+     stays the floor's */
   .segmented button {
     min-width: 66px;
-    min-height: 42px;
     font-size: 12.5px;
   }
 

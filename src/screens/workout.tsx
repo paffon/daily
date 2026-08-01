@@ -134,10 +134,12 @@ export function Workout(): VNode {
     start(exercise.id)
   }
 
+  /** `ended` is optional and is left out rather than guessed: pressing this
+   *  ends the *recording*, which is the workout's end only when the workout is
+   *  now — and a log written for last Tuesday would otherwise store a session
+   *  that ran for four days. See this phase's doc. */
   const end = () => {
-    putEntry(
-      newEntry('workout', { started: ts, ended: toIso(new Date()), exercises: performed }, ts),
-    )
+    putEntry(newEntry('workout', { started: ts, exercises: performed }, ts))
     setPast(readEntries('workout'))
     setPerformed([])
     setAt(0)
@@ -239,7 +241,11 @@ export function Workout(): VNode {
                 entry={previousOf(current.exercise_id)}
                 locale={locale}
                 render={(entry) => {
-                  const last = performedIn(entry).find((p) => p.exercise_id === current.exercise_id)
+                  /* the last block of it in that workout, not the first — an
+                     exercise done again as a burnout is the newer answer */
+                  const last = [...performedIn(entry)]
+                    .reverse()
+                    .find((p) => p.exercise_id === current.exercise_id)
                   return last === undefined ? null : <Sets performed={last} exercise={exercise} />
                 }}
               />

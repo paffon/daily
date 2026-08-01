@@ -51,11 +51,13 @@ export function LibraryPicker({
         ))}
       </div>
 
+      {/* what is typed names the new item, so with nothing typed there is
+          nothing to make — said in the control rather than by ignoring a press */}
       <button
         type="button"
         class="picker-new hit"
+        disabled={needle === ''}
         onClick={() => {
-          if (needle === '') return
           onNew(typed.trim())
           setTyped('')
         }}

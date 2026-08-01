@@ -174,6 +174,20 @@ describe('the set table', () => {
     expect(markOf(container, 0)).toBe('more')
   })
 
+  it('does not read the minus of a negative number as a mark', () => {
+    // the weight is this kind's first box, which is the one the fast input
+    // listens to — a counterweight is typed one character at a time, and `-`
+    // on its own is on the way to -20 rather than an instruction about next time
+    const { container } = render(<Table exercise={named('dips yellow machine')} />)
+
+    type(container, 'set 1 weight', '-')
+    expect(markOf(container, 0)).toBe('same')
+
+    type(container, 'set 1 weight', '-20')
+    expect(markOf(container, 0)).toBe('same')
+    expect(box(container, 'set 1 weight')?.value).toBe('-20')
+  })
+
   it('opens with one row at same, so the first number has somewhere to go', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
     expect(container.querySelectorAll('.set-row')).toHaveLength(1)
@@ -284,5 +298,31 @@ describe('editing a past workout', () => {
     expect(sets?.[0]).toMatchObject({ weight: 47.5, reps: 8 })
     expect(sets?.[2]).toMatchObject({ mark: 'more' })
     expect(getEntry(id)?.rev).toBe(2)
+  })
+})
+
+describe('what a saved workout holds', () => {
+  it('leaves the end time out rather than guessing it from when save was pressed', () => {
+    const { container } = render(<Workout />)
+    logChestPress(container)
+
+    const payload = readEntries('workout')[0]!.payload
+    expect(payload['started']).toBe(readEntries('workout')[0]!.ts)
+    expect(payload).not.toHaveProperty('ended')
+  })
+
+  it('hands back the last block of an exercise done twice in one workout', () => {
+    const first = render(<Workout />)
+    pick(first.container, 'chest press')
+    type(first.container, 'set 1 weight', '47.5')
+    press(first.container, '.workout-rail-add')
+    pick(first.container, 'chest press')
+    type(first.container, 'set 1 weight', '30')
+    press(first.container, '.workout-end')
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    pick(container, 'chest press')
+    expect(container.querySelector('.field-previous')?.textContent).toContain('30 kg')
   })
 })

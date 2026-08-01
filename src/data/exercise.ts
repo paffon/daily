@@ -45,12 +45,20 @@ export function fieldsFor(exercise: Exercise): Field[] {
  *  number carries no mark of its own. The run may be any length — the sign is
  *  typed as many times as the hand felt like, and the last one is the intent. */
 export function parseMark(input: string): { value: number | null; mark: string } {
-  const [, typed = '', run = ''] = /^(.*?)([+-]*)$/.exec(input.trim()) ?? []
   const marks = loadExercises().marks
+  const signs = marks.map((mark) => mark.sign)
+
+  /* which characters end a number is the marks' own business — the seed
+     declares them, so the notation is read from the same place it is named */
+  const trimmed = input.trim()
+  let at = trimmed.length
+  while (at > 0 && signs.includes(trimmed[at - 1]!)) at--
+  const typed = trimmed.slice(0, at)
   const number = Number(typed)
+
   return {
-    value: typed.trim() === '' || Number.isNaN(number) ? null : number,
-    mark: marks.find((mark) => mark.sign === run.slice(-1))?.value ?? '',
+    value: typed === '' || Number.isNaN(number) ? null : number,
+    mark: marks.find((mark) => mark.sign === trimmed.slice(at).slice(-1))?.value ?? '',
   }
 }
 

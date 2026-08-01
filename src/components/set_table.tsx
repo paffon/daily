@@ -22,11 +22,13 @@ export function SetTable({
 }): VNode {
   const fields = fieldsFor(exercise)
   const marks = loadExercises().marks
+  /** What a number with no sign after it means, and what a row starts at. */
+  const same = parseMark('').mark
 
   /** A row is flat, so a spread copies it whole. */
   const blank = (): SetRow => ({
     ...Object.fromEntries(fields.map((field) => [field.name, null])),
-    mark: parseMark('').mark,
+    mark: same,
   })
 
   /** An exercise just picked has no rows yet, and the first number needs
@@ -56,19 +58,20 @@ export function SetTable({
             <label class="set-cell" key={field.name}>
               {/* uncontrolled: the row holds the parsed number, and writing it
                   back mid-keystroke would eat the dot as `47.` parses to 47 */}
+              {/* text, not a decimal keypad: the phone must still offer the
+                  signs the fast input is typed with */}
               <input
                 class={field.optional ? 'set-input set-input-optional' : 'set-input'}
                 type="text"
-                inputMode="text"
                 aria-label={`set ${at + 1} ${field.name}`}
                 defaultValue={row[field.name] === null ? '' : String(row[field.name])}
                 onInput={(e) => {
-                  const typed = e.currentTarget.value
-                  const { value, mark } = parseMark(typed)
-                  /* the first box is the fast input: a trailing run of + or -
-                     sets the mark too. Without a run the mark is left alone,
-                     so correcting a number does not undo a chosen mark */
-                  const marked = column === 0 && /[+-]$/.test(typed.trim())
+                  const { value, mark } = parseMark(e.currentTarget.value)
+                  /* the first box is the fast input, but only a number with a
+                     sign after it moves the mark: a bare number leaves a chosen
+                     mark alone, and the lone `-` on the way to typing -20 is
+                     not yet a mark of anything */
+                  const marked = column === 0 && value !== null && mark !== same
                   write(at, { ...row, [field.name]: value, ...(marked && { mark }) })
                 }}
               />
