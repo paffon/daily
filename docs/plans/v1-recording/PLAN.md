@@ -129,7 +129,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4 | pending | | |
 | [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4 | pending | | |
-| [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | pending | | |
+| [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | in progress | 19c476f | 2026-08-01 |
 
 P5 through P8 are independent of each other and all hang off P4. They are
 numbered in `DESIGN.md` §13's order, which is value order — follow it unless

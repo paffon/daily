@@ -186,10 +186,21 @@ export async function getFile(path: string): Promise<string | null> {
   return (await api(`/drive/v3/files/${id}?alt=media`)).text()
 }
 
+/** The same file as `getFile`, as bytes. Photos are the only caller: they are
+ *  never mirrored, so there is nothing local to read them from. */
+export async function getBlob(path: string): Promise<Blob | null> {
+  const id = await fileId(path)
+  if (id === null) return null
+  return (await api(`/drive/v3/files/${id}?alt=media`)).blob()
+}
+
 /** Whole-file write — one user, tiny files, and no append API to reach for.
  *  Hands back the file's new `modifiedTime`, which is how the pull that
- *  follows tells this browser's own upload from a change made elsewhere. */
-export async function putFile(path: string, text: string): Promise<string> {
+ *  follows tells this browser's own upload from a change made elsewhere.
+ *
+ *  A `Blob` body is a photo. `fetch` takes the content type off the blob, so
+ *  the same `PATCH` uploads a JPEG without any of it being written twice. */
+export async function putFile(path: string, content: string | Blob): Promise<string> {
   let id = await fileId(path)
   if (id === null) {
     const [prefix, name] = path.split('/')
@@ -199,7 +210,7 @@ export async function putFile(path: string, text: string): Promise<string> {
   const written = await (
     await api(`/upload/drive/v3/files/${id}?uploadType=media&fields=modifiedTime`, {
       method: 'PATCH',
-      body: text,
+      body: content,
     })
   ).json()
   return written.modifiedTime as string

@@ -12,7 +12,9 @@
   },
   "body": {
     "weight_unit": "kg",
-    "weight_decimals": 1
+    "weight_decimals": 1,
+    "photo_max_edge": 1600,
+    "photo_quality": 0.8
   },
   "home": {
     "recent_count": 6,
