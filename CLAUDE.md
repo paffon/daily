@@ -15,6 +15,12 @@ opens. If a decision trades logging speed for anything else, logging speed wins.
 | `docs/COACH.md` | the utterance layer — what the coach says, when, and how |
 | `docs/RULES.md` | the short list of rules that are easy to break by accident |
 | `docs/CONTEXT.md` | glossary — the project's canonical vocabulary |
+| `docs/adr/` | why the build is shaped the way it is — decisions, with their trade-offs |
+| `docs/OPEN.md` | what the v1 build left unresolved — read before picking up new work |
+
+The recording half shipped on 2026-08-02. Its plan is archived under
+`docs/plans/archive/` and is explicitly not current truth — the decisions worth
+keeping are in `docs/adr/` and what is still open is in `docs/OPEN.md`.
 
 The design was reversed on 2026-08-01. `DESIGN.md` §3 and the *Reversals* table
 in `RULES.md` list what changed; `CONTEXT.md` ends with the vocabulary that went

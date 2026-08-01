@@ -1,5 +1,10 @@
 # Plan: v1-recording
 
+**COMPLETED 2026-08-02 — historical record, not current truth.** All eight
+phases shipped. The durable decisions were graduated to `docs/adr/` (storage
+layout, entry shape, the seed-and-config mechanism) and the unresolved open
+questions to `docs/OPEN.md`. Read those, not this. Nothing below is maintained.
+
 **Live document.** Unlike the old design, this file is written to during
 execution. The executor of phase N may edit **only two files**: its own
 `P{N}_{...}.md` doc and this `PLAN.md`. It updates its row in the phase
