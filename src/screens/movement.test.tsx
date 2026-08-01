@@ -288,6 +288,37 @@ describe('the movement screen', () => {
     expect(container.querySelector('.movement-hint')?.textContent).toBe('')
   })
 
+  it('shows an entry logged for another day rather than swallowing it', () => {
+    const { container } = render(<Movement />)
+
+    // logging yesterday's walk today is the ordinary case here, and the strip
+    // makes it one press. If the rail only ever shows the wall-clock day the
+    // entry is saved and shows nowhere, and the obvious next press logs it a
+    // second time
+    const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
+    if (collapsed !== null) fireEvent.click(collapsed)
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.field-stamp-edit input[type="date"]')!, {
+      target: { value: yesterday },
+    })
+
+    logToWork(container)
+
+    expect(readEntries('movement')).toHaveLength(1)
+    expect(railLines(container)).toEqual(['to work · 18 min · steady'])
+    expect(
+      [...container.querySelectorAll('.movement-rail-label')].map((h) => h.textContent),
+    ).toEqual(['today', 'earlier'])
+  })
+
+  it('keeps the earlier group away until there is something in it', () => {
+    const { container } = render(<Movement />)
+    logToWork(container)
+    expect(
+      [...container.querySelectorAll('.movement-rail-label')].map((h) => h.textContent),
+    ).toEqual(['today'])
+  })
+
   it('draws no graph, and says plainly what there is instead', () => {
     const { container } = render(<Movement />)
     expect(container.querySelector('svg, canvas')).toBeNull()

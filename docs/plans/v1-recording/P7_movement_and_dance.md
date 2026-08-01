@@ -395,19 +395,26 @@ For the planner. Nothing here blocked the phase.
    payload gains `standing_hours` and the form a third field, or the bar is
    two parts and the doc says so. **Everything else about the bar is right** —
    it writes nothing, which is the part that matters.
-2. **A backdated segment is saved and then vanishes from the screen that saved
-   it.** The capsule says logging yesterday's walk today is normal, and the
-   editable timestamp makes it one press. But both rail lists filter on
-   `isToday` against the wall clock, so an entry logged for yesterday is
-   written correctly and shows nowhere — the only trace is
-   `progress · 1 entry`. The likely next action is to log it again, silently
-   duplicating it. `body.tsx` and `nutrition.tsx` filter the same way, so the
-   fix is one decision across three screens: either the rail follows the day
-   the *timestamp* names rather than the wall clock, or the honest empty says
-   something about entries filed on other days. Not taken here because it
-   crosses two screens this phase does not own. (Smaller and same family: the
-   wall-clock day is captured once per render, so a screen left open across
-   midnight goes on showing yesterday.)
+2. **Fixed for movement; nutrition is the one screen left.** A backdated entry
+   was saved and then vanished from the screen that saved it — the capsule
+   calls logging yesterday's walk today the ordinary case and the editable
+   timestamp makes it one press, but the rail filtered on the wall-clock day,
+   so the entry was written correctly and shown nowhere. The only trace was
+   `progress · 1 entry`, which reads as a failed save, and the obvious next
+   press logs it twice. **The first report of this named the wrong screens.**
+   Checked one at a time afterwards: `workout.tsx` had already answered it in
+   P5 with `today` + `history` groups, `body.tsx` never filtered at all (its
+   rail is `recorded`), and dance shows its last four by timestamp. Only
+   movement and nutrition were affected. `movement.tsx` now carries the same
+   two groups — `today` and `earlier`, the second rendered only when it has
+   something in it, rows keyed to the clock for today and the date for the
+   rest — with a case in `movement.test.tsx` watched to fail without it.
+   `nutrition.tsx` is in no P7 list, so it is a comment in P6's block rather
+   than a fix. Left standing and small: the wall-clock day is captured once per
+   render, so a screen open across midnight goes on showing yesterday.
+   `railRow`'s dispatch on `payload.type` is also the reason the fresh review's
+   `lineOf` cut was right when it was made and would be wrong now — the history
+   group is a call site that has not filtered by type.
 3. **An emptied stepper box shows blank and logs the old number.**
    `AmountStepper` suppresses `onChange` for an unreadable box, which is right
    — half a typed number is not a number. But clearing the `sitting` box leaves
@@ -467,7 +474,12 @@ Commands run:
   Exit npm run build → exit 0, dist/index.html written.
   Watched to fail before their fix: the posture bar's sitting clamp, `same as
     yesterday` prefilling the box, and the dance box surviving a keystroke.
-Test status: npm test → 14 files, 196 tests, all passed.
+  After the record was written, open question 2 was fixed for movement — the
+    rail gained an `earlier` group, watched to fail first — taking the suite to
+    198 and re-running the gate: npm test exit 0, typecheck exit 0, build exit
+    0, and the empty case confirmed in the browser (no `earlier` heading until
+    it has something in it).
+Test status: npm test → 14 files, 198 tests, all passed.
 Assumptions: 5, above.
 Open questions: 6, above. The one to read is question 1 — this doc ordered a
   three-part bar and specified a two-number payload, and the third part is 0px

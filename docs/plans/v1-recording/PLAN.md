@@ -391,16 +391,6 @@ worktree again.
     covered by an import-order accident rather than by any state the app can
     reach. Deleting it is yours to decide, not P7's; the read-only JSON dump
     and the line saying an editor is not built are both dead.
-  - *From P7, for the planner rather than for an executor — P4 is `done`.*
-    **A backdated entry is saved and then vanishes from the screen that saved
-    it.** P7's capsule calls logging yesterday's walk today the ordinary case,
-    and the editable timestamp makes it one press — but every module rail
-    filters on the wall-clock day, so the entry is written correctly and shows
-    nowhere. The likely next action is to log it again, silently duplicating
-    it. This is not P7's to fix: `body.tsx` and `nutrition.tsx` filter the same
-    way, so it is one decision across three screens — the rail follows the day
-    the *timestamp* names, or the honest empty says something about entries
-    filed on other days. P7's open question 2.
   - *From P6, for the planner.* A nutrition entry's row on home renders an
     empty detail. `detail(entry, config)` in `src/screens/home.tsx` still
     switches on the module and answers only for `body`, so a logged food shows
@@ -555,6 +545,19 @@ worktree again.
     putting it there creates an import cycle. P4's comment and P5's deviation 3
     both cover this.
   - *From P7, for the planner rather than for an executor — P6 is `done`.*
+    **A nutrition entry logged for another day is saved and then shows nowhere
+    on the screen that saved it.** `nutrition.tsx` filters its rail on the
+    wall-clock day, so an apple logged this morning but stamped yesterday is
+    written correctly, syncs, and appears on home's `recent` — but the rail
+    that just took it stays empty, which reads as a failed save, and the
+    obvious next press logs it twice. **Nutrition is the only screen left with
+    this.** `workout.tsx` answered it first with `today` + `history` groups,
+    P7 gave `movement.tsx` the same two (`today` + `earlier`, the second
+    rendered only when it has something in it), `body.tsx` never filtered, and
+    dance shows its last four by timestamp. The fix is one conditional group,
+    and `movement.tsx`'s `railRow` is the shape. Not done here because
+    `nutrition.tsx` is in no P7 list. P7's open question 2.
+  - *From P7, for the planner rather than for an executor — P6 is `done`.*
     **An emptied `AmountStepper` box shows blank and logs the number it used to
     hold.** Suppressing `onChange` for an unreadable box is right — half a
     typed number is not a number — but the field then reads empty while the
@@ -604,7 +607,13 @@ worktree again.
   to read is question 1: **this doc ordered a three-part bar and specified a
   two-number payload, so the third part is 0px wide for every possible input**
   — measured in the browser, not reasoned about.
-- **The suite is now 196 tests over 14 files**, which supersedes the 120-over-11
+- **The rail shows `today` and `earlier`, not today alone.** A backdated entry
+  used to be saved and then show nowhere on the screen that saved it, which
+  reads as a failed save and invites logging it twice. `workout.tsx` had
+  answered this in P5 and movement had not followed; it does now. `body.tsx`
+  never filtered and dance lists by timestamp, so **nutrition is the only
+  screen left with it** — see the comment in P6's block.
+- **The suite is now 198 tests over 14 files**, which supersedes the 120-over-11
   figure in **Test commands** above — P6 added one file and P7 two, and the
   worktree collection that made the older numbers untrustworthy is still fixed.
   A count far above 196 still means something is collecting a worktree.

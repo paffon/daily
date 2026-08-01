@@ -6,7 +6,7 @@ import { putEntry, readEntries, readJson, writeJson } from '../data/store'
 import type { Segment } from '../data/segment'
 import { hintOf, loadSegments } from '../data/segment'
 import { loadLevels } from '../data/food'
-import { Previous, Timestamp, clockOf } from '../components/fields'
+import { Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
@@ -199,6 +199,30 @@ export function Movement(): VNode {
 
   const segment = picked === null ? null : asSegment(picked.segment_id, library)
 
+  /** One row, either type. A block says so in its own when-line, so the two
+   *  read apart in a list that is not grouped — which is what the history
+   *  needs, since the rule only separates them for today. Today's rows carry
+   *  the clock and older ones the date, because "which day" is the whole
+   *  question about an entry that is not today's. */
+  const railRow = (entry: Entry) => (
+    <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
+      <span class="movement-rail-when">
+        {`${isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}${
+          isPosture(entry) ? ' · posture' : ''
+        }`}
+      </span>
+      <span class="movement-rail-what">
+        {isPosture(entry)
+          ? postureLine(entry.payload as Posture)
+          : `${asSegment((entry.payload as Walk).segment_id, library).name} · ${segmentLine(
+              entry.payload as Walk,
+            )}`}
+      </span>
+    </a>
+  )
+
+  const earlier = past.filter((entry) => !isToday(entry))
+
   return (
     <main class="movement">
       <header class="movement-strip">
@@ -214,29 +238,24 @@ export function Movement(): VNode {
           {/* the events first and the blocks ruled off below them: one list,
               because they are one day's movement, and a rule because they are
               not the same kind of thing */}
-          {past
-            .filter((entry) => isToday(entry) && !isPosture(entry))
-            .map((entry) => (
-              <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-                <span class="movement-rail-when">{clockOf(entry.ts, locale)}</span>
-                <span class="movement-rail-what">
-                  {`${asSegment((entry.payload as Walk).segment_id, library).name} · ${segmentLine(entry.payload as Walk)}`}
-                </span>
-              </a>
-            ))}
+          {past.filter((entry) => isToday(entry) && !isPosture(entry)).map(railRow)}
 
           <div class="movement-rail-blocks">
-            {past
-              .filter((entry) => isToday(entry) && isPosture(entry))
-              .map((entry) => (
-                <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-                  <span class="movement-rail-when">{`${clockOf(entry.ts, locale)} · posture`}</span>
-                  <span class="movement-rail-what">
-                    {postureLine(entry.payload as Posture)}
-                  </span>
-                </a>
-              ))}
+            {past.filter((entry) => isToday(entry) && isPosture(entry)).map(railRow)}
           </div>
+
+          {/* the editable timestamp makes logging yesterday's walk today one
+              press, and this module's own capsule calls that the ordinary
+              case — so an entry filed on another day has to land somewhere it
+              can be seen, or the screen that just saved it reads as if it had
+              not, and the next press logs it twice. Workout's rail answered
+              this first; this is the same two groups. */}
+          {earlier.length > 0 && (
+            <>
+              <h2 class="movement-rail-label">earlier</h2>
+              {earlier.map(railRow)}
+            </>
+          )}
 
           <p class="movement-rail-progress">
             {`progress · ${past.length} ${past.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
