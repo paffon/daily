@@ -7,6 +7,7 @@ import { ensureSeeded, readText } from './data/store'
 import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
+import { Objectives } from './screens/objectives'
 import { EditEntry } from './screens/edit_entry'
 import { SignIn, SignInBand } from './screens/signin'
 
@@ -31,7 +32,7 @@ const ROUTES: Record<string, () => VNode> = {}
 for (const module of MODULES) ROUTES[`#/${module}`] = () => <Stub name={module} />
 Object.assign(ROUTES, {
   '#/': () => <Home />,
-  '#/objectives': () => <Stub name="objectives" />,
+  '#/objectives': () => <Objectives />,
   '#/body': () => <Body />,
 })
 

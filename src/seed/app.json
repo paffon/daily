@@ -19,5 +19,12 @@
   "home": {
     "recent_count": 6,
     "weekday_within_days": 7
+  },
+  "objectives": {
+    "directions": ["up", "stable", "down"],
+    "new_target": [
+      { "kind": "count", "label": "", "module": "workout", "per": "week", "target": 3 },
+      { "kind": "direction", "label": "", "direction": "stable" }
+    ]
   }
 }
