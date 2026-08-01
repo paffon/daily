@@ -1,0 +1,280 @@
+/* Frame 4d. The shared module skeleton, for the fifth time — strip, rail,
+   fields, narrow first with the rail below the fields and the action pinned to
+   the bottom, and the wide arrangement at 760px. `body.css`, `edit_entry.css`,
+   `workout.css` and `nutrition.css` carry the same rules; hoisting them crosses
+   files no module phase owns, and is open question 4 in `P5_workout.md` and
+   question 3 in `P6_nutrition.md`. */
+
+.movement {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.movement-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.movement-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.movement-split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* the rail — the day's events, with the blocks ruled off below them */
+
+.movement-rail {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 0;
+  background: var(--paper-panel);
+}
+
+.movement-rail-label {
+  margin: 0;
+  padding: 16px 24px;
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.movement-rail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 24px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* a proportion is not an event — one rule above the blocks is the whole of
+   that distinction, and the group carries it rather than each row */
+.movement-rail-blocks:not(:empty) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule-light);
+}
+
+.movement-rail-when {
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.movement-rail-what {
+  font: 400 15.5px/1.3 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.movement-rail-progress {
+  margin: 8px 0 0;
+  padding: 16px 24px 14px;
+  font: 400 11.5px/1.5 var(--family-mono);
+  color: var(--mono);
+}
+
+.movement-add-block {
+  align-items: center;
+  justify-content: center;
+  margin: 0 24px 28px;
+  height: 48px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-quiet);
+  font: 400 14px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+/* the fields */
+
+.movement-fields {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 24px 24px;
+  min-width: 0;
+}
+
+.movement-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.movement-title {
+  margin: 0;
+  font: 200 clamp(30px, 5vw, 38px) / 1.1 var(--family-serif);
+  color: var(--ink);
+}
+
+/* `2.8 km · mixed` — what the route is, beside what it is called */
+.movement-hint {
+  font: 400 12.5px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.movement-change {
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 11.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.movement-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px 44px;
+}
+
+.movement-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.movement-label {
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.movement-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: auto;
+  padding: 12px 0;
+  background: var(--paper);
+}
+
+.movement-log {
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 18px 30px;
+  border: 1px solid var(--steel);
+  border-radius: var(--radius-control);
+  background: var(--steel);
+  color: var(--paper);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.movement-log:disabled {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--mono-faint);
+  cursor: default;
+}
+
+.movement-repeat {
+  align-items: center;
+  justify-content: center;
+  padding: 16px 26px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-quiet);
+  font: 400 14.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.movement-repeat:disabled {
+  color: var(--mono-faint);
+  cursor: default;
+}
+
+/* editing a past entry, inside frame 4h */
+
+.movement-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.movement-edit-name {
+  margin: 0;
+  font: 200 26px/1.1 var(--family-serif);
+  color: var(--ink);
+}
+
+@media (min-width: 760px) {
+  .movement-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .movement-split {
+    flex-direction: row;
+  }
+
+  .movement-rail {
+    order: 0;
+    flex: none;
+    width: 340px;
+    padding-top: 40px;
+  }
+
+  .movement-rail-label,
+  .movement-rail-row,
+  .movement-rail-progress {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .movement-rail-progress {
+    margin-top: auto;
+  }
+
+  .movement-add-block {
+    margin: 0 34px 32px;
+  }
+
+  .movement-fields {
+    flex: 1;
+    gap: 28px;
+    padding: 34px 52px 0;
+  }
+
+  .movement-actions {
+    position: static;
+    flex-direction: row;
+    gap: 10px;
+    padding: 0 0 28px;
+    background: none;
+  }
+
+  .movement-log,
+  .movement-repeat {
+    flex: none;
+    min-width: 240px;
+  }
+}
