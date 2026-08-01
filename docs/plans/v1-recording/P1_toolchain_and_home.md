@@ -200,6 +200,68 @@ Do not, even if it seems better:
   hairlines and one steel accent, and the absence of icons is deliberate.
 - No `1120px` or `372px` media queries — those are canvases, not breakpoints.
 
+## Deviations and decisions
+
+Recorded during execution. Nothing here changed what the doc ordered; these
+are the places reality needed a choice or an extra file.
+
+### Two files outside the Touch list
+
+- `src/screens/home.css` — home's layout could not be written without it. Home
+  needs a `:hover` fill and a breakpoint, and neither is expressible in inline
+  styles. The two candidates were "put home's layout rules in `tokens.css`",
+  which contradicts that file's stated purpose, or a stylesheet beside the
+  screen. **Convention set here: per-screen CSS lives next to the screen as
+  `src/screens/{screen}.css`, imported by the screen.** P2–P8 should follow it
+  rather than growing `tokens.css`.
+- `.claude/launch.json` — harness config so `npm run dev` can be started for
+  the Exit-criteria by-eye check. Not app source.
+
+### Token midpoints (T2 asked for these to be noted)
+
+Where the handoff README gives a range, `tokens.css` takes the midpoint:
+`ink-quiet` 0.28, `mono` 0.54, `mono-faint` 0.65, `steel-text` 0.43 lightness
+with 0.055 chroma, `rule` 0.87, `rule-light` 0.915. `danger`'s two values
+became `--danger` (text) and `--danger-border`.
+
+One token beyond the README's colour table: `--paper-hover:
+oklch(0.947 0.005 255)`, the module-tile hover fill. The README gives it inline
+in its Home spec rather than in the table, so it had nowhere else to live.
+
+### Toolchain facts the doc did not predict
+
+- TypeScript installed at 7.x, which errors `TS2882` on the side-effect import
+  of a `.css` file. Fixed by adding `vite/client` to `compilerOptions.types` in
+  `tsconfig.json` — a Touch-listed file, no new file needed.
+- `package.json` is `"type": "module"`, and `vite.config.ts` imports
+  `defineConfig` from `vitest/config` rather than `vite` so the `test` block
+  typechecks.
+
+### Open notes for the planner
+
+1. **`760px` breakpoint.** The capsule says "build one fluid layout" and also
+   specifies two genuinely different arrangements (five columns with verticals
+   vs. five 60–62px rows; three-column `recent` vs. two-line `recent`). Those
+   cannot both exist without a breakpoint or a container query. `home.css` uses
+   `@media (min-width: 760px)`, which honours the Anti-goal as written — it
+   bans `1120px` and `372px` specifically — but the tension is real and P5–P8
+   will hit it on every module screen.
+2. **Frame 4a's top strip is not built.** The frame draws a 56px/52px strip
+   carrying `daily` and the date above the modules band. The capsule's "Home's
+   parts, top to bottom" omits it and Exit criteria says "nothing above the
+   modules band", so it was left out. Whether home should have the strip is a
+   planner decision, not an executor one. P2 has an Incoming comment.
+3. **Doc-ordered things the over-engineering lens objected to**, left in place
+   per the skill's rule: the `.serif`/`.mono` classes and the control-radius
+   base rule in `tokens.css` (T2 named all three); the 13 tokens with no
+   consumer yet (T2 named each); and the populated-`recent` branch in
+   `home.tsx`, unreachable while `recentEntries()` returns `[]` but specified
+   in full by the capsule and swapped live by P2.
+4. **The five-module list is a source constant** (`MODULES` in `home.tsx`).
+   Read against RULES.md's no-hard-coded-targets rule this is structure — the
+   routes and screens are source — not editable data. Flagged so it is a
+   decision rather than an oversight.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -229,3 +291,69 @@ Assumptions: {numbered, or "none"}
 Open questions: {numbered, or "none"}
 Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
 ```
+
+## Outcome
+
+Objective: stand up the toolchain and the visual system, then render home in
+its silent state with every route reachable.
+
+HEAD: `4d9a2fb` | Branch: `v1-implementation` | Baseline: `a596d41`
+
+Files changed:
+
+```txt
+.gitignore
+.claude/launch.json
+docs/plans/v1-recording/PLAN.md
+docs/plans/v1-recording/P1_toolchain_and_home.md
+index.html
+package-lock.json
+package.json
+src/main.tsx
+src/screens/home.css
+src/screens/home.test.tsx
+src/screens/home.tsx
+src/styles/tokens.css
+tsconfig.json
+vite.config.ts
+```
+
+Commands run:
+
+| command | result |
+| :- | :- |
+| `node --version` | `v22.14.0` — entry criterion held |
+| `git status --porcelain` | empty — entry criterion held |
+| `npm run build` | exit 0, `dist/index.html` written (T1, T2, Exit) |
+| `grep -c 'oklch(' src/styles/tokens.css` | 22 — above the 20 the doc asks for |
+| `grep -c '#' src/styles/tokens.css` | 0 — no hex colour survived |
+| `npm run typecheck` | exit 0, no output (T3, gate 2) |
+| `npm test` | exit 0, 4 tests passed (T4, gate 1) |
+| fresh review | subagent, diff-only; findings applied in `71198f2` |
+| `npm run dev` at 1120×700 | five columns on one row, `rule` above and below, `nothing recorded yet`, `objectives →` at the foot, nothing above the band |
+| `npm run dev` at 372×780 | five 62px rows, `scrollWidth == 372` — no horizontal scroll |
+| route check | `#/workout` `#/objectives` stub; `#/entry/abc-123` shows `entry abc-123`; `#/nonsense` falls back to home |
+
+Test status: `npm test` → exit 0, 4 passed, 0 failed. No test is deliberately
+left red by this phase.
+
+Assumptions:
+
+1. Home has no top strip, because the capsule's parts list omits it and Exit
+   criteria says nothing sits above the modules band — see Deviations note 2.
+2. A module never touched prints nothing rather than a placeholder string.
+   Silence is unknown, not a miss, and the doc names no string for it.
+3. `recentEntries()` returns rows already formatted for display (`time`,
+   `detail` as strings), so home does no date arithmetic. P2 formats.
+4. `760px` is a legitimate breakpoint since the Anti-goal names only the two
+   canvas widths — see Deviations note 1.
+
+Open questions:
+
+1. Should home carry frame 4a's `daily` strip? Planner decision; P2 has an
+   Incoming comment in `PLAN.md`.
+2. Does the module list belong in `config/app.json` once P3 exists, or is it
+   permanently source? Treated as source here — see Deviations note 4.
+
+Next action: **P2: entry_store_and_body_weight** — its only dependency, P1, is
+now `done`.

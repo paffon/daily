@@ -122,7 +122,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 
 | Phase | Purpose | Depends on | Status | Baseline | Updated |
 | - | - | - | - | - | - |
-| [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | in progress | a596d41 | 2026-08-01 |
+| [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | done | a596d41 | 2026-08-01 |
 | [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | pending | | |
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | pending | | |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | pending | | |
@@ -159,7 +159,17 @@ being added — `npm run typecheck` is the static gate.
   `#/objectives`, `#/entry/{id}`. Later phases fill in stub screens; they do
   not invent new routes without recording it here.
 - **Notes:** home reads from an empty in-file shim until P2 replaces it with
-  the store.
+  the store. Done — every route above is live, unknown hashes fall back to
+  home, and `#/entry/{id}` already parses its id into the stub. Two files
+  outside the doc's Touch list were needed: `src/screens/home.css` and
+  `.claude/launch.json`. **Convention: per-screen CSS lives beside the screen
+  as `src/screens/{screen}.css`** — grow that, not `tokens.css`. Layout is one
+  fluid arrangement with a single `@media (min-width: 760px)`; neither canvas
+  width appears anywhere. TypeScript resolved to 7.x, which needs `vite/client`
+  in `tsconfig`'s `types` before a CSS import will typecheck. Home has no top
+  strip — see open question 1 in `P1_toolchain_and_home.md` → **Deviations**,
+  which also records the token midpoints and the over-engineering objections
+  left standing because this doc ordered them.
 - **Incoming comments:**
 
 ### P2: entry_store_and_body_weight
@@ -172,6 +182,19 @@ being added — `npm run typecheck` is the static gate.
   phases add controls to that file rather than restating them.
 - **Notes:**
 - **Incoming comments:**
+  - *From P1.* `src/screens/home.tsx` exports two shims for you to replace:
+    `recentEntries()` returning `[]` and `lastTouched(module)` returning
+    `null`. Both hand back **display-ready strings** — `RecentEntry` carries
+    `time` and `detail` as text, and `lastTouched` returns something like
+    `wed 19:40` — so home does no date arithmetic and no formatting. Keep that
+    boundary: the formatting belongs on your side. The populated-`recent`
+    markup and its CSS already exist and go live the moment the shim returns
+    rows.
+  - *From P1.* Home does **not** render frame 4a's top strip (the 56px/52px
+    band carrying `daily` and the date). P1's capsule omitted it and its Exit
+    criteria said nothing sits above the modules band, so it was left out
+    rather than improvised. If home should have one, that is a planner
+    decision — see open question 1 in `P1_toolchain_and_home.md`.
 
 ### P3: drive_store_and_offline
 
