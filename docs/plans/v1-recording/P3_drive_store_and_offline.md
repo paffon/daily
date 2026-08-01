@@ -316,6 +316,48 @@ Not in the doc, but T2's Verify says *"in the browser console call the exported
 `putFile`"* — and a Vite module's exports are not reachable from the console
 without it. Absent from `npm run build` output.
 
+### T3: the first pull happens before seeding, not after
+
+**The doc asked for** `main.tsx` to *"call `ensureSeeded` then `syncNow`"*.
+
+**What is built:** the reverse, and conditionally — a mirror with no
+`config/app.json` awaits `syncNow()` before seeding; one that already has a
+copy seeds immediately and syncs behind the paint.
+
+**Why:** in the doc's order a second browser destroys the user's config. Its
+mirror starts empty, so `ensureSeeded` writes the defaults, `set` marks the
+path dirty, and dirty-wins then pushes those defaults over the real
+`config/app.json` in Drive. Every edited setting, gone, silently, on nothing
+worse than opening the app on a laptop. The conditional keeps the doc's
+promise that reads never wait on the network — only a browser with nothing to
+paint waits, and only once.
+
+### T3: `syncNow` does nothing while signed out
+
+Not in the doc. Without it, a write before sign-in fires a pass that tries to
+upload with an empty bearer token — pointless requests during boot, and real
+network traffic from the test suite, which never signs in. The mirror keeps
+the write and the next pass sends it.
+
+### T3: the adapter takes the mirror rather than importing it
+
+`driveAdapter(local)` is a function of the mirror, so `sync.ts` needs only
+`import type { Adapter }` from the store. Had it imported `localAdapter`
+directly, the two modules would import each other at runtime — which happens
+to work here, since neither touches the other while loading, but breaks
+obscurely the first time one does. The store's swap is still the single line
+P2's note predicted, and the tests get an injectable mirror for free.
+
+### T3: `ensureSeeded` still does not backfill — passed through, not fixed
+
+P2's Incoming comment in `PLAN.md` flags that `ensureSeeded` writes a seed only
+when the whole file is absent, so a browser holding an older `config/app.json`
+gets `undefined` for any key added later. Left alone: P2 called it a planner
+decision and nothing here changes that. Worth noting it now costs more than it
+did — with sync in place a stale config no longer stays on one machine, it
+propagates. **Still a planner decision, and more urgent before P5–P8 each add
+their seeds.**
+
 ### T1: `.gitignore` needed no edit
 
 Listed under Touch as *"ensure `.env.local` and `dist/` are ignored"*. Both were

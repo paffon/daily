@@ -3,6 +3,7 @@
 
 import type { Entry, Module } from './entry'
 import { entryPath } from './entry'
+import { driveAdapter } from './sync'
 import appSeed from '../seed/app.json'
 
 /** Three methods, and P3 supplies a Drive-backed second implementation. */
@@ -28,7 +29,7 @@ export const localAdapter: Adapter = {
 }
 
 /** P3 swaps this line for the Drive-backed adapter. Nothing above it moves. */
-const adapter: Adapter = localAdapter
+const adapter: Adapter = driveAdapter(localAdapter)
 
 export function readText(path: string): string | null {
   return adapter.get(path)

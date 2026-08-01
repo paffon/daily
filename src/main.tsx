@@ -2,7 +2,8 @@ import { render } from 'preact'
 import type { VNode } from 'preact'
 import './styles/tokens.css'
 import { MODULES } from './data/entry'
-import { ensureSeeded } from './data/store'
+import { ensureSeeded, readText } from './data/store'
+import { syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
 import { SignIn } from './screens/signin'
@@ -48,7 +49,14 @@ const paint = () => render(screen(location.hash || '#/'), mount)
  *  and the mirror is not populated before sign-in. Every page load starts
  *  here — the token is memory-only and a token request needs a user gesture,
  *  so there is no boot path that skips the press. */
-function start(): void {
+async function start(): Promise<void> {
+  /* Seeding before the first pull would write defaults over a config this
+     browser has simply never seen, and then push them up over the real one.
+     So an empty mirror waits for Drive — it has nothing to paint anyway —
+     while one that already holds a copy paints from it and syncs behind. */
+  if (readText('config/app.json') === null) await syncNow()
+  else void syncNow()
+
   ensureSeeded()
   addEventListener('hashchange', paint)
   paint()
