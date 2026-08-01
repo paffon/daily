@@ -389,6 +389,107 @@ and it holds.
 Listed under Touch as *"ensure `.env.local` and `dist/` are ignored"*. Both were
 already there from P1. No change made.
 
+### Deviations the fresh review caught that were not written down
+
+All three are sound and stay as built; they belong here because they were not
+recorded when made.
+
+- **The fonts are runtime-cached, not precached.** The capsule says *"precaching
+  the built assets and the Google Fonts stylesheet"*. Cross-origin URLs cannot
+  be precached at build time — they are not in the build manifest — so they are
+  cached on first use via `runtimeCaching` instead. Same outcome after one
+  online load.
+- **`_folders.json` is written straight to `localStorage`, not through the
+  store.** The capsule says *"cache the folder ids in the mirror"*. Writing it
+  through the store's adapter would mark it dirty and try to push a file to
+  Drive that does not exist there — and its path has no `/`, which every path
+  split in `drive.ts` assumes. It sits beside the mirror, under the same key
+  prefix.
+- **The GIS script is neither precached nor runtime-cached.** Which is why the
+  app cannot be entered offline — see the first open question below.
+
+## Fresh review
+
+`git diff 7911067..HEAD` reviewed by a context that did not implement it,
+against this doc plus the over-engineering lens. It confirmed the Anti-goals
+(no persisted token, no server, no `appDataFolder`, no merge scheme) and that
+the store's public signatures are byte-identical to P2, so P4–P8 are unaffected.
+
+### Fixed
+
+- **`push` could destroy a logged entry.** It cleared a path's dirty flag after
+  an upload even when the mirror had been rewritten during that upload — so the
+  newer text was marked clean but never sent, and the pull immediately after
+  overwrote it with the older remote copy. A weight logged while the previous
+  one was still uploading vanished from the mirror and from Drive at once.
+  `push` now clears the flag only if the file still holds what it sent.
+  Covered by `keeps holding a path that was written again while its upload was
+  in flight`, which was watched to fail without the guard.
+- **The seed guard did not cover a failed first pull.** `syncNow` swallowed
+  every error and returned nothing, so a fresh browser could not tell an empty
+  Drive from an unreachable one, and seeded defaults over the real config by
+  the slower route the T3 deviation was written to prevent. `syncNow` now
+  reports whether Drive was heard from, and `ensureSeeded` runs only if it was.
+  Nothing is lost by waiting: screens read config through `readJson`, which
+  already falls back to the seed in memory.
+- **An expired token failed silently forever.** `accessToken` stayed set after a
+  401, so `token()` read non-empty and every later write fired a pass that could
+  only fail. `api` now clears it on 401, which at least makes the state honest —
+  the re-prompt the capsule promises still does not exist, see below.
+- **A write landing mid-pass was not sent by that pass** and nothing scheduled
+  another, so it sat until the next write, `online` event or reload. The pass
+  now takes another lap when a write arrived while it ran.
+- **A dirty path whose mirror entry had vanished stayed in the set forever.**
+  Now drained.
+- **Nothing repainted after a pull landed**, so entries logged elsewhere were
+  invisible until a hashchange. The warm boot path now repaints when its pass
+  finishes.
+- **`delete:` the `window.drive` console hook** — scaffolding for T2's manual
+  Verify, which is done. `ensureFolders` stays exported; the doc's T2 names it.
+- **`stdlib:` the hand-rolled `split`** — `indexOf`/`slice` doing what
+  `String.prototype.split('/')` does, at two call sites.
+
+### Declined
+
+- **`shrink:` two centring lines on `.signin-go`** (`signin.css`) that are
+  visually inert on a single-line button. Kept: they are copied verbatim from
+  `.body-log`, and two identical buttons that differ in source read worse than
+  two inert declarations.
+
+### Open questions for the planner
+
+Left as found, because each is a decision this doc already made or does not
+cover. In severity order.
+
+1. **The app cannot be entered offline, which defeats the phase Goal.** Every
+   page load renders the sign-in screen (see the T1 deviation), and offline the
+   GIS script is unreachable, so `signIn()` resolves false and the button is
+   silently dead. The service worker has the shell and the mirror has every
+   entry, and none of it can be reached. The Exit criteria still pass, because
+   they go offline mid-session rather than reloading. The fix breaks no
+   Anti-goal — when sign-in fails and the mirror is populated, enter anyway;
+   `syncNow` already no-ops without a token, so writes queue in the dirty set
+   and go up at the next sign-in. **Not built here**, because it needs a
+   decision this doc does not make: what the app shows when it is signed out
+   and not syncing, and the doc says the sign-in screen is what renders when
+   auth fails. **This is the most consequential thing left open by P3.**
+2. **Nothing re-prompts after the token expires.** The capsule says *"an expiry
+   mid-session just re-prompts on the next sync"*. Nothing does, and nothing
+   can: a re-prompt is a popup and needs a gesture. The token is now cleared on
+   401 so the state is honest, but the user gets no signal that writes have
+   stopped reaching Drive until they reload. Same decision as (1) — both are
+   the sign-in screen's shape, not a bug in the sync pass.
+3. **`syncNow` pulls every file after every write.** The capsule orders both
+   (*"for every file under `daily/`, fetch it"*, *"called… after any `set`"*),
+   so it stays. Logging one weight costs a list query plus one GET per file —
+   about 65 round trips today, growing with every month file. `modifiedTime`
+   comes back in the list query already and would make it nearly free. **Doc
+   ordered this; it is a planner call, not a defect.**
+4. **The folder-id cache has no invalidation.** `daily:_folders.json` is written
+   once and trusted forever, so trashing `daily/` in Drive breaks writes until
+   the key is cleared by hand. The capsule ordered the cache to keep boot to one
+   lookup. **Doc ordered this.**
+
 ## Outcome
 Objective: {phase goal, one line}
 HEAD: {git rev-parse --short HEAD} | Branch: {git branch --show-current}

@@ -35,6 +35,10 @@ export function driveAdapter(local: Adapter): Adapter {
       const paths = dirty()
       paths.add(path)
       save(paths)
+      /* If a pass is already running it may have read the dirty set before
+         this write, so it owes the write another lap. Redundant when there is
+         no pass — the one starting below clears the flag as it begins. */
+      again = true
       void syncNow()
     },
   }
@@ -42,17 +46,22 @@ export function driveAdapter(local: Adapter): Adapter {
 
 /** Every dirty path up, clearing each flag as it lands. A failure leaves that
  *  path and everything after it dirty and stops — the next pass retries from
- *  there. The set is re-read each time so a write made during the pass is not
- *  cleared without having been sent. */
+ *  there. */
 export async function push(): Promise<void> {
   for (const path of dirty()) {
     const text = mirror.get(path)
-    if (text === null) continue
     try {
-      await putFile(path, text)
+      if (text !== null) await putFile(path, text)
     } catch {
       return
     }
+    /* Only clear the flag if the file still holds what was actually sent. A
+       weight logged while this very upload was in flight rewrote the mirror,
+       and clearing here would leave that entry clean but unsent — the pull
+       right after would then overwrite it with the older remote copy and the
+       entry would be gone from both sides. It stays dirty and goes up next
+       pass instead. */
+    if (mirror.get(path) !== text) continue
     const paths = dirty()
     paths.delete(path)
     save(paths)
@@ -71,23 +80,33 @@ export async function pull(): Promise<void> {
   }
 }
 
-let running: Promise<void> | null = null
+let running: Promise<boolean> | null = null
+let again = false
 
 /** `push` then `pull`, at most one in flight — a burst of writes joins the
- *  pass already going rather than queueing five of them. Signed out it does
- *  nothing at all: there is no token to spend and the mirror keeps the writes
- *  until there is one. */
-export function syncNow(): Promise<void> {
+ *  pass already going rather than queueing five of them, and a write that
+ *  lands mid-pass gets a lap of its own rather than waiting for whatever
+ *  happens next. Signed out it does nothing at all: there is no token to
+ *  spend and the mirror keeps the writes until there is one.
+ *
+ *  Answers whether Drive was actually heard from — a caller about to write
+ *  defaults needs to tell an empty Drive from an unreachable one. */
+export function syncNow(): Promise<boolean> {
   if (running !== null) return running
-  if (token() === '') return Promise.resolve()
+  if (token() === '') return Promise.resolve(false)
 
   running = (async () => {
     try {
-      await push()
-      await pull()
+      do {
+        again = false
+        await push()
+        await pull()
+      } while (again)
+      return true
     } catch {
       /* offline, or the token expired mid-pass. Everything stays dirty and
          the next pass — on `online`, or on the next write — tries again. */
+      return false
     } finally {
       running = null
     }

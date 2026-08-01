@@ -54,10 +54,17 @@ async function start(): Promise<void> {
      browser has simply never seen, and then push them up over the real one.
      So an empty mirror waits for Drive — it has nothing to paint anyway —
      while one that already holds a copy paints from it and syncs behind. */
-  if (readText('config/app.json') === null) await syncNow()
-  else void syncNow()
+  let heard = true
+  if (readText('config/app.json') === null) heard = await syncNow()
+  else void syncNow().then(paint)
 
-  ensureSeeded()
+  /* Only seed once Drive has actually answered. A pass that failed cannot be
+     told apart from an empty Drive, and seeding on a failure is the same
+     clobber by a slower route. Nothing is lost by waiting: every screen reads
+     config through `readJson`, which falls back to the seed in memory, so an
+     unseeded boot renders identically — it just writes nothing. */
+  if (heard) ensureSeeded()
+
   addEventListener('hashchange', paint)
   addEventListener('online', syncNow)
   paint()

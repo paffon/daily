@@ -104,6 +104,11 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
     ...init,
     headers: { ...init?.headers, Authorization: `Bearer ${accessToken}` },
   })
+  /* An expired token is worse than no token: it looks signed in, so every
+     write keeps firing passes that can only fail, silently, forever. Dropping
+     it makes `token()` empty again, which is what the rest of the app reads
+     to mean "nothing can reach Drive right now". */
+  if (response.status === 401) accessToken = ''
   if (!response.ok) throw new Error(`drive ${response.status} on ${path}`)
   return response
 }
@@ -162,15 +167,10 @@ export async function ensureFolders(): Promise<Record<string, string>> {
   return folders
 }
 
-function split(path: string): [string, string] {
-  const cut = path.indexOf('/')
-  return [path.slice(0, cut), path.slice(cut + 1)]
-}
-
 async function fileId(path: string): Promise<string | null> {
   const known = fileIds.get(path)
   if (known !== undefined) return known
-  const [prefix, name] = split(path)
+  const [prefix, name] = path.split('/')
   const id = await findId(name, (await ensureFolders())[prefix], false)
   if (id !== null) fileIds.set(path, id)
   return id
@@ -187,7 +187,7 @@ export async function getFile(path: string): Promise<string | null> {
 export async function putFile(path: string, text: string): Promise<void> {
   let id = await fileId(path)
   if (id === null) {
-    const [prefix, name] = split(path)
+    const [prefix, name] = path.split('/')
     id = await create(name, (await ensureFolders())[prefix], false)
     fileIds.set(path, id)
   }
@@ -214,10 +214,4 @@ export async function listFiles(): Promise<string[]> {
     paths.push(path)
   }
   return paths
-}
-
-/* Reachable from the devtools console in `npm run dev`, and nowhere else —
-   this phase's Drive calls can only be checked by hand, against real Drive. */
-if (import.meta.env.DEV) {
-  Object.assign(window, { drive: { ensureFolders, getFile, putFile, listFiles, token } })
 }

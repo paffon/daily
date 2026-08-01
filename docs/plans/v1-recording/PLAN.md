@@ -251,6 +251,12 @@ being added — `npm run typecheck` is the static gate.
   - *From P2.* `putEntry` is a plain read-modify-write of one month file. It
     does **not** move an entry when an edited `ts` crosses a month boundary —
     left alone deliberately, since this block already assigns that to you.
+  - *From P3.* Moving an entry between month files is **two writes**, and each
+    one syncs independently. Write the destination before deleting from the
+    source: if the second write is the one that never reaches Drive, a
+    duplicated entry is recoverable and a vanished one is not. `putEntry`'s
+    read-modify-write of a whole file is also why a delete must stay a
+    tombstone — a removed line looks identical to a stale mirror.
 
 ### P5: workout
 
@@ -289,6 +295,16 @@ being added — `npm run typecheck` is the static gate.
   `src/data/objectives.ts` and stays exported — the coach plan lifts it out.
 - **Notes:**
 - **Incoming comments:**
+  - *From P3.* You add the photos, and photos are what make the file count
+    grow. `listFiles` in `src/data/drive.ts` asks for `pageSize=1000` and does
+    **not** follow `nextPageToken`, so past a thousand files a pull silently
+    stops seeing the rest — no error, just older files that never come down on
+    a second device. Entries alone reach that in roughly three years; one photo
+    a day gets there far sooner. Add the paging loop when you add photos.
+  - *From P3.* `findId` interpolates a filename straight into a Drive query
+    (`name='${name}'`) with no escaping. Safe today because every filename is
+    generated from a module name and a date. If any path you add derives from
+    text the user typed, escape the quote first.
 
 ## On completion
 
