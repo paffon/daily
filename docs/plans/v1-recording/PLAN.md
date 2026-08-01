@@ -123,7 +123,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | Phase | Purpose | Depends on | Status | Baseline | Updated |
 | - | - | - | - | - | - |
 | [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | done | a596d41 | 2026-08-01 |
-| [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | in progress | 1811f3d | 2026-08-01 |
+| [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | done | 1811f3d | 2026-08-01 |
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | pending | | |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | pending | | |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
@@ -180,7 +180,17 @@ being added — `npm run typecheck` is the static gate.
   libraries through `readJson`, never through a constant. Also owns the shared
   `Previous` and `Timestamp` controls in `src/components/fields.tsx`; later
   phases add controls to that file rather than restating them.
-- **Notes:**
+- **Notes:** Done. `MODULES` moved to `src/data/entry.ts` — import the module
+  list and the `Module` type from there, not from `home.tsx`. `fields.tsx`
+  also exports the date formatters every screen needs (`dayTimeOf`, `monthOf`,
+  `whenOf`); reuse them rather than reaching for `Intl` again. **Every unit,
+  count, precision and window is in `src/seed/app.json`** — `locale`,
+  `body.weight_decimals`, `home.recent_count` and `home.weekday_within_days`
+  joined the three keys T2 named, each one deleting a source literal. Per-screen
+  CSS follows P1's convention and `fields.css` extends it to shared controls.
+  `tsconfig.json` needed `resolveJsonModule` back for T2's seed import. Full
+  detail, including where frame 4f and the capsule disagree, is in
+  `P2_entry_store_and_body_weight.md` → **Deviations**.
 - **Incoming comments:**
   - *From P1.* `src/screens/home.tsx` exports two shims for you to replace:
     `recentEntries()` returning `[]` and `lastTouched(module)` returning
@@ -207,6 +217,20 @@ being added — `npm run typecheck` is the static gate.
   Context). If sign-in cannot be completed the phase is blocked, not improvised
   around.
 - **Incoming comments:**
+  - *From P2.* The adapter swap is literally one line —
+    `const adapter: Adapter = localAdapter` near the top of
+    `src/data/store.ts`. Nothing above it moves, and `readText`/`writeText`
+    are already the only things the rest of the store calls, so the dirty-path
+    mirror hooks in there.
+  - *From P2.* **`ensureSeeded` only writes a seed when the whole file is
+    absent** — it never backfills a key added later. A browser holding an
+    older `config/app.json` gets `undefined` where TypeScript says a value is
+    present. This already bit once during P2. The capsule specified the
+    file-level behaviour so P2 did not change it; if it should merge, that is
+    a planner decision to make before more keys land.
+  - *From P2.* `tsconfig.json` carries `resolveJsonModule` because `SEEDS`
+    imports `src/seed/app.json`. Any phase adding a seed follows the same
+    import shape.
 
 ### P4: edit_and_delete_entries
 
@@ -218,6 +242,15 @@ being added — `npm run typecheck` is the static gate.
   crosses a month boundary.
 - **Notes:**
 - **Incoming comments:**
+  - *From P2.* `src/screens/home.tsx` has a private `detail(entry, config)`
+    that switches on `entry.module` to write a `recent` row's text — today it
+    handles `body` and returns `''` for the other four. That is your renderer
+    registry in miniature. Decide whether the registry covers `recent` rows as
+    well as the edit screen; if it does, home's switch should go and P5–P8
+    register one function each instead of two.
+  - *From P2.* `putEntry` is a plain read-modify-write of one month file. It
+    does **not** move an entry when an edited `ts` crosses a month boundary —
+    left alone deliberately, since this block already assigns that to you.
 
 ### P5: workout
 

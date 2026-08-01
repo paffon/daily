@@ -216,6 +216,84 @@ Do not, even if it seems better:
 - No entry deletion or editing UI — P4 owns it. `deleted` exists in the shape
   and is honoured by `readEntries`, but nothing sets it yet.
 
+## Deviations and decisions
+
+Recorded during execution. Nothing here changed what the doc ordered.
+
+### Files outside the Touch list
+
+- `src/screens/body.css`, `src/components/fields.css` — per the convention P1
+  registered in `PLAN.md`: per-screen CSS beside the screen. The body screen
+  needs a breakpoint and `log it` pinned on phone; neither is an inline style.
+- `tsconfig.json` — `resolveJsonModule` back on. T2's own
+  `SEEDS = [['config/app.json', appSeed]]` requires importing the seed from
+  TypeScript, and P1 had removed the flag on a review finding that it was
+  unused. It is used now.
+- `src/screens/home.test.tsx` — one import line. P2 moves `MODULES` from
+  `home.tsx` to `entry.ts`, where the `Module` union already lives, so the
+  test that imported it from home had to follow. The doc lists `home.tsx` as
+  an edit but not its test.
+- `src/main.tsx` — five lines, not the one T4 permits. Two are the `#/body`
+  route; the rest are `import { Body }`, `import { ensureSeeded }` and the
+  boot call. The capsule says `ensureSeeded()` is "called once at boot" and
+  boot is `main.tsx`, so the doc asks for something its file rule forbids.
+  `MODULES` now comes straight from `entry.ts` rather than through a
+  re-export in `home.tsx`.
+
+### `app.json` carries more than T2 listed
+
+T2 names week start, day zones and the weight unit. Four more keys are there,
+each one deleting a source literal the Anti-goals forbid — *"if you find
+yourself typing a number that a user might reasonably disagree with, it
+belongs in `src/seed/app.json`"*:
+
+| key | what it replaced |
+| :- | :- |
+| `locale` | the argument to every `Intl.DateTimeFormat` |
+| `body.weight_decimals` | `toFixed(1)`, which the exit criteria's `74.0 kg` needs |
+| `home.recent_count` | the "last 3–6 entries" count home asks the store for |
+| `home.weekday_within_days` | how recent an entry must be to read `wed 19:40` rather than `12 july` |
+
+### Where the doc and the frame disagree
+
+1. **`Previous` is the capsule's block, not frame 4f's line.** Frame 4f draws
+   `previous · 12 july 07:40 · 73.1 kg` as one mono line. The capsule
+   specifies `<Previous>` as a `paper-quote` block with a 2px `steel` left
+   border. The capsule won, since it defines the shared control every later
+   module reuses.
+2. **The rail's `progress ·` line is frame 4f's, not the capsule's.** The
+   capsule describes the rail as the list and nothing else. It is built
+   because the frame has it, but it is a second count of the same data on one
+   screen, and `PLAN.md` describes `progress →` as a link to a list this plan
+   never builds. Planner call.
+3. **P1's Incoming comment conflicts with this capsule.** P1 asked that the
+   store hand home display-ready strings. The capsule says
+   `lastTouched(module)` returns the newest `ts`. The capsule won: home
+   formats through `whenOf`, and `detail()` in `home.tsx` reads the body
+   payload. That switch is what P4's renderer registry should absorb — P4 has
+   an Incoming comment.
+
+### Notes for the planner
+
+1. **`ensureSeeded` never backfills a new key.** It writes a seed only when
+   the whole file is absent, exactly as the capsule specifies. Any phase that
+   adds a key to an already-seeded `app.json` gets `undefined` at runtime
+   while TypeScript types it as present. This bit during execution — a test
+   overriding `body` without `weight_decimals` silently rendered `11 st`.
+   P3 has an Incoming comment; not fixed here because the capsule is explicit.
+2. **Doc-ordered things the over-engineering lens objected to**, left standing
+   per the skill's rule: `readEntries`' `months?` parameter has no caller;
+   `readText`/`writeText` wrap the adapter without adding anything and have no
+   caller outside `store.ts` (P3's dirty-path sync is the plausible one);
+   `localAdapter` is exported with a single implementation, which is the point
+   — "keep the interface exported so P3's swap is one line".
+3. **`putEntry` does not move an entry between month files** when an edited
+   `ts` crosses a boundary. `PLAN.md` gives that to P4, so it was left alone.
+4. **Harness mouse clicks did not reach the page** during the Exit-criteria
+   walkthrough — the browser pane was not compositing, so synthetic clicks
+   were dropped. The walkthrough was driven with real DOM events in the real
+   browser instead; the handler path is unchanged. Nothing to do with the app.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -245,3 +323,74 @@ Assumptions: {numbered, or "none"}
 Open questions: {numbered, or "none"}
 Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
 ```
+
+## Outcome
+
+Objective: the entry primitive, the one module that touches persistence, and
+the smallest module shipped end to end to prove both.
+
+HEAD: `d02469e` | Branch: `v1-implementation` | Baseline: `1811f3d`
+
+Files changed:
+
+```txt
+docs/plans/v1-recording/PLAN.md
+docs/plans/v1-recording/P2_entry_store_and_body_weight.md
+src/components/fields.css
+src/components/fields.tsx
+src/data/entry.ts
+src/data/store.test.ts
+src/data/store.ts
+src/main.tsx
+src/screens/body.css
+src/screens/body.test.tsx
+src/screens/body.tsx
+src/screens/home.test.tsx
+src/screens/home.tsx
+src/seed/app.json
+tsconfig.json
+```
+
+Commands run:
+
+| command | result |
+| :- | :- |
+| `npm test` (entry criterion) | exit 0, 4 passed — P1's suite |
+| `git status --porcelain` | empty |
+| `npm test` (T1) | exit 0, 9 passed |
+| `npm test` (T2) | exit 0, 15 passed |
+| `npm run typecheck` (T3, gate 2) | exit 0, no output |
+| `npm test` (T4, gate 1) | exit 0, 21 passed |
+| `npm run build` (Exit) | exit 0, `dist/index.html` written |
+| fresh review | subagent, diff-only; findings applied in `d02469e` |
+| `npm run dev`, log `74.0` then `72.4` at 07:35, reload | both persist; rail reads `1 august 16:56 · 74.0 kg` then `1 august 07:35 · 72.4 kg`; home's `recent` shows `today 07:35 · body · 72.4 kg`; `Previous` shows `74.0 kg`; the body tile reads `today 16:56` |
+| `npm run dev` at 372×780 | rail sits below the fields, `log it` is sticky, `scrollWidth == 372` |
+
+Test status: `npm test` → exit 0, 21 passed, 0 failed. No test is deliberately
+left red by this phase.
+
+Assumptions:
+
+1. `monthKey` reads the date part of the timestamp rather than converting
+   through `Date`. A timestamp carries its own offset, so its date part is
+   already the recording-local date, and the answer no longer depends on where
+   the app is opened from later.
+2. A blank weight is a valid entry and stores `null`, per *blanks are valid
+   entries*. The rail writes it as `—`.
+3. `Previous` on body shows the newest entry, which after logging is the entry
+   just logged. The exit criteria's `74.0 kg` reading confirms this is what was
+   meant.
+4. The strip carries a back affordance and the entry's own date, per frame 4f.
+   Home still has no strip — P1's open question is unchanged.
+
+Open questions:
+
+1. Should the rail's `progress ·` line stay? See Deviations → *Where the doc
+   and the frame disagree* 2.
+2. Should `ensureSeeded` merge missing keys into an existing config file
+   rather than only writing an absent one? See Deviations → *Notes* 1.
+3. Does home's `detail()` move into P4's renderer registry, and does that
+   registry cover `recent` rows as well as the edit screen?
+
+Next action: **P3: drive_store_and_offline** — blocked until the user supplies
+`VITE_GOOGLE_CLIENT_ID`, per `PLAN.md`'s Context.
