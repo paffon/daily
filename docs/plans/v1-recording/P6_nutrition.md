@@ -219,6 +219,139 @@ Do not, even if it seems better:
   level is a recorded property.
 - No barcode scanning, nutrition database lookup, or import.
 
+## Deviations
+
+Recorded as they happened. Nothing here changed what the doc asked for; each
+is a place reality and the doc disagreed.
+
+1. **`src/screens/edit_entry.tsx` was not edited.** The Files list says
+   `edit: one registerEditor('nutrition', ...) call`, but P5's Incoming comment
+   in `PLAN.md` and P4's own note both say the call goes **at module scope in
+   the module's own screen file** — putting it in `edit_entry.tsx` would make
+   that screen import the module that imports it. The call sits at the top of
+   `src/screens/nutrition.tsx`, and `edit_entry.tsx` is untouched.
+2. **`src/main.tsx` needed one import and one route line**, and it is in no
+   module phase's Touch list. P5 recorded the same deviation for `#/workout`;
+   without it `#/nutrition` renders P1's stub. P7 will hit it too.
+3. **Three CSS files were created that the Touch list does not name** —
+   `src/components/amount_stepper.css`, `src/components/level_control.css` and
+   `src/screens/nutrition.css`. P1's convention puts per-screen and
+   per-component CSS beside its file and forbids growing `tokens.css`; every
+   component P5 shipped has one. `nutrition.css` is the **fourth** copy of the
+   module skeleton — see open question 3.
+4. **Four keys were added to `config/app.json`** under a new `nutrition`
+   section: `amount_start`, `amount_step`, `decimals` and `new_food`. Each one
+   deletes a literal that `RULES.md` forbids — the amount a food opens at, what
+   a press adds, how many decimals a number is shown to, and the unit and level
+   a food created inline gets. `new_food` follows the shape P8 gave
+   `objectives.new_target`.
+5. **`src/seed/foods.json` is a wrapper object, not a bare array.** It is
+   `{ units, foods }`, the shape `exercises.json` already uses. `units` maps a
+   unit to how it reads past one (`slice` → `slices`); a unit absent from the
+   map reads the same at either count, which is what `g` needs. The alternative
+   was an English plural rule in source — which `RULES.md` forbids as a list in
+   code, and which gets `glass` and `g` wrong anyway.
+6. **A `change` press was added beside the food's name.** Nothing in the doc
+   names one, but picking a food replaced the picker with the fields and left
+   no way back: the wrong food, once picked, was permanent for that entry. One
+   press, and it is what the tests use to reach a second food.
+7. **The primary action is one button, not frame 4c's two.** `log it` and
+   `log and add another` do the same thing here, because nothing contains an
+   entry — logging always lands back at the picker. T3 says "the primary
+   action", singular.
+8. **Frame 4c's food reference line is not built** — the
+   `slice · 285 kcal · 12 g protein at normal` beside the title. T3's field list
+   does not name it, and the per-entry line below it says the same thing for
+   the amount actually being logged. See open question 2.
+9. **The entry criteria's clean-tree check was not literally met.**
+   `git status --porcelain` reported one untracked file, `.claude/settings.json`
+   — harness configuration, outside `src/`, and unable to enter either the
+   review diff or the rollback target. The phase proceeded rather than blocking
+   on it.
+
+## Assumptions
+
+1. **Pizza is seeded at the frame's numbers**, 285 kcal and 12 g protein at one
+   slice — see open question 1 for why that contradicts this doc's Demo line.
+2. **A food's `unit` is blank where the food counts as itself.** An apple reads
+   `1 · normal`, which is what frame 4c's rail shows. `piece` never appears.
+3. **The head reference numbers, had they been built, would have read at the
+   food's `default_level`** rather than at a level named `normal` in source.
+   Nothing in the code names a level.
+4. **`examples` is all-three-or-nothing per food.** A partial object renders a
+   blank column rather than collapsing the row — the has-examples distinction
+   is per food, not per level.
+5. **The rail lists today only**, and the `progress` line counts every entry
+   ever logged. Frame 4c's rail is headed `today`; the progress affordance is
+   about the history behind it.
+
+## Fresh review
+
+`git diff 0a32e6b..HEAD` reviewed by a context that did not implement it,
+against this doc plus the over-engineering lens. Two data defects were found
+and fixed, each with a test watched to fail without the fix:
+
+- **A typed negative amount reached the payload.** The presses clamped at zero
+  but the box did not, so typing `-5` stored a negative amount, reported
+  negative calories and pluralised to `-5 slices`. A typed negative is now
+  unreadable the way a word is.
+- **A written-out `"kcal": null` multiplied to `0`.** The guard tested for an
+  absent key only. The library is a file the user edits and syncs, and `null`
+  is how a person writes down that there is no number — so an unknown was being
+  recorded as a zero, which is the one distinction `nutritionFor` exists to
+  keep.
+
+Three lens findings were applied: `foodLine` collapsed into its single caller,
+a redundant `gap: 0`, and a comment explaining that a `food === null` test is
+the type checker's rather than a state the screen can reach.
+
+The lens's largest finding was **not** applied, because this doc ordered the
+file that carries it: `nutrition.css` is the fourth copy of the module
+skeleton, and roughly 90 of its 232 lines are shared with `body.css`,
+`workout.css` and `edit_entry.css`. Hoisting them crosses files no module
+phase owns. It is open question 3, and P5's open question 4 before that.
+
+## Open questions
+
+For the planner. None blocked this phase.
+
+1. **This doc's Demo cannot be produced as written.** It says 2 slices of pizza
+   at `loaded` reads `570 kcal · 24 g protein` *with the 1.4× applied*. With
+   the frame's seeded pizza (285 kcal, 12 g protein at one slice) that is the
+   **normal** case; `loaded` gives `798 kcal · 34 g protein`. Frame 4c shows
+   285/12 beside the title, the `normal` button filled, and 570/24 as the
+   entry — so the Demo line took the frame's normal-case reading and attached
+   `loaded` to it. The Exit criterion as phrased ("kcal and protein at 1.4× the
+   normal case") is met. The seed follows the frame; the Demo string is the
+   thing that is wrong.
+2. **Should the food's reference line exist?** Frame 4c puts the food's own
+   normal-case numbers beside the title, distinct from the per-entry line. T3's
+   field list omits it and it was left out rather than improvised. It is the
+   only thing that tells the user what one unit of a food is worth before they
+   choose an amount.
+3. **The module skeleton is now written four times**, and P7 makes it five and
+   six. P4 asked that this be raised before a third copy, P5 could not avoid a
+   third, and this is the fourth. The fix crosses files no module phase owns,
+   so it needs a planner decision — a shared stylesheet, or an accepted
+   duplication.
+4. **`amount_step` is one global number, and gram foods pay for it.** Cottage
+   cheese and chicken breast are logged in grams and open at `1 g`, stepping by
+   `1` — so the presses are decorative for them and the number is typed every
+   time. `RULES.md` makes logging speed the rule that wins. A per-unit step
+   belongs in `foods.json`'s `units` map, which is already data, if this proves
+   slow in use.
+5. **Two entries logged in the same second show oldest-first.** `readEntries`
+   orders by `ts`, and `toIso` is second-precision, so a tie falls back to the
+   order the lines reached the file. This is the module where that happens,
+   because logging lands straight back at the picker. It is cosmetic — the two
+   rows show the same clock time — and the fix is in `src/data/entry.ts` or
+   `src/data/store.ts`, which this phase does not own. The rail was left on the
+   store's ordering rather than re-sorting locally.
+6. **`ensureSeeded` still never backfills, and this phase added a fifth key
+   section.** `nutritionConfig()` in `src/data/food.ts` spreads the seed under
+   the stored `nutrition` section for exactly the reason P8 had to do it twice.
+   Three phases have now written this workaround. P8's open question 2.
+
 ## If blocked
 
 Set this phase's Status to `blocked` in `PLAN.md`'s table (fill Baseline and
@@ -248,3 +381,66 @@ Assumptions: {numbered, or "none"}
 Open questions: {numbered, or "none"}
 Next action: {the next eligible phase per PLAN.md's table, or "plan complete"}
 ```
+
+## Outcome
+
+**Objective:** a flat timeline of what was eaten and when, with per-food units,
+optional level examples, and level multipliers that live in editable data.
+
+**HEAD:** `715f829` | **Branch:** `v1-implementation` | **Baseline:** `0a32e6b`
+
+**Files changed**
+
+```txt
+src/components/amount_stepper.css   src/screens/nutrition.css
+src/components/amount_stepper.tsx   src/screens/nutrition.test.tsx
+src/components/level_control.css    src/screens/nutrition.tsx
+src/components/level_control.tsx    src/seed/app.json
+src/data/food.ts                    src/seed/foods.json
+src/data/store.ts                   src/seed/levels.json
+src/main.tsx
+```
+
+**Commands run**
+
+| command | result |
+| :- | :- |
+| `npm test` (entry) | exit 0 — 120 tests over 11 files, the count `PLAN.md` predicts |
+| `npm test` (T1 → gate) | exit 0 — 130, 140, 151, 153, then **155 tests over 12 files** |
+| `npm run typecheck` | exit 0, no output, at every task boundary |
+| `npm run build` | exit 0, `dist/index.html` written (1.15 kB), service worker generated |
+| `npm run dev` | serves `http://localhost:5173`, HTTP 200 |
+| fresh review | subagent on `git diff 0a32e6b..HEAD` — 2 data defects fixed, 3 lens cuts applied, 1 lens finding recorded rather than fixed |
+
+**Test status:** `npm test` → exit 0, 155 tests over 12 files, all passing. 35
+of them are this phase's, in `src/screens/nutrition.test.tsx`. No test is left
+deliberately red, and none of the four still-red-for-a-later-phase kind exists
+anywhere in this plan.
+
+**Exit criteria**
+
+- `npm test` → exit 0 ✓
+- `npm run build` → exit 0, `dist/index.html` written ✓
+- The pizza walkthrough, the identical-buttons case and the three-in-a-day flat
+  list are all **covered by tests rather than walked in a browser** — the
+  browser path needs a Google sign-in this session cannot perform. Under test:
+  2 slices at `loaded` reads `798 kcal · 34 g protein` (1.4× the normal case's
+  570/24 — see open question 1), three example columns render, a food with no
+  examples renders identical buttons and no prose at all, and three entries in
+  one day give three rows, one label, no total and no `done`.
+- Searching `src/` for `breakfast`, `lunch`, `dinner`, `meal` → **1 match**, in
+  `nutrition.test.tsx`, and it is the assertion that forbids them. P8 recorded
+  the same shape of expected non-zero.
+- Searching `src/` for `0.7` and `1.4` → the only multiplier is in
+  `src/seed/levels.json`. A bare substring search also hits typographic
+  line-heights (`/1.4`, `/1.45`) in four CSS files, two of which predate this
+  phase — so the criterion's number was already unmeetable, while its intent
+  holds. Scope it to `.ts`/`.tsx` if it is re-run.
+
+**Assumptions:** 5, above. **Open questions:** 6, above — question 1 is the one
+to read.
+
+**Next action:** P7 (`movement_and_dance`). Both things it was waiting on now
+exist: `src/components/amount_stepper.tsx` and `src/seed/levels.json` with its
+`stroll / steady / brisk` and `marking / social / full-out` scales. It is the
+last phase of the plan.

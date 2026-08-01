@@ -127,7 +127,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | done | 7911067 | 2026-08-01 |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | done | b736ee8 | 2026-08-01 |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | done | 19c476f | 2026-08-01 |
-| [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | pending | | |
+| [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | done | 0a32e6b | 2026-08-01 |
 | [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5, P6 | pending | | |
 | [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | done | 19c476f | 2026-08-01 |
 
@@ -296,6 +296,14 @@ worktree again.
     TypeScript says a number is, and a canvas sized `NaN` uploads a photo
     nothing can open. Every later phase adding a config key inherits that
     workaround. P8's open question 2.
+  - *From P6, for the planner rather than for an executor — P3 is `done`.*
+    **Third phase, same workaround.** P6 added a `nutrition` section of four
+    keys to `config/app.json` and defends it with `nutritionConfig()` in
+    `src/data/food.ts`, which spreads the seed under the stored section. An
+    older stored file would otherwise hand `undefined` to `toFixed`, and every
+    number on the screen would read `NaN`. P7 adds a fifth section and writes
+    it a fourth time. The duplication is the symptom; `ensureSeeded` merging
+    keys is the fix, and it is still a planner decision.
 
 ### P4: edit_and_delete_entries
 
@@ -351,6 +359,18 @@ worktree again.
     is right and the file is orphaned, and clearing it needs the same
     `Adapter` delete your open question 1 asks for — one primitive, two
     callers now.
+  - *From P6, for the planner rather than for an executor — P4 is `done`.*
+    Your not-built-yet branch is **down to two modules**, movement and dance.
+    Whoever runs P7 registers both and makes it unreachable, which is the call
+    P8's comment above already handed forward.
+  - *From P6, for the planner.* A nutrition entry's row on home renders an
+    empty detail. `detail(entry, config)` in `src/screens/home.tsx` still
+    switches on the module and answers only for `body`, so a logged food shows
+    its time and nothing else — the question P2 left you about whether the
+    renderer registry should cover `recent` rows as well as the edit screen.
+    Nutrition would answer it with the same `lineOf` the rail uses. `home.tsx`
+    is in no module phase's Touch list, so P6 did not touch it, and P7 will
+    arrive with the same gap for two more modules.
 
 ### P5: workout
 
@@ -454,7 +474,32 @@ worktree again.
 - **For other phases:** `src/seed/levels.json` holds every module's level
   scale and the global multipliers, not just nutrition's. P7 reads its
   `stroll / steady / brisk` and `marking / social / full-out` scales from it.
-- **Notes:**
+- **Notes:** Done. `src/seed/levels.json` is in the tree in exactly the shape
+  the capsule specified, and `src/components/amount_stepper.tsx` with it — the
+  two things P7 was waiting on. `src/data/food.ts` owns the library and the
+  arithmetic: `loadFoods()`, `loadLevels()`, `nutritionFor(food, amount, level)`
+  and `unitOf`. Four things every later phase should know. **`AmountStepper`
+  takes `value`, `unit`, `step`, `onChange` and `label`, and is presentational
+  like P5's two** — the step is a prop, not a config read, and the box holds
+  what was typed so a decimal point survives; key it on whatever changes the
+  number underneath it. **`LevelControl` takes `scale`, `value`, `onChange`,
+  optional `examples` and `label`**, wraps `Segmented` at `tone="ink-select"`,
+  and is one component in two conditions — pass no examples and the prose does
+  not exist while the buttons stay identical. **`src/seed/foods.json` is
+  `{ units, foods }`, not a bare array**: `units` maps a unit to how it reads
+  past one, and a unit absent from it reads the same at either count, which is
+  how `g` avoids becoming `gs`. And **`nutritionConfig()` spreads the seed under
+  the stored `nutrition` section** — the third phase to write that workaround
+  for `ensureSeeded` not backfilling. The fresh review caught two data defects,
+  both fixed with tests watched to fail first: a typed negative amount reached
+  the payload where the presses had always refused one, and a written-out
+  `"kcal": null` multiplied to `0` instead of staying unknown. Nine deviations,
+  five assumptions and six open questions are in `P6_nutrition.md` →
+  **Deviations**, **Assumptions**, **Fresh review**, **Open questions**,
+  **Outcome**. The one to read is question 1: **this phase's own Demo line
+  cannot be produced** — `570 kcal · 24 g protein` is 2 slices of the seeded
+  pizza at `normal`, not at `loaded`, and frame 4c agrees with the code rather
+  than with the doc.
 - **Incoming comments:**
   - *From P5.* Both shared controls are built and their signatures are in P5's
     Notes above — read them before writing a level control or a food picker.
@@ -502,6 +547,26 @@ worktree again.
     screen and is in no module phase's Touch list; register your editor at
     module scope in your own screen file, not in `edit_entry.tsx`. Both are
     recorded deviations in `P5_workout.md`, and P6 carries the same two.
+  - *From P6.* **Both things you were waiting on are now in the tree.**
+    `src/seed/levels.json` carries your two scales — `movement.scale` is
+    `stroll / steady / brisk` and `dance.scale` is `marking / social /
+    full-out`, each under its module's own key, and neither has `multipliers`
+    because only nutrition multiplies anything. Read them with `loadLevels()`
+    from `src/data/food.ts`, which returns `Record<string, Scale>` and is the
+    one export of that file you need. `src/components/amount_stepper.tsx` is
+    built to the signature in P6's Notes above.
+  - *From P6.* **The stepper is a number and a unit, and your durations are
+    minutes** — pass `unit="min"` and a step from config rather than adding a
+    duration control. It is presentational: it takes `step` as a prop and reads
+    no config itself. Key it on whatever changes the number underneath it, or
+    the box keeps what was typed for the previous thing.
+  - *From P6.* Nutrition's `amount_step` is one global number, which is fine
+    for slices and wrong for grams — see P6's open question 4 before you pick
+    how a duration steps. If the planner moves the step into the `units` map,
+    your durations inherit it.
+  - *From P6.* You write the **fifth and sixth** copies of the module skeleton
+    CSS. It is P5's open question 4 and P6's open question 3, still open, and
+    still crossing files no module phase owns.
 
 ### P8: photos_and_objectives
 
