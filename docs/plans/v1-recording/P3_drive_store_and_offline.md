@@ -358,6 +358,32 @@ did — with sync in place a stale config no longer stays on one machine, it
 propagates. **Still a planner decision, and more urgent before P5–P8 each add
 their seeds.**
 
+### T4: no web app manifest
+
+The capsule configures `vite-plugin-pwa` for the service worker and says
+nothing about a manifest. `manifest: false` is set explicitly, because the
+plugin ships one by default and a web app manifest exists to invite
+installation — which `RULES.md` forbids outright: *"No installed apps. Static
+web only — laptop and phone browser, same URL."* The service worker is here to
+survive a lost signal, not to become an app.
+
+### T4: the `push` search needs to name what it is looking for
+
+**The doc asked for** *"searching `dist/` for `push` and `Notification`
+returns 0 matches in the generated service worker."*
+
+**What holds:** `dist/sw.js` — the generated service worker — has zero matches
+for both. `dist/workbox-*.js`, the runtime it loads, contains `push` eight
+times, every one of them `Array.prototype.push` in minified code
+(`this.p.push(t)`, `e.push(n.url)`). No bundled JavaScript can ever pass the
+criterion as literally written.
+
+**What was checked instead**, across all of `dist/`, matching zero times:
+`addEventListener("push")`, `pushManager`, `showNotification`, `Notification`,
+`requestPermission`, `periodicSync`, `backgroundSync`. That is the rule the
+criterion was reaching for — no channel through which the app could notify —
+and it holds.
+
 ### T1: `.gitignore` needed no edit
 
 Listed under Touch as *"ensure `.env.local` and `dist/` are ignored"*. Both were

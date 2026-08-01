@@ -59,6 +59,7 @@ async function start(): Promise<void> {
 
   ensureSeeded()
   addEventListener('hashchange', paint)
+  addEventListener('online', syncNow)
   paint()
 }
 
