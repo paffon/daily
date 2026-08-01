@@ -5,7 +5,8 @@ import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
 import { loadFoods, loadLevels, nutritionFor } from '../data/food'
 import type { Food } from '../data/food'
-import { ensureSeeded, writeJson } from '../data/store'
+import { ensureSeeded, readEntries, writeJson } from '../data/store'
+import { Nutrition } from './nutrition'
 
 const named = (name: string): Food => {
   const food = loadFoods().foods.find((item) => item.name === name)
@@ -144,6 +145,169 @@ describe('the level control', () => {
     )
     fireEvent.click(container.querySelectorAll('.segmented button')[2]!)
     expect(picked).toEqual(['loaded'])
+  })
+})
+
+describe('the nutrition screen', () => {
+  const pick = (container: Element, name: string) =>
+    fireEvent.click(
+      [...container.querySelectorAll<HTMLButtonElement>('.picker-item')].find(
+        (item) => item.textContent?.startsWith(name),
+      )!,
+    )
+
+  const chooseLevel = (container: Element, level: string) =>
+    fireEvent.click(
+      [...container.querySelectorAll<HTMLButtonElement>('.level .segmented button')].find((button) =>
+        button.textContent?.includes(level),
+      )!,
+    )
+
+  const typeAmount = (container: Element, value: string) =>
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="amount"]')!, {
+      target: { value },
+    })
+
+  const logIt = (container: Element) =>
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-log')!)
+
+  const railLines = (container: Element) =>
+    [...container.querySelectorAll('.nutrition-rail-what')].map((row) => row.textContent)
+
+  /** The entry's own timestamp, moved the way the strip moves it — logging the
+   *  apple from an hour ago is the normal case here. */
+  const setTime = (container: Element, time: string) => {
+    // the two boxes stay open once opened, so this only presses when collapsed
+    const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
+    if (collapsed !== null) fireEvent.click(collapsed)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.field-stamp-edit input[type="time"]')!, {
+      target: { value: time },
+    })
+  }
+
+  const logPizza = (container: Element) => {
+    pick(container, 'pizza')
+    typeAmount(container, '2')
+    chooseLevel(container, 'loaded')
+    logIt(container)
+  }
+
+  it('logs the food, the amount and the level, and nothing else', () => {
+    const { container } = render(<Nutrition />)
+    logPizza(container)
+
+    const [entry] = readEntries('nutrition')
+    expect(entry?.payload).toEqual({ food_id: 'pizza', amount: 2, level: 'loaded' })
+  })
+
+  it('shows the entry’s own numbers with the level’s multiplier applied', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'pizza')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('285 kcal · 12 g protein')
+
+    typeAmount(container, '2')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('570 kcal · 24 g protein')
+
+    chooseLevel(container, 'loaded')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('798 kcal · 34 g protein')
+  })
+
+  it('says nothing about numbers for a food that carries none', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'water')
+    expect(container.querySelector('.nutrition-numbers')).toBeNull()
+  })
+
+  it('carries the food’s own unit into the entry’s line, pluralised past one', () => {
+    const { container } = render(<Nutrition />)
+    logPizza(container)
+    pick(container, 'coffee')
+    logIt(container)
+    pick(container, 'apple')
+    logIt(container)
+
+    // an apple counts as itself, so its line carries no unit at all
+    expect(railLines(container)).toEqual(
+      expect.arrayContaining(['pizza · 2 slices · loaded', 'coffee · 1 cup · normal', 'apple · 1 · normal']),
+    )
+  })
+
+  it('opens a food at its own default level', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'apple')
+    expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('normal')
+  })
+
+  it('scopes Previous to the food rather than to the day', () => {
+    const first = render(<Nutrition />)
+    logPizza(first.container)
+    first.unmount()
+
+    const { container } = render(<Nutrition />)
+    pick(container, 'pizza')
+    expect(container.querySelector('.field-previous')?.textContent).toContain('2 slices · loaded')
+
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-change')!)
+    pick(container, 'coffee')
+    expect(container.querySelector('.field-previous')?.textContent).toContain('nothing recorded yet')
+  })
+
+  it('makes a library food out of what was typed to find it', () => {
+    const { container } = render(<Nutrition />)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: 'malabi' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.picker-new')!)
+
+    expect(container.querySelector('.nutrition-title')?.textContent).toBe('malabi')
+    expect(loadFoods().foods.some((food) => food.name === 'malabi')).toBe(true)
+  })
+
+  it('lands back at the picker, because nothing contains an entry', () => {
+    const { container } = render(<Nutrition />)
+    logPizza(container)
+    expect(container.querySelector('.picker')).not.toBeNull()
+    expect(container.querySelector<HTMLButtonElement>('.nutrition-log')?.disabled).toBe(true)
+  })
+
+  it('keeps three entries in one day as a flat list with no grouping or total', () => {
+    const { container } = render(<Nutrition />)
+
+    setTime(container, '09:20')
+    pick(container, 'coffee')
+    logIt(container)
+
+    setTime(container, '16:10')
+    pick(container, 'apple')
+    logIt(container)
+
+    setTime(container, '13:30')
+    logPizza(container)
+
+    // newest first, one label over the whole list rather than one per group,
+    // and nothing that adds the three together
+    expect(railLines(container)).toEqual([
+      'apple · 1 · normal',
+      'pizza · 2 slices · loaded',
+      'coffee · 1 cup · normal',
+    ])
+    expect(container.querySelectorAll('.nutrition-rail-label')).toHaveLength(1)
+    expect(container.textContent).not.toMatch(/total/i)
+    expect(container.querySelector('.nutrition-actions')?.textContent).toBe('log it')
+  })
+
+  it('knows nothing about what a container of food would be called', () => {
+    const { container } = render(<Nutrition />)
+    logPizza(container)
+    expect(container.textContent).not.toMatch(/breakfast|lunch|dinner|meal/i)
+  })
+
+  it('draws no graph, and says plainly what there is instead', () => {
+    const { container } = render(<Nutrition />)
+    expect(container.querySelector('svg, canvas')).toBeNull()
+    expect(container.querySelector('.nutrition-rail-progress')?.textContent).toBe(
+      'progress · 0 entries, not enough to draw',
+    )
   })
 })
 

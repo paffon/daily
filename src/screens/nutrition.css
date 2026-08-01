@@ -1,0 +1,232 @@
+/* Frame 4c. The shared module skeleton, for the fourth time — strip, rail,
+   fields, narrow first with the rail below the fields and the action pinned to
+   the bottom, and the wide arrangement at 760px. `body.css`, `edit_entry.css`
+   and `workout.css` carry the same rules; hoisting them crosses files no module
+   phase owns, and is open question 4 in `P5_workout.md`. */
+
+.nutrition {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.nutrition-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.nutrition-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nutrition-split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* the rail — one flat timeline, newest first */
+
+.nutrition-rail {
+  order: 2;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 0;
+  background: var(--paper-panel);
+}
+
+.nutrition-rail-label {
+  margin: 0;
+  padding: 16px 24px;
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.nutrition-rail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 24px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nutrition-rail-when {
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.nutrition-rail-what {
+  font: 400 15.5px/1.3 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.nutrition-rail-progress {
+  margin: 8px 0 0;
+  padding: 16px 24px 28px;
+  font: 400 11.5px/1.5 var(--family-mono);
+  color: var(--mono);
+}
+
+/* the fields */
+
+.nutrition-fields {
+  order: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px 24px 24px;
+  min-width: 0;
+}
+
+.nutrition-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.nutrition-change {
+  align-items: center;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 11.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.nutrition-title {
+  margin: 0;
+  font: 200 clamp(30px, 5vw, 38px) / 1.1 var(--family-serif);
+  color: var(--ink);
+}
+
+.nutrition-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px 44px;
+}
+
+.nutrition-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nutrition-label {
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.nutrition-numbers {
+  padding-bottom: 6px;
+  font: 400 16px/1.4 var(--family-mono);
+  color: var(--ink-quiet);
+}
+
+.nutrition-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  margin-top: auto;
+  padding: 12px 0;
+  background: var(--paper);
+}
+
+.nutrition-log {
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 18px 30px;
+  border: 1px solid var(--steel);
+  border-radius: var(--radius-control);
+  background: var(--steel);
+  color: var(--paper);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.nutrition-log:disabled {
+  border-color: var(--rule);
+  background: transparent;
+  color: var(--mono-faint);
+  cursor: default;
+}
+
+/* editing a past entry, inside frame 4h */
+
+.nutrition-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.nutrition-edit-name {
+  margin: 0;
+  font: 200 26px/1.1 var(--family-serif);
+  color: var(--ink);
+}
+
+@media (min-width: 760px) {
+  .nutrition-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .nutrition-split {
+    flex-direction: row;
+  }
+
+  .nutrition-rail {
+    order: 0;
+    flex: none;
+    width: 340px;
+    padding-top: 40px;
+  }
+
+  .nutrition-rail-label,
+  .nutrition-rail-row,
+  .nutrition-rail-progress {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .nutrition-rail-progress {
+    margin-top: auto;
+    padding-bottom: 32px;
+  }
+
+  .nutrition-fields {
+    flex: 1;
+    gap: 28px;
+    padding: 34px 52px 0;
+  }
+
+  .nutrition-actions {
+    position: static;
+    padding: 0 0 28px;
+    background: none;
+  }
+
+  .nutrition-log {
+    flex: none;
+    min-width: 240px;
+  }
+}

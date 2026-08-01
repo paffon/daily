@@ -8,6 +8,7 @@ import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
 import { Workout } from './screens/workout'
+import { Nutrition } from './screens/nutrition'
 import { Objectives } from './screens/objectives'
 import { EditEntry } from './screens/edit_entry'
 import { SignIn, SignInBand } from './screens/signin'
@@ -36,6 +37,7 @@ Object.assign(ROUTES, {
   '#/objectives': () => <Objectives />,
   '#/body': () => <Body />,
   '#/workout': () => <Workout />,
+  '#/nutrition': () => <Nutrition />,
 })
 
 /** Hash to screen. An id-carrying route is matched before the table;
