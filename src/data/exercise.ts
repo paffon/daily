@@ -36,6 +36,20 @@ export type Performed = { exercise_id: string; sets: SetRow[]; comment: string }
 
 export const loadExercises = (): Library => readJson('library/exercises.json', exercisesSeed)
 
+/** The distinct body parts a workout touched, resolved against the library at
+ *  the moment it is logged and written onto the entry — `src/data/objectives.ts`
+ *  reads `payload.body_parts` to answer a target like *something for the back
+ *  weekly*. Resolved here rather than by the reader because nothing in a
+ *  library is protected from being renamed, re-tagged or deleted, and an entry
+ *  has to keep saying what was true when it happened. An exercise carrying no
+ *  body part contributes none. */
+export function bodyPartsOf(performed: Performed[], library: Exercise[]): string[] {
+  const parts = performed.map(
+    (done) => library.find((item) => item.id === done.exercise_id)?.body_part ?? '',
+  )
+  return [...new Set(parts.filter((part) => part !== ''))]
+}
+
 export function fieldsFor(exercise: Exercise): Field[] {
   return exercise.fields ?? loadExercises().kinds[exercise.kind] ?? []
 }

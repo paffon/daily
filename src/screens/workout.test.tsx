@@ -1,10 +1,12 @@
 import { fireEvent, render } from '@testing-library/preact'
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
-import { fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
+import { bodyPartsOf, fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
 import type { Exercise, Performed, SetRow } from '../data/exercise'
+import { factFor } from '../data/objectives'
+import type { CountTarget } from '../data/objectives'
 import { SetTable } from '../components/set_table'
-import { ensureSeeded, getEntry, readEntries } from '../data/store'
+import { ensureSeeded, getEntry, readEntries, writeJson } from '../data/store'
 import { EditEntry } from './edit_entry'
 import { Workout } from './workout'
 
@@ -324,5 +326,70 @@ describe('what a saved workout holds', () => {
     const { container } = render(<Workout />)
     pick(container, 'chest press')
     expect(container.querySelector('.field-previous')?.textContent).toContain('30 kg')
+  })
+})
+
+/** The one contract between this module and the objectives surface. Objectives
+ *  reads `payload.body_parts` and nothing else of a workout, so a target like
+ *  *something for the back weekly* is answered by what the entry recorded at
+ *  log time — never by a library lookup that a later rename would change. */
+describe('the body parts an objective counts', () => {
+  const backTarget: CountTarget = {
+    kind: 'count',
+    label: 'something for the back weekly',
+    module: 'workout',
+    per: 'week',
+    target: 1,
+    body_part: 'back',
+  }
+
+  it('keeps each part once, however many exercises reached it', () => {
+    const { container } = render(<Workout />)
+    pick(container, 'chest press')
+    press(container, '.workout-rail-add')
+    pick(container, 'pec deck')
+    press(container, '.workout-rail-add')
+    pick(container, 'pull ups')
+    press(container, '.workout-end')
+
+    expect(readEntries('workout')[0]!.payload['body_parts']).toEqual(['chest', 'back'])
+  })
+
+  it('answers a body-part target with the workout just logged', () => {
+    expect(factFor(backTarget, readEntries('workout'))).toBe('0 this week')
+
+    const { container } = render(<Workout />)
+    pick(container, 'pull ups')
+    press(container, '.workout-end')
+
+    expect(factFor(backTarget, readEntries('workout'))).toBe('1 this week')
+  })
+
+  it('does not answer for a part the workout never reached', () => {
+    const { container } = render(<Workout />)
+    pick(container, 'pull ups')
+    press(container, '.workout-end')
+
+    expect(factFor({ ...backTarget, body_part: 'legs' }, readEntries('workout'))).toBe('0 this week')
+  })
+
+  it('records the part an exercise carried even after the library is re-tagged', () => {
+    const { container } = render(<Workout />)
+    pick(container, 'pull ups')
+    press(container, '.workout-end')
+
+    const library = loadExercises()
+    writeJson('library/exercises.json', {
+      ...library,
+      exercises: library.exercises.map((item) =>
+        item.name === 'pull ups' ? { ...item, body_part: 'shoulders' } : item,
+      ),
+    })
+
+    expect(factFor(backTarget, readEntries('workout'))).toBe('1 this week')
+  })
+
+  it('contributes nothing for an exercise carrying no body part', () => {
+    expect(bodyPartsOf([{ exercise_id: 'nothing-known', sets: [], comment: '' }], [])).toEqual([])
   })
 })

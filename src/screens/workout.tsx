@@ -4,7 +4,7 @@ import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson, writeJson } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
-import { fieldsFor, loadExercises, setLine } from '../data/exercise'
+import { bodyPartsOf, fieldsFor, loadExercises, setLine } from '../data/exercise'
 import { Previous, Timestamp, dayTimeOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
 import { SetTable } from '../components/set_table'
@@ -139,7 +139,8 @@ export function Workout(): VNode {
    *  now — and a log written for last Tuesday would otherwise store a session
    *  that ran for four days. See this phase's doc. */
   const end = () => {
-    putEntry(newEntry('workout', { started: ts, exercises: performed }, ts))
+    const body_parts = bodyPartsOf(performed, library.exercises)
+    putEntry(newEntry('workout', { started: ts, exercises: performed, body_parts }, ts))
     setPast(readEntries('workout'))
     setPerformed([])
     setAt(0)
