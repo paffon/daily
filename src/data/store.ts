@@ -5,6 +5,7 @@ import type { Entry, Module } from './entry'
 import { entryPath, revise } from './entry'
 import { driveAdapter } from './sync'
 import appSeed from '../seed/app.json'
+import objectivesSeed from '../seed/objectives.json'
 
 /** Three methods, and P3 supplies a Drive-backed second implementation. */
 export type Adapter = {
@@ -150,7 +151,12 @@ export function lastTouched(module: Module): string | null {
 
 /** Seeds are defaults, not truth: written once if absent, never over an
  *  edited copy. P3–P8 add rows here and change nothing else in this file. */
-const SEEDS: [string, unknown][] = [['config/app.json', appSeed]]
+const SEEDS: [string, unknown][] = [
+  ['config/app.json', appSeed],
+  /* Empty on purpose: a shipped objective would be exactly the hard-coded
+     target `RULES.md` forbids. The user writes their own or has none. */
+  ['config/objectives.json', objectivesSeed],
+]
 
 export function ensureSeeded(): void {
   for (const [path, value] of SEEDS) {
