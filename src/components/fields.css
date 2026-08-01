@@ -1,0 +1,66 @@
+/* Shared controls. Per-screen CSS lives beside its screen; these two live
+   beside the components every module reuses. */
+
+.field-stamp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-stamp-box {
+  align-items: center;
+  height: 52px;
+  padding: 0 18px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  font: 400 15px/1 var(--family-mono);
+  color: var(--ink-quiet);
+  cursor: pointer;
+}
+
+.field-stamp-edit {
+  display: flex;
+  gap: 8px;
+}
+
+.field-stamp-edit input {
+  height: 52px;
+  padding: 0 12px;
+  border: 1.5px solid var(--steel);
+  background: var(--paper-input);
+  font: 400 15px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.field-stamp-now {
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+.field-previous {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--paper-quote);
+  border-left: 2px solid var(--steel);
+}
+
+.field-previous-label,
+.field-previous-when,
+.field-previous-empty {
+  font: 400 12.5px/1.4 var(--family-mono);
+  color: var(--mono);
+}
+
+.field-previous-label {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.field-previous-what {
+  font: 400 12.5px/1.4 var(--family-mono);
+  color: var(--ink-quiet);
+}
