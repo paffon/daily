@@ -352,10 +352,36 @@ was watched to fail.
 For the planner. In severity order.
 
 1. **The workout payload's `body_parts` is a contract P5 has not agreed to.**
-   If P5 records exercises as `{ exercises: [{ body_part: 'back' }] }` — which
+   ~~If P5 records exercises as `{ exercises: [{ body_part: 'back' }] }` — which
    is what the capsule describes — every body-part-scoped target reads
-   `0 this week` forever, with no error anywhere. P5 has an Incoming comment.
-   Someone should decide which shape is right before P5 writes it.
+   `0 this week` forever, with no error anywhere.~~
+
+   **Closed 2026-08-01 at the P5 merge, and it had already fired.** P5 was not
+   waiting to be written — it had been built in a worktree off the same
+   baseline as this phase and left unmerged, storing
+   `{ started, exercises: [{ exercise_id, sets, comment }] }`. No `body_parts`,
+   no error, every body-part target reading `0 this week`, precisely the
+   failure described above.
+
+   Resolved this phase's way. `bodyPartsOf(performed, library)` in
+   `src/data/exercise.ts` returns the distinct parts, and `end()` in
+   `src/screens/workout.tsx` writes them onto the payload at log time. Changing
+   `bodyParts()` in `src/data/objectives.ts` to walk `exercises[]` was the
+   rejected alternative: a `Performed` names only `exercise_id`, so the reader
+   would have to join against the library, and `asExercise` in P5's own screen
+   exists precisely because that join fails when an exercise is renamed or
+   deleted. `objectives.ts` already carried the comment saying an entry has to
+   keep saying what was true when it happened.
+
+   Five tests in `src/screens/workout.test.tsx`; three were watched to fail
+   first, one of which re-tags the library after logging and still expects
+   `1 this week`.
+
+   **The lesson worth keeping is not about body parts.** An Incoming comment in
+   `PLAN.md` binds the *next executor to read it*, and a phase running in a
+   worktree branched before the comment was written never does. This one was
+   correct, specific, and named the exact failure — and it still did not
+   arrive, because P5 had already started.
 2. **`ensureSeeded` still never backfills a key.** P2 raised this; this phase
    added four more keys to `config/app.json` and had to defend two of them by
    hand, because a browser holding an older file gets `undefined` where
@@ -457,6 +483,9 @@ runnable and record the rest:
 - *log a workout → the row shows `1 this week`* — there is no workout screen
   yet. The transition was walked in the browser with the entry written through
   the same store call P5 will use: `0 this week` → `1 this week`.
+  **Walked for real on 2026-08-01**, once P5 was merged: `workout.test.tsx`
+  drives the workout screen and asserts the same transition, including the
+  body-part-scoped case this phase could only assume. See open question 1.
 - *log one entry in every module, reload, confirm home's `recent`* — four of
   the five modules are still stubs.
 - *T4's whole-app pass* covered home, body, the edit screen and objectives.
@@ -471,12 +500,17 @@ objectives screen found no `progress`, `meter`, `[role=progressbar]`, `svg` or
 `canvas`, no `%` in its text, and — by computed style over every element — no
 colour anywhere in which red dominates. No console errors.
 
-**Next action:** **P5, and only P5.** Corrected when this branch was merged
+**Next action:** ~~**P5, and only P5.**~~ Corrected when this branch was merged
 into `v1-implementation`, which had meanwhile recorded that P6 waits on P5 and
 P7 waits on P5 and P6 — each is forbidden to rebuild the shared controls the
 one before it ships. P8 was the last phase still hanging off P4 alone, which
 is what let it run out of order at all. When P7 lands, this plan is complete
 and `PLAN.md` → **On completion** applies.
+
+**Superseded 2026-08-01: P5 was already done.** It had been built in a worktree
+off `19c476f` and never merged, so the phase table said `pending` over finished
+work. Merged on 2026-08-01; **the next action is P6**, and open question 1
+above closed in the process.
 
 ## On completion
 

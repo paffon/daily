@@ -154,6 +154,16 @@ unless the user says otherwise.
 baseline is exit 0 with every test passing. There is no lint step and none is
 being added — `npm run typecheck` is the static gate.
 
+**If you run your phase in a git worktree, check the file count.** Until the
+P5 merge, `vitest`'s default include walked `.claude/worktrees/` and collected
+a whole second copy of `src/` per worktree — the suite reported 505 tests over
+52 files where the checkout had 120 over 11. Every test count recorded in a
+phase outcome before P5 counted branches that were not checked out, which is
+why those numbers do not add up against each other. `vite.config.ts` now sets
+`include: ['src/**/*.test.{ts,tsx}']`. **After the merge the suite is 120 tests
+over 11 files** — if you see a number far above that, something is collecting a
+worktree again.
+
 ## Phase notes
 
 ### P1: toolchain_and_home
@@ -383,6 +393,20 @@ being added — `npm run typecheck` is the static gate.
   a blank body part and the library's first kind, permanently**, so a route
   added as `run · park loop` gets a weight box and the coach loses the field
   `DESIGN.md` calls the only reason it exists.
+- **Merged 2026-08-01, after P8 rather than before it.** P5 was built in a
+  worktree off `19c476f` and left unmerged, so `PLAN.md` on the main branch
+  went on saying `pending` while the work existed. Both phases branched from
+  the same commit; three files conflicted and all three were pure unions —
+  a `SEEDS` row each in `src/data/store.ts`, a stub route each in
+  `src/main.tsx`, and the phase table, which took P5's `done` alongside the
+  corrected `P6, P7` dependency columns that P5 predates. **Two things landed
+  with the merge that are not in P5's own record.** `payload.body_parts` is now
+  written at log time, closing P8's open question 1 — see the closed comment
+  below. And `npm test` had been collecting the worktrees: vitest's default
+  include walks `.claude/worktrees/`, so the suite reported 505 tests over 52
+  files where this checkout has 120 over 11, and **every phase outcome recorded
+  before this one counted branches that were not checked out**. `vite.config.ts`
+  now scopes the include to `src/`.
 - **Incoming comments:**
   - *From P4.* You are the first phase to build a module screen since the edit
     screen landed, and `src/screens/edit_entry.css` now duplicates `body.css`
@@ -404,18 +428,21 @@ being added — `npm run typecheck` is the static gate.
     (a number, a duration), keep the input **uncontrolled** — `defaultValue`,
     not `value` — or writing the parsed value back mid-keystroke will eat a
     decimal point as it is typed. `src/screens/body.tsx` shows the shape.
-  - *From P8, and read this before you design the payload.* Objectives already
-    counts your entries, and a body-part-scoped target
-    (`something for the back weekly`) reads **`payload.body_parts`, a flat
-    array of strings on the workout entry**. Nothing else in `src/` reads a
-    workout payload, so this is the whole contract. If you record body parts
-    somewhere else — `{ exercises: [{ body_part: 'back' }] }` is what the P8
-    capsule describes — every such target reads `0 this week` forever with no
-    error anywhere. Either populate `body_parts` at log time or change
-    `bodyParts()` in `src/data/objectives.ts`, which is four lines. Populating
-    it is the better call on its own merits: nothing in a library is protected
-    from being renamed or re-tagged, and an entry has to keep saying what was
-    true when it happened. This is P8's open question 1.
+  - *From P8 — **closed at the merge**, and it had fired.* Objectives counts
+    your entries, and a body-part-scoped target (`something for the back
+    weekly`) reads **`payload.body_parts`, a flat array of strings on the
+    workout entry**. P5 was built in its worktree without seeing this comment
+    and stored `{ started, exercises: [{ exercise_id, sets, comment }] }` —
+    no `body_parts` anywhere — so every such target read `0 this week` with no
+    error, exactly as predicted. Fixed when the branches were merged, P8's way
+    rather than by changing the reader: `bodyPartsOf` in `src/data/exercise.ts`
+    resolves the distinct parts against the library and `end()` writes them
+    onto the payload. The reader was the wrong place because the entry is only
+    joinable to the library by `exercise_id`, and `asExercise` in your own
+    screen already documents that that lookup fails — nothing in a library is
+    protected from rename or delete. Five tests in `workout.test.tsx`, three
+    watched to fail first, one of which re-tags the library after logging and
+    still expects `1 this week`.
   - *From P8.* `src/components/segmented.tsx` is yours to build and P8 needed
     a choice control before it existed, so `src/screens/objectives.tsx` uses
     plain `<select>` elements. They are not a precedent for the next-time mark
@@ -461,7 +488,11 @@ being added — `npm run typecheck` is the static gate.
   both level scales. None existed. The column now reads `P4, P5, P6` and the
   phase is plain `pending` again — it waits its turn, nothing here is blocked.
   Nothing else in the doc changes; every task works as written once P6 lands.
-  Full record in `P7_movement_and_dance.md` → **Prior attempt**.
+  Full record in `P7_movement_and_dance.md` → **Prior attempt**. **Two of the
+  four are now in the tree** — `segmented.tsx` and `library_picker.tsx` came
+  with the P5 merge on 2026-08-01. The two still missing are both P6's,
+  `amount_stepper.tsx` and `src/seed/levels.json`, and they are what this phase
+  is still waiting for.
 - **Incoming comments:**
   - *From P5.* The two shared controls are built; their signatures are in P5's
     Notes above. Your two level scales (`stroll / steady / brisk` and
@@ -499,6 +530,18 @@ being added — `npm run typecheck` is the static gate.
   **Deviations**, **Fresh review**, **Open questions**, **Outcome**. Four Exit
   items could not be walked because P5–P7 are pending; the Outcome names each
   one and what covers it instead.
+- **Open question 1 is closed, 2026-08-01, and it had fired.** P5 turned out to
+  have been built already, in an unmerged worktree, storing its body parts
+  inside `exercises[]` and never as `payload.body_parts` — so every body-part
+  target read `0 this week`, silently, exactly as this phase predicted. The
+  merge resolved it the way this phase argued for: `bodyPartsOf` in
+  `src/data/exercise.ts`, called from `end()`, writing the distinct parts onto
+  the entry at log time. The invention was correct. What failed was its reach —
+  an Incoming comment in `PLAN.md` cannot bind a phase whose executor branched
+  before it was written and never merged back. **Two of the four unwalked Exit
+  items are now walked**: a workout can be logged, and the objectives row it
+  feeds goes `0 this week` → `1 this week` under test rather than by hand in a
+  browser.
 - **Incoming comments:**
   - *From P5.* `src/main.tsx` needs one import and one route line for
     `#/objectives`, and it is in no phase's Touch list — a recorded deviation

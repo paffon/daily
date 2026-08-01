@@ -348,6 +348,14 @@ For the planner. None blocked this phase.
    native `<select>` over the kinds map and a text box for body part, both in
    the exercise header, which would also satisfy §8.1's "the field list of any
    individual exercise is editable".
+
+   **Worse than recorded, since the merge.** Body part is no longer only the
+   coach's someday-problem: `payload.body_parts` is resolved from the library
+   at log time, so an exercise created inline contributes **nothing** to it.
+   A workout made entirely of inline-created exercises satisfies no body-part
+   objective, today, on a screen the user is already looking at — and with no
+   library-editing surface anywhere, there is no way to correct it after the
+   fact. This is the strongest argument for the text box.
 2. **`+ set` cannot be undone.** A mis-tap leaves a row that can be blanked but
    not removed — including on the edit screen, which uses the same table.
    Is a blank row the intended answer, or should the table have a remove
@@ -360,7 +368,8 @@ For the planner. None blocked this phase.
    `edit_entry.css` and `workout.css` carry the same strip, back link, field
    label and breakpoint. P4 predicted this and asked that it be raised before
    a third copy; there was no way to avoid it without touching files no module
-   phase owns. P6, P7 and P8 make it six.
+   phase owns. P6, P7 and P8 make it six. *Since the merge: P8 is done and
+   `objectives.css` is the fourth copy. P6 and P7 still make it six.*
 5. **`loadExercises()` re-reads and re-parses the library on every call**,
    including once per keystroke. Immaterial at 32 exercises; worth knowing
    before a library gets large.
@@ -455,3 +464,45 @@ Next action: P6, P7 and P8 are all eligible — each depends only on P4, and
              P5 blocked none of them. P6 is next in DESIGN.md §13's value
              order and inherits both shared controls.
 ```
+
+## Merged
+
+**2026-08-01, into `v1-implementation` as `603ebef`.** The record above was
+written on `claude/complex-plan-phase-5-3c63d7` and describes the branch, not
+the tree. Four corrections, in the order they matter.
+
+**P8 had already landed, and P5 broke its one contract.** Both phases branched
+from `19c476f`; P8 merged first. P8's objectives surface answers a target like
+*something for the back weekly* by reading `payload.body_parts` on a workout
+entry — a flat array of strings it had to invent, because this phase did not
+exist yet to be asked. The payload above has no such field, so every body-part
+target read `0 this week` with no error anywhere, which is exactly the failure
+P8 recorded as its open question 1 and left as an Incoming comment in
+`PLAN.md`. **The comment was correct and never arrived**: it was written after
+this branch had started, and nothing merges `PLAN.md` into a running worktree.
+
+Fixed in the merge, P8's way. `bodyPartsOf(performed, library)` in
+`src/data/exercise.ts` returns the distinct parts of what was performed, and
+`end()` writes them onto the payload. The alternative — teaching
+`src/data/objectives.ts` to walk `exercises[]` — was rejected because a
+`Performed` carries only `exercise_id`, so the reader would have to join
+against the library, and `asExercise` in this phase's own screen exists because
+that join fails once an exercise is renamed or deleted. Five tests, three
+watched to fail first, one of which re-tags the library after logging and still
+expects `1 this week`.
+
+**The test counts above are inflated, and so is every phase's before this.**
+`vitest`'s default include walked `.claude/worktrees/`, collecting a full copy
+of `src/` per worktree. `79 passed (7 files)` was this branch plus whatever
+else was checked out beside it. `vite.config.ts` now scopes the include to
+`src/`; the merged tree is **120 tests over 11 files**, which is P4's 55 plus
+P8's 36 plus this phase's 24 plus the 5 added with the fix.
+
+**Next action is P6, and only P6.** The `Next action` line above is wrong in
+its premise: P6 and P7 do not depend only on P4. `PLAN.md`'s table now reads
+`P4, P5` for P6 and `P4, P5, P6` for P7 — P7 discovered the hard way that it
+cannot be built before the controls it is forbidden to rebuild exist. P8 is
+already `done`.
+
+Three conflicts, all pure unions: a `SEEDS` row each in `src/data/store.ts`, a
+stub route each in `src/main.tsx`, and the phase table.
