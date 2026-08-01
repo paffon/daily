@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/preact'
 import { Objectives } from './objectives'
-import { readObjectives } from '../data/objectives'
+import { readObjectives, writeObjectives } from '../data/objectives'
 import { newEntry } from '../data/entry'
 import { ensureSeeded, putEntry, writeJson } from '../data/store'
 import appSeed from '../seed/app.json'
@@ -84,6 +84,17 @@ describe('the objectives screen', () => {
       direction: 'stable',
     })
     expect(container.querySelector('.obj-fact')?.textContent).toBe('direction')
+  })
+
+  it('writes onto what is stored, not onto what it last rendered', () => {
+    const { container } = render(<Objectives />)
+    /* something changed the file since this screen rendered — a pull from
+       another device, or an edit made before this render caught up */
+    writeObjectives({ statement: 'written elsewhere', targets: [] })
+    addObjective(container)
+
+    expect(readObjectives().statement).toBe('written elsewhere')
+    expect(readObjectives().targets).toHaveLength(1)
   })
 
   it('removes a target from the row that shows it', () => {

@@ -140,13 +140,19 @@ export function Objectives(): VNode {
   /* Every module's log, because a count target names the module it counts. */
   const entries: Entry[] = MODULES.flatMap((module) => readEntries(module))
 
-  const save = (next: Stored) => {
+  /** Read-modify-write of the stored file, not of this render's copy: two
+   *  changes landing before a re-render would otherwise have the second write
+   *  the first one's state back out, and losing the statement of intent to a
+   *  press on `+ objective` is exactly the kind of loss that is not noticed.
+   *  The read is the mirror, so it costs nothing. */
+  const save = (change: (held: Stored) => Stored) => {
+    const next = change(readObjectives())
     writeObjectives(next)
     setStored(next)
   }
 
   const put = (at: number, target: Target) =>
-    save({ ...stored, targets: stored.targets.map((held, i) => (i === at ? target : held)) })
+    save((held) => ({ ...held, targets: held.targets.map((t, i) => (i === at ? target : t)) }))
 
   /* `new_target` is editable like everything else, so it can be emptied. Then
      there is no shape to start from and the press does nothing, rather than
@@ -155,12 +161,12 @@ export function Objectives(): VNode {
     const blank = blanksOf()[0]
     if (blank === undefined) return
     setOpen(stored.targets.length)
-    save({ ...stored, targets: [...stored.targets, blank] })
+    save((held) => ({ ...held, targets: [...held.targets, blank] }))
   }
 
   const remove = (at: number) => {
     setOpen(null)
-    save({ ...stored, targets: stored.targets.filter((_, i) => i !== at) })
+    save((held) => ({ ...held, targets: held.targets.filter((_, i) => i !== at) }))
   }
 
   return (
@@ -180,7 +186,10 @@ export function Objectives(): VNode {
           rows={2}
           aria-label="statement of intent"
           defaultValue={stored.statement}
-          onChange={(e) => save({ ...stored, statement: e.currentTarget.value })}
+          onChange={(e) => {
+            const written = e.currentTarget.value
+            save((held) => ({ ...held, statement: written }))
+          }}
         />
         <p class="obj-yours">your words · never read by the app</p>
 
