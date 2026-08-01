@@ -10,6 +10,7 @@ import { Body } from './screens/body'
 import { Workout } from './screens/workout'
 import { Nutrition } from './screens/nutrition'
 import { Movement } from './screens/movement'
+import { Dance } from './screens/dance'
 import { Objectives } from './screens/objectives'
 import { EditEntry } from './screens/edit_entry'
 import { SignIn, SignInBand } from './screens/signin'
@@ -40,6 +41,7 @@ Object.assign(ROUTES, {
   '#/workout': () => <Workout />,
   '#/nutrition': () => <Nutrition />,
   '#/movement': () => <Movement />,
+  '#/dance': () => <Dance />,
 })
 
 /** Hash to screen. An id-carrying route is matched before the table;
