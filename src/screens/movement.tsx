@@ -11,6 +11,7 @@ import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
 import { PostureBar } from '../components/posture_bar'
+import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './movement.css'
 
@@ -47,6 +48,80 @@ const lineOf = (entry: Entry): string =>
     : segmentLine(entry.payload as Segmented)
 
 const scaleOf = (): string[] => loadLevels()['movement']?.scale ?? []
+
+/** Movement's half of frame 4h. Two entry types means two shapes behind one
+ *  registration — a segment is corrected the way it was entered, and so is a
+ *  block, which is why `payload.type` is on the entry rather than inferred
+ *  from which fields happen to be present. */
+registerEditor('movement', (payload, onChange) => {
+  const config = movementConfig()
+
+  if (payload['type'] === 'posture') {
+    const block = payload as Posture
+    return (
+      <div class="movement-edit">
+        <h2 class="movement-edit-name">posture</h2>
+
+        <div class="movement-row">
+          <label class="movement-field">
+            <span class="movement-label">span</span>
+            <AmountStepper
+              value={block.span_hours}
+              unit="h"
+              step={config.hours_step}
+              onChange={(span_hours) => onChange({ ...payload, span_hours })}
+              label="span"
+            />
+          </label>
+
+          <label class="movement-field">
+            <span class="movement-label">sitting</span>
+            <AmountStepper
+              value={block.sitting_hours}
+              unit="h"
+              step={config.hours_step}
+              onChange={(sitting_hours) => onChange({ ...payload, sitting_hours })}
+              label="sitting"
+            />
+          </label>
+        </div>
+
+        <PostureBar span={block.span_hours} sitting={block.sitting_hours} />
+      </div>
+    )
+  }
+
+  const logged = payload as Segmented
+  const segment = asSegment(logged.segment_id, loadSegments())
+
+  return (
+    <div class="movement-edit">
+      <h2 class="movement-edit-name">{segment.name}</h2>
+      <span class="movement-hint">{hintOf(segment)}</span>
+
+      <label class="movement-field">
+        <span class="movement-label">duration</span>
+        <AmountStepper
+          value={logged.duration_min}
+          unit="min"
+          step={config.duration_step}
+          onChange={(duration_min) => onChange({ ...payload, duration_min })}
+          label="duration"
+        />
+      </label>
+
+      <div class="movement-field">
+        <span class="movement-label">speed</span>
+        <LevelControl
+          scale={scaleOf()}
+          value={logged.level}
+          onChange={(level) => onChange({ ...payload, level })}
+          label="speed"
+        />
+      </div>
+    </div>
+  )
+})
 
 export function Movement(): VNode {
   const { locale } = readJson('config/app.json', appSeed)

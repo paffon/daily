@@ -1,7 +1,8 @@
 import { fireEvent, render } from '@testing-library/preact'
 import { loadLevels } from '../data/food'
-import { ensureSeeded, readEntries, readJson, writeJson } from '../data/store'
+import { ensureSeeded, getEntry, readEntries, readJson, writeJson } from '../data/store'
 import appSeed from '../seed/app.json'
+import { EditEntry } from './edit_entry'
 import { Dance } from './dance'
 // the screen's own source, through Vite rather than through `node:fs` — the
 // bundler already reads files and `@types/node` would be a dependency for it
@@ -123,5 +124,38 @@ describe('the dance screen', () => {
     expect(container.querySelector('.dance-rail-progress')?.textContent).toBe(
       'progress · 0 sessions, not enough to draw',
     )
+  })
+
+  describe('editing a past entry', () => {
+    const logged = () => {
+      const first = render(<Dance />)
+      shortcut(first.container, '75')
+      chooseLevel(first.container, 'social')
+      press(first.container, '.dance-log')
+      first.unmount()
+      return readEntries('dance')[0]!.id
+    }
+
+    it('opens it with the fields it was logged with', () => {
+      const { container } = render(<EditEntry id={logged()} />)
+
+      expect(box(container).value).toBe('75')
+      expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain(
+        'social',
+      )
+      expect(container.querySelector('.segmented-steel')).toBeNull()
+    })
+
+    it('writes a corrected duration and intensity back through the store', () => {
+      const id = logged()
+      const { container } = render(<EditEntry id={id} />)
+
+      fireEvent.input(box(container), { target: { value: '45' } })
+      chooseLevel(container, 'marking')
+      press(container, '.edit-save')
+
+      expect(getEntry(id)?.payload).toEqual({ duration_min: 45, level: 'marking' })
+      expect(getEntry(id)?.rev).toBe(2)
+    })
   })
 })

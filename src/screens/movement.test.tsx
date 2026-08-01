@@ -1,7 +1,8 @@
 import { fireEvent, render } from '@testing-library/preact'
 import { PostureBar } from '../components/posture_bar'
 import { hintOf, loadSegments } from '../data/segment'
-import { ensureSeeded, readEntries } from '../data/store'
+import { ensureSeeded, getEntry, readEntries } from '../data/store'
+import { EditEntry } from './edit_entry'
 import { Movement } from './movement'
 
 beforeEach(() => {
@@ -89,10 +90,11 @@ describe('the movement screen', () => {
   const press = (container: Element, selector: string) =>
     fireEvent.click(container.querySelector<HTMLButtonElement>(selector)!)
 
+  const box = (container: Element, label: string) =>
+    container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
+
   const type = (container: Element, label: string, value: string) =>
-    fireEvent.input(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
-      target: { value },
-    })
+    fireEvent.input(box(container, label), { target: { value } })
 
   const chooseLevel = (container: Element, level: string) =>
     fireEvent.click(
@@ -275,5 +277,75 @@ describe('the movement screen', () => {
     expect(container.querySelector('.movement-rail-progress')?.textContent).toBe(
       'progress · 0 entries, not enough to draw',
     )
+  })
+
+  describe('editing a past entry', () => {
+    const logged = (log: (container: Element) => void) => {
+      const first = render(<Movement />)
+      log(first.container)
+      first.unmount()
+      return readEntries('movement')[0]!.id
+    }
+
+    it('opens a segment as a segment', () => {
+      const { container } = render(<EditEntry id={logged(logToWork)} />)
+
+      expect(container.querySelector('.movement-edit-name')?.textContent).toBe('to work')
+      expect(container.querySelector('.movement-hint')?.textContent).toBe('2.8 km · mixed')
+      expect(box(container, 'duration').value).toBe('18')
+      expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain(
+        'steady',
+      )
+      // a segment has no span and a block has no route: the two shapes do not
+      // leak into each other
+      expect(container.querySelector('[aria-label="span"]')).toBeNull()
+    })
+
+    it('opens a posture block as a posture block, bar and all', () => {
+      const { container } = render(<EditEntry id={logged(logBlock)} />)
+
+      expect(container.querySelector('.movement-edit-name')?.textContent).toBe('posture')
+      expect(box(container, 'span').value).toBe('8')
+      expect(box(container, 'sitting').value).toBe('6')
+      expect(container.querySelector('.posture-bar')).not.toBeNull()
+      expect(container.querySelector('[aria-label="duration"]')).toBeNull()
+      expect(container.textContent).not.toContain('%')
+    })
+
+    it('writes a corrected segment back through the store', () => {
+      const id = logged(logToWork)
+      const { container } = render(<EditEntry id={id} />)
+
+      fireEvent.input(box(container, 'duration'), { target: { value: '25' } })
+      chooseLevel(container, 'brisk')
+      press(container, '.edit-save')
+
+      expect(getEntry(id)?.payload).toEqual({
+        type: 'segment',
+        segment_id: 'to-work',
+        duration_min: 25,
+        level: 'brisk',
+      })
+      expect(getEntry(id)?.rev).toBe(2)
+    })
+
+    it('writes a corrected block back, and redraws the bar as it is typed', () => {
+      const id = logged(logBlock)
+      const { container } = render(<EditEntry id={id} />)
+
+      fireEvent.input(box(container, 'sitting'), { target: { value: '3' } })
+      expect(
+        [...container.querySelector('.posture-bar')!.children].map(
+          (part) => (part as HTMLElement).style.flexGrow,
+        ),
+      ).toEqual(['3', '5', ''])
+
+      press(container, '.edit-save')
+      expect(getEntry(id)?.payload).toEqual({
+        type: 'posture',
+        span_hours: 8,
+        sitting_hours: 3,
+      })
+    })
   })
 })

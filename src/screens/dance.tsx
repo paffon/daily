@@ -7,6 +7,7 @@ import { loadLevels } from '../data/food'
 import { Previous, Timestamp, dayTimeOf } from '../components/fields'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
+import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './dance.css'
 
@@ -30,6 +31,37 @@ const scaleOf = (): string[] => loadLevels()['dance']?.scale ?? []
 const danceConfig = (): typeof appSeed.dance => ({
   ...appSeed.dance,
   ...readJson('config/app.json', appSeed).dance,
+})
+
+/** Dance's half of frame 4h: the two fields it was logged with, and no third
+ *  one that only the edit screen would know about. */
+registerEditor('dance', (payload, onChange) => {
+  const logged = payload as Session
+
+  return (
+    <div class="dance-edit">
+      <label class="dance-field">
+        <span class="dance-label">duration</span>
+        <AmountStepper
+          value={logged.duration_min}
+          unit="min"
+          step={danceConfig().duration_step}
+          onChange={(duration_min) => onChange({ ...payload, duration_min })}
+          label="duration"
+        />
+      </label>
+
+      <div class="dance-field">
+        <span class="dance-label">intensity</span>
+        <LevelControl
+          scale={scaleOf()}
+          value={logged.level}
+          onChange={(level) => onChange({ ...payload, level })}
+          label="intensity"
+        />
+      </div>
+    </div>
+  )
 })
 
 export function Dance(): VNode {
