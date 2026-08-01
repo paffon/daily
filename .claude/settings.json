@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \".claude/worktrees/complex-plan-phase-8-0f5cf7\" status --porcelain)",
+      "Bash(git -C \".claude/worktrees/complex-plan-phase-8-0f5cf7\" diff)",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(sed -i 's/ \\\\&\\\\& parsed >= 0\\) onChange\\(parsed\\)/\\) onChange\\(parsed\\)/' src/components/amount_stepper.tsx)",
+      "Bash(sed -i 's/value == null ? null/value === undefined ? null/' src/data/food.ts)",
+      "Bash(git checkout *)",
+      "Bash(grep -n \"^---$\\\\|^\\\\*\\\\*\\\\*$\\\\|^___$\" docs/plans/v1-recording/PLAN.md docs/plans/v1-recording/P6_nutrition.md)"
+    ]
+  }
+}
