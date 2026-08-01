@@ -31,6 +31,10 @@
      it uses ink-select and must never be unified with steel */
   --ink-select: oklch(0.35 0.012 260);
 
+  /* the hover fill, given inline in the README's Home spec rather than in
+     its colour table */
+  --paper-hover: oklch(0.947 0.005 255);
+
   /* lines */
   --rule: oklch(0.87 0.006 255);
   --rule-light: oklch(0.915 0.005 255);
