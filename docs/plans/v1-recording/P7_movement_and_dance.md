@@ -227,6 +227,51 @@ user and stop. Do not guess, do not widen the file list, do not edit another
 phase's doc. To abandon work already done, roll back with
 `git reset --hard {baseline hash from PLAN.md's phase table}`.
 
+## Blocked
+
+**2026-08-01, baseline `19c476f`.** Stopped before touching code. Entry criteria
+all passed — P4 `done`, `npm test` exit 0 (6 files, 55 tests), tree clean — and
+the drift scan since P4's baseline `b736ee8` found nothing that collides. The
+block is in this doc's own dependency assumption.
+
+The phase table says **Depends on: P4**, and says P5–P8 are independent of each
+other. This doc is not. Its capsule reuses four things that P5 and P6 build,
+and its **Do not touch** list names all four, so they cannot be supplied here:
+
+| needed by | artifact | owner | exists |
+| :- | :- | :- | :- |
+| T2, T3 | `src/components/segmented.tsx` | P5 | no |
+| T2 | `src/components/library_picker.tsx` | P5 | no |
+| T2, T3 | `src/components/amount_stepper.tsx` | P6 | no |
+| T2, T3 | `src/seed/levels.json` → `config/levels.json` | P6 | no |
+
+`src/components/` holds only `fields.tsx` and `fields.css`; `src/seed/` holds
+only `app.json`; `SEEDS` in `src/data/store.ts` has one entry. Nothing under a
+different name — `git grep` for `levels.json`, `segmented`, `amount_stepper`,
+`library_picker`, `movement.scale`, `dance.scale` hits only the design handoff
+README.
+
+The scales are the sharpest edge. The capsule says to read `movement.scale` and
+`dance.scale` from `config/levels.json`; **Anti-goals** says "No duplicate level
+scale in code"; **Do not touch** assigns the file to P6 and says "it already
+carries both scales". It does not exist. There is no reading of this doc under
+which P7 can put `stroll / steady / brisk` on screen today.
+
+**What is unaffected:** T1 in full — `src/seed/segments.json`, its `SEEDS`
+registration, `src/data/segment.ts`, and `src/components/posture_bar.tsx` with
+its test. None of it touches P5 or P6 territory. The posture *form* in T2 is
+also close to independent (span field, sitting field, the bar, `same as
+yesterday` — no picker, no stepper, no scale), but T2 also owns the segment
+form and the two-type switch, so the task cannot complete.
+
+**Suggested fix, for the planner.** Cheapest is the true one: P7's **Depends
+on** is wrong, not its content. Set it to `P4, P5, P6` and run this phase after
+P6 — which is already the numbered order — and every task works as written with
+no other change. Two alternatives, both worse: reassign the three shared
+components and `levels.json` to whichever of P5/P6/P7 runs first, which moves
+ownership out of the phase whose capsule specifies them; or split T1 into a
+standalone phase, which buys one commit and leaves the same dependency behind.
+
 ## On completion
 
 1. Every Entry/Validation/Exit item passed — re-check, don't recall.
