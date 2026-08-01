@@ -5,7 +5,8 @@ import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
 import { loadFoods, loadLevels, nutritionFor } from '../data/food'
 import type { Food } from '../data/food'
-import { ensureSeeded, readEntries, writeJson } from '../data/store'
+import { ensureSeeded, getEntry, readEntries, writeJson } from '../data/store'
+import { EditEntry } from './edit_entry'
 import { Nutrition } from './nutrition'
 
 const named = (name: string): Food => {
@@ -308,6 +309,56 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.nutrition-rail-progress')?.textContent).toBe(
       'progress · 0 entries, not enough to draw',
     )
+  })
+})
+
+describe('editing a past entry', () => {
+  const logged = () => {
+    const first = render(<Nutrition />)
+    fireEvent.click(
+      [...first.container.querySelectorAll<HTMLButtonElement>('.picker-item')].find((item) =>
+        item.textContent?.startsWith('pizza'),
+      )!,
+    )
+    fireEvent.input(first.container.querySelector<HTMLInputElement>('[aria-label="amount"]')!, {
+      target: { value: '2' },
+    })
+    fireEvent.click(
+      [...first.container.querySelectorAll<HTMLButtonElement>('.level .segmented button')].find(
+        (button) => button.textContent?.includes('loaded'),
+      )!,
+    )
+    fireEvent.click(first.container.querySelector<HTMLButtonElement>('.nutrition-log')!)
+    first.unmount()
+    return readEntries('nutrition')[0]!.id
+  }
+
+  it('opens it with the fields it was logged with', () => {
+    const { container } = render(<EditEntry id={logged()} />)
+
+    expect(container.querySelector('.nutrition-edit-name')?.textContent).toBe('pizza')
+    expect(container.querySelector<HTMLInputElement>('[aria-label="amount"]')?.value).toBe('2')
+    expect(container.querySelector('.stepper-unit')?.textContent).toBe('slices')
+    expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('loaded')
+    expect(container.querySelectorAll('.level-example')).toHaveLength(3)
+  })
+
+  it('writes a corrected amount and level back through the store', () => {
+    const id = logged()
+    const { container } = render(<EditEntry id={id} />)
+
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="amount"]')!, {
+      target: { value: '1.5' },
+    })
+    fireEvent.click(
+      [...container.querySelectorAll<HTMLButtonElement>('.level .segmented button')].find((button) =>
+        button.textContent?.includes('lean'),
+      )!,
+    )
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.edit-save')!)
+
+    expect(getEntry(id)?.payload).toEqual({ food_id: 'pizza', amount: 1.5, level: 'lean' })
+    expect(getEntry(id)?.rev).toBe(2)
   })
 })
 

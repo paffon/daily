@@ -11,6 +11,7 @@ import {
   nutritionConfig,
   nutritionFor,
   nutritionLine,
+  unitOf,
 } from '../data/food'
 import { Previous, Timestamp, clockOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
@@ -57,7 +58,7 @@ registerEditor('nutrition', (payload, onChange) => {
         <span class="nutrition-label">amount</span>
         <AmountStepper
           value={logged.amount}
-          unit={food.unit}
+          unit={unitOf(library, food, logged.amount)}
           step={amount_step}
           onChange={(amount) => onChange({ ...payload, amount })}
           label="amount"
@@ -192,7 +193,7 @@ export function Nutrition(): VNode {
                   <AmountStepper
                     key={picked.food_id}
                     value={picked.amount}
-                    unit={food.unit}
+                    unit={unitOf(library, food, picked.amount)}
                     step={config.amount_step}
                     onChange={(amount) => setPicked({ ...picked, amount })}
                     label="amount"
