@@ -28,5 +28,11 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    /* Only this checkout's tests. A phase run in a git worktree puts a whole
+       second copy of `src/` under `.claude/worktrees/`, and vitest's default
+       include walks into it — the suite then reports several hundred tests
+       from branches that are not checked out, and a stale copy can fail a
+       run of code that is fine. */
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })
