@@ -1,6 +1,5 @@
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
-import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson } from '../data/store'
 import { loadLevels } from '../data/food'
@@ -74,12 +73,14 @@ export function Dance(): VNode {
     duration_min: config.duration_start,
     level: config.default_level,
   }))
-  /* the stepper holds what was typed, so tapping a shortcut has to remount it
-     — or the box goes on reading the opening duration while the payload
-     already carries the one that was tapped */
+  /* the stepper holds what was typed, so a duration set from outside the box
+     has to remount it — or the box goes on reading the opening number while
+     the payload already carries the tapped one. Only from *outside*: bumping
+     this on the box's own input would replace the input mid-keystroke, and a
+     typed duration would lose every character after the first. */
   const [filled, setFilled] = useState(0)
 
-  const setDuration = (duration_min: number) => {
+  const tap = (duration_min: number) => {
     setFilled((n) => n + 1)
     setSession({ ...session, duration_min })
   }
@@ -104,8 +105,10 @@ export function Dance(): VNode {
       <div class="dance-split">
         <section class="dance-rail">
           {/* enough to answer "was that a long one" without opening progress,
-              which is all the rail is for */}
-          <h2 class="dance-rail-label">last four</h2>
+              which is all the rail is for — and the heading counts what the
+              list actually shows, so editing the config does not leave the
+              word and the rows disagreeing */}
+          <h2 class="dance-rail-label">{`last ${config.recent_count}`}</h2>
           {past.slice(0, config.recent_count).map((entry) => (
             <a class="dance-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
               <span class="dance-rail-when">{dayTimeOf(entry.ts, locale)}</span>
@@ -136,7 +139,7 @@ export function Dance(): VNode {
                 value={session.duration_min}
                 unit="min"
                 step={config.duration_step}
-                onChange={setDuration}
+                onChange={(duration_min) => setSession({ ...session, duration_min })}
                 label="duration"
               />
 
@@ -148,7 +151,7 @@ export function Dance(): VNode {
                     type="button"
                     key={minutes}
                     class="dance-shortcut hit"
-                    onClick={() => setDuration(minutes)}
+                    onClick={() => tap(minutes)}
                   >
                     {minutes}
                   </button>

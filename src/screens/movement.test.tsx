@@ -238,6 +238,23 @@ describe('the movement screen', () => {
     )
   })
 
+  it('does not replace a box while it is being typed into', () => {
+    const { container } = render(<Movement />)
+    press(container, '.movement-add-block')
+    const before = box(container, 'sitting')
+
+    // the remount that keeps `same as yesterday` honest must fire only for a
+    // number set from outside the box: firing it on the box's own input would
+    // hand back a new node mid-keystroke, close the phone's keyboard, and eat
+    // every character after the first
+    fireEvent.input(before, { target: { value: '5' } })
+    expect(box(container, 'sitting')).toBe(before)
+
+    fireEvent.input(box(container, 'sitting'), { target: { value: '5.5' } })
+    press(container, '.movement-log')
+    expect(readEntries('movement')[0]?.payload['sitting_hours']).toBe(5.5)
+  })
+
   it('offers nothing to repeat before a block has ever been logged', () => {
     const { container } = render(<Movement />)
     press(container, '.movement-add-block')

@@ -1,10 +1,8 @@
-/** The movement library, and the config movement reads.
- *
- *  A segment is a named route. Only the name is required — an ad-hoc segment
- *  typed into the picker has nothing else, and blanks are valid everywhere. */
+/** The movement library. A segment is a named route, and only the name is
+ *  required — an ad-hoc segment typed into the picker has nothing else, and
+ *  blanks are valid everywhere. */
 
 import { readJson } from './store'
-import appSeed from '../seed/app.json'
 import segmentsSeed from '../seed/segments.json'
 
 export type Segment = {
@@ -26,13 +24,3 @@ export const hintOf = ({ distance_km, gradient }: Segment): string =>
   [distance_km === undefined ? '' : `${distance_km} km`, gradient ?? '']
     .filter((part) => part !== '')
     .join(' · ')
-
-/** `ensureSeeded` writes a seed only when the whole file is absent, so a
- *  browser holding an `app.json` from before this phase has no `movement`
- *  section and `undefined` would reach the steppers. The fourth phase to write
- *  this defence; the duplication is the symptom of a store that never
- *  backfills a key. */
-export const movementConfig = (): typeof appSeed.movement => ({
-  ...appSeed.movement,
-  ...readJson('config/app.json', appSeed).movement,
-})

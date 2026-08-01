@@ -65,6 +65,24 @@ describe('the dance screen', () => {
     expect(readEntries('dance')[0]?.payload['duration_min']).toBe(90)
   })
 
+  it('does not replace the box while it is being typed into', () => {
+    const { container } = render(<Dance />)
+    const before = box(container)
+
+    // a duration typed a character at a time is `4`, then `45`. If the first
+    // keystroke remounts the stepper the input is a new node, focus falls to
+    // the body, the phone's keyboard closes, and the `5` lands nowhere — the
+    // session logs 4 minutes with nothing on screen having said so
+    fireEvent.input(before, { target: { value: '4' } })
+    expect(box(container)).toBe(before)
+
+    fireEvent.input(box(container), { target: { value: '45' } })
+    expect(box(container).value).toBe('45')
+
+    press(container, '.dance-log')
+    expect(readEntries('dance')[0]?.payload['duration_min']).toBe(45)
+  })
+
   it('takes the three numbers from config rather than from source', () => {
     writeJson('config/app.json', {
       ...readJson('config/app.json', appSeed),

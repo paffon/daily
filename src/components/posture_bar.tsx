@@ -15,7 +15,7 @@ export function PostureBar({ span, sitting }: { span: number; sitting: number })
   const sat = Math.min(Math.max(sitting, 0), Math.max(span, 0))
 
   return (
-    <div class="posture-bar" role="presentation">
+    <div class="posture-bar">
       <span class="posture-bar-sitting" style={{ flexGrow: sat }} />
       <span class="posture-bar-standing" style={{ flexGrow: Math.max(span, 0) - sat }} />
       <span class="posture-bar-rest" />

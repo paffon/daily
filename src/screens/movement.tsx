@@ -4,7 +4,7 @@ import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { putEntry, readEntries, readJson, writeJson } from '../data/store'
 import type { Segment } from '../data/segment'
-import { hintOf, loadSegments, movementConfig } from '../data/segment'
+import { hintOf, loadSegments } from '../data/segment'
 import { loadLevels } from '../data/food'
 import { Previous, Timestamp, clockOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
@@ -21,9 +21,19 @@ import './movement.css'
  *  the same day's movement, and splitting them would put half of it behind a
  *  tile the user does not think of as a module. */
 
-type Segmented = { type: 'segment'; segment_id: string; duration_min: number; level: string }
+/* not `Segmented` — that is the shared control's name, and a local type
+   wearing it would silently shadow the import anyone reaches for next */
+type Walk = { type: 'segment'; segment_id: string; duration_min: number; level: string }
 
 type Posture = { type: 'posture'; span_hours: number; sitting_hours: number }
+
+/** The seed under the stored section, because `ensureSeeded` writes a file
+ *  only when the whole thing is absent and never backfills a key added later.
+ *  The same defence P6 and P8 wrote, in the fourth phase to need it. */
+const movementConfig = (): typeof appSeed.movement => ({
+  ...appSeed.movement,
+  ...readJson('config/app.json', appSeed).movement,
+})
 
 const isPosture = (entry: Entry): boolean => entry.payload['type'] === 'posture'
 
@@ -33,7 +43,7 @@ const asSegment = (id: string, library: Segment[]): Segment =>
   library.find((item) => item.id === id) ?? { id, name: id }
 
 /** `18 min · steady`, which is the same sentence the rail and `Previous` say. */
-const segmentLine = ({ duration_min, level }: Segmented): string =>
+const segmentLine = ({ duration_min, level }: Walk): string =>
   [`${duration_min} min`, level].filter((part) => part !== '').join(' · ')
 
 /** `8 h · 6 sitting` — the block's own two numbers and no third one derived
@@ -41,11 +51,6 @@ const segmentLine = ({ duration_min, level }: Segmented): string =>
  *  the module exists to avoid. */
 const postureLine = ({ span_hours, sitting_hours }: Posture): string =>
   `${span_hours} h · ${sitting_hours} sitting`
-
-const lineOf = (entry: Entry): string =>
-  isPosture(entry)
-    ? postureLine(entry.payload as Posture)
-    : segmentLine(entry.payload as Segmented)
 
 const scaleOf = (): string[] => loadLevels()['movement']?.scale ?? []
 
@@ -91,7 +96,7 @@ registerEditor('movement', (payload, onChange) => {
     )
   }
 
-  const logged = payload as Segmented
+  const logged = payload as Walk
   const segment = asSegment(logged.segment_id, loadSegments())
 
   return (
@@ -131,7 +136,7 @@ export function Movement(): VNode {
 
   const [ts, setTs] = useState(() => toIso(new Date()))
   const [past, setPast] = useState(() => readEntries('movement'))
-  const [picked, setPicked] = useState<Segmented | null>(null)
+  const [picked, setPicked] = useState<Walk | null>(null)
   const [block, setBlock] = useState<Posture | null>(null)
   /* every stepper holds what was typed into it, so a number replaced from
      outside the box — a fresh pick, an opened block, `same as yesterday` —
@@ -177,7 +182,7 @@ export function Movement(): VNode {
     setBlock({ ...lastPosture.payload } as Posture)
   }
 
-  const log = (payload: Segmented | Posture) => {
+  const log = (payload: Walk | Posture) => {
     putEntry(newEntry('movement', { ...payload }, ts))
     setPast(readEntries('movement'))
     setPicked(null)
@@ -189,7 +194,7 @@ export function Movement(): VNode {
    *  logged, however long ago. A posture block's previous is the last block
    *  outright — there is only one kind of workday. */
   const previousSegment = (segment_id: string): Entry | null =>
-    past.find((entry) => !isPosture(entry) && (entry.payload as Segmented).segment_id === segment_id) ??
+    past.find((entry) => !isPosture(entry) && (entry.payload as Walk).segment_id === segment_id) ??
     null
 
   const segment = picked === null ? null : asSegment(picked.segment_id, library)
@@ -215,7 +220,7 @@ export function Movement(): VNode {
               <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
                 <span class="movement-rail-when">{clockOf(entry.ts, locale)}</span>
                 <span class="movement-rail-what">
-                  {`${asSegment((entry.payload as Segmented).segment_id, library).name} · ${lineOf(entry)}`}
+                  {`${asSegment((entry.payload as Walk).segment_id, library).name} · ${segmentLine(entry.payload as Walk)}`}
                 </span>
               </a>
             ))}
@@ -226,7 +231,9 @@ export function Movement(): VNode {
               .map((entry) => (
                 <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
                   <span class="movement-rail-when">{`${clockOf(entry.ts, locale)} · posture`}</span>
-                  <span class="movement-rail-what">{lineOf(entry)}</span>
+                  <span class="movement-rail-what">
+                    {postureLine(entry.payload as Posture)}
+                  </span>
                 </a>
               ))}
           </div>
@@ -332,7 +339,7 @@ export function Movement(): VNode {
                 <Previous
                   entry={previousSegment(picked.segment_id)}
                   locale={locale}
-                  render={(entry) => segmentLine(entry.payload as Segmented)}
+                  render={(entry) => segmentLine(entry.payload as Walk)}
                 />
 
                 <div class="movement-row">
