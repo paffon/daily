@@ -29,7 +29,12 @@ export function SetTable({
     mark: parseMark('').mark,
   })
 
-  const write = (at: number, row: SetRow) => onChange(sets.map((s, i) => (i === at ? row : s)))
+  /** An exercise just picked has no rows yet, and the first number needs
+   *  somewhere to go — so one blank row is always drawn, and typing into it is
+   *  what makes it real. */
+  const rows = sets.length === 0 ? [blank()] : sets
+
+  const write = (at: number, row: SetRow) => onChange(rows.map((s, i) => (i === at ? row : s)))
 
   return (
     <div class="sets">
@@ -43,7 +48,7 @@ export function SetTable({
         <span class="set-next">next time</span>
       </div>
 
-      {sets.map((row, at) => (
+      {rows.map((row, at) => (
         <div class="set-row" key={at}>
           <span class="set-index">{at + 1}</span>
 
@@ -87,7 +92,7 @@ export function SetTable({
         <button
           type="button"
           class="set-add-press hit"
-          onClick={() => onChange([...sets, { ...(sets[sets.length - 1] ?? blank()) }])}
+          onClick={() => onChange([...rows, { ...rows[rows.length - 1]! }])}
         >
           + set
         </button>

@@ -2,9 +2,10 @@ import { fireEvent, render } from '@testing-library/preact'
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import { fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
-import type { Exercise, SetRow } from '../data/exercise'
+import type { Exercise, Performed, SetRow } from '../data/exercise'
 import { SetTable } from '../components/set_table'
-import { ensureSeeded } from '../data/store'
+import { ensureSeeded, readEntries } from '../data/store'
+import { Workout } from './workout'
 
 const named = (name: string): Exercise => {
   const exercise = loadExercises().exercises.find((item) => item.name === name)
@@ -31,6 +32,32 @@ const markOf = (container: Element, row: number) =>
   container
     .querySelectorAll('.set-row')
     [row]?.querySelector('[aria-pressed="true"] .segmented-word')?.textContent
+
+const press = (container: Element, selector: string) =>
+  fireEvent.click(container.querySelector<HTMLButtonElement>(selector)!)
+
+const pick = (container: Element, name: string) =>
+  fireEvent.click(
+    [...container.querySelectorAll<HTMLButtonElement>('.picker-item')].find((item) =>
+      item.textContent?.startsWith(name),
+    )!,
+  )
+
+/** The demo, as a function: three sets at one weight, the third marked by
+ *  typing the sign, and a form cue on the exercise. */
+const logChestPress = (container: Element) => {
+  pick(container, 'chest press')
+  type(container, 'set 1 weight', '47.5')
+  type(container, 'set 1 reps', '10')
+  addSet(container)
+  addSet(container)
+  type(container, 'set 3 weight', '47.5+')
+  type(container, 'comment', '30°')
+  press(container, '.workout-end')
+}
+
+const loggedExercises = (): Performed[] =>
+  (readEntries('workout')[0]?.payload['exercises'] as Performed[]) ?? []
 
 beforeEach(() => {
   localStorage.clear()
@@ -95,7 +122,6 @@ describe('the exercise library', () => {
 describe('the set table', () => {
   it('copies the row above, values included, so three sets cost three taps', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
-    addSet(container)
     type(container, 'set 1 weight', '47.5')
     type(container, 'set 1 reps', '10')
 
@@ -110,12 +136,10 @@ describe('the set table', () => {
 
   it('draws the fields the kind declares, and only those', () => {
     const loaded = render(<Table exercise={named('chest press')} />)
-    addSet(loaded.container)
     expect(box(loaded.container, 'set 1 weight')).not.toBeNull()
     expect(box(loaded.container, 'set 1 distance')).toBeNull()
 
     const distance = render(<Table exercise={named('run · river path')} />)
-    addSet(distance.container)
     expect(box(distance.container, 'set 1 distance')).not.toBeNull()
     expect(box(distance.container, 'set 1 duration')).not.toBeNull()
     expect(box(distance.container, 'set 1 weight')).toBeNull()
@@ -123,7 +147,6 @@ describe('the set table', () => {
 
   it('stands an optional field open rather than behind a reveal', () => {
     const { container } = render(<Table exercise={named('plank')} />)
-    addSet(container)
 
     expect(box(container, 'set 1 weight')).not.toBeNull()
     expect(box(container, 'set 1 weight')?.className).toContain('set-input-optional')
@@ -132,7 +155,6 @@ describe('the set table', () => {
 
   it('takes the mark off the number as it is typed', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
-    addSet(container)
 
     type(container, 'set 1 weight', '47.5+')
     expect(markOf(container, 0)).toBe('more')
@@ -143,7 +165,6 @@ describe('the set table', () => {
 
   it('leaves a chosen mark alone when the number beside it is corrected', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
-    addSet(container)
 
     fireEvent.click(container.querySelectorAll('.set-row [aria-pressed]')[2]!)
     expect(markOf(container, 0)).toBe('more')
@@ -152,9 +173,81 @@ describe('the set table', () => {
     expect(markOf(container, 0)).toBe('more')
   })
 
-  it('starts every row at same, which is what a blank mark means', () => {
+  it('opens with one row at same, so the first number has somewhere to go', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
-    addSet(container)
+    expect(container.querySelectorAll('.set-row')).toHaveLength(1)
     expect(markOf(container, 0)).toBe('same')
+  })
+})
+
+describe('the workout screen', () => {
+  it('logs three sets, two of them one tap, with the mark typed into the weight', () => {
+    const { container } = render(<Workout />)
+    logChestPress(container)
+
+    expect(readEntries('workout')).toHaveLength(1)
+    const [performed] = loggedExercises()
+    expect(performed?.sets).toHaveLength(3)
+    expect(performed?.sets[2]).toMatchObject({ weight: 47.5, reps: 10, mark: 'more' })
+    expect(performed?.sets[0]).toMatchObject({ weight: 47.5, reps: 10, mark: 'same' })
+    expect(performed?.comment).toBe('30°')
+  })
+
+  it('hands the last time this exercise was done back to the next one', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    pick(container, 'chest press')
+    const previous = container.querySelector('.field-previous')?.textContent ?? ''
+    expect(previous).toContain('47.5 kg × 10')
+    expect(previous).toContain('more')
+    expect(previous).toContain('30°')
+  })
+
+  it('scopes Previous to the exercise rather than to the workout', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    pick(container, 'incline press')
+    expect(container.querySelector('.field-previous')?.textContent).toContain('nothing recorded yet')
+  })
+
+  it('keeps one exercise’s numbers out of the next one’s boxes', () => {
+    const { container } = render(<Workout />)
+    pick(container, 'chest press')
+    type(container, 'set 1 weight', '47.5')
+
+    press(container, '.workout-rail-add')
+    pick(container, 'incline press')
+    expect(box(container, 'set 1 weight')?.value).toBe('')
+    type(container, 'set 1 weight', '20')
+
+    // back to the first one through the rail, which swaps the table's rows
+    // without unmounting it
+    fireEvent.click(container.querySelectorAll<HTMLButtonElement>('.workout-rail-row')[0]!)
+    expect(box(container, 'set 1 weight')?.value).toBe('47.5')
+  })
+
+  it('makes a library item out of what was typed to find it', () => {
+    const { container } = render(<Workout />)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: 'dips blue machine' },
+    })
+    press(container, '.picker-new')
+
+    expect(container.querySelector('.workout-title')?.textContent).toBe('dips blue machine')
+    expect(loadExercises().exercises.some((item) => item.name === 'dips blue machine')).toBe(true)
+  })
+
+  it('draws no graph, and says plainly what there is instead', () => {
+    const { container } = render(<Workout />)
+    expect(container.querySelector('svg, canvas')).toBeNull()
+    expect(container.querySelector('.workout-rail-progress')?.textContent).toBe(
+      'progress · 0 workouts, not enough to draw',
+    )
   })
 })
