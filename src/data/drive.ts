@@ -220,27 +220,43 @@ export async function putFile(path: string, content: string | Blob): Promise<str
  *  change token: the pull compares it and downloads only what moved. */
 export type DriveFile = { path: string; modifiedTime: string }
 
-/** Every file the app has ever written, as store paths. One query, because
- *  the `drive.file` scope means Drive shows this app nothing it did not
- *  create — so "all files" already means "all of daily's files". */
+/** Drive's own ceiling for one listing, not a number worth tuning. */
+const PAGE = 1000
+
+/** Every file the app has ever written, as store paths. The `drive.file` scope
+ *  means Drive shows this app nothing it did not create, so "all files" already
+ *  means "all of daily's files" and no query narrows it further.
+ *
+ *  Every page of them: a listing that stopped at the first would go on
+ *  answering without an error, and the files past it would simply never come
+ *  down on a second device. Entries alone reach a thousand in a few years, and
+ *  photos get there sooner. */
 export async function listFiles(): Promise<DriveFile[]> {
   const known = await ensureFolders()
   const prefixOf = new Map(Object.entries(known).map(([prefix, id]) => [id, prefix]))
   const query = encodeURIComponent(`trashed=false and mimeType!='${FOLDER_MIME}'`)
-  const found = await (
-    await api(
-      `/drive/v3/files?q=${query}&fields=files(id,name,parents,modifiedTime)&pageSize=1000`,
-    )
-  ).json()
 
   const files: DriveFile[] = []
   type Listed = { id: string; name: string; parents?: string[]; modifiedTime: string }
-  for (const file of found.files as Listed[]) {
-    const prefix = prefixOf.get(file.parents?.[0] ?? '')
-    if (prefix === undefined || prefix === '') continue
-    const path = `${prefix}/${file.name}`
-    fileIds.set(path, file.id)
-    files.push({ path, modifiedTime: file.modifiedTime })
-  }
+  let next = ''
+
+  do {
+    const found = await (
+      await api(
+        `/drive/v3/files?q=${query}&fields=nextPageToken,files(id,name,parents,modifiedTime)` +
+          `&pageSize=${PAGE}${next === '' ? '' : `&pageToken=${next}`}`,
+      )
+    ).json()
+
+    for (const file of found.files as Listed[]) {
+      const prefix = prefixOf.get(file.parents?.[0] ?? '')
+      if (prefix === undefined || prefix === '') continue
+      const path = `${prefix}/${file.name}`
+      fileIds.set(path, file.id)
+      files.push({ path, modifiedTime: file.modifiedTime })
+    }
+    next = (found.nextPageToken as string | undefined) ?? ''
+  } while (next !== '')
+
   return files
 }
