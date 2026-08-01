@@ -16,6 +16,10 @@ const dayOf = (at: Date, locale: string) => format(at, locale, { day: 'numeric',
 
 const weekdayOf = (at: Date, locale: string) => format(at, locale, { weekday: 'short' })
 
+/** `may` — the honest-empty prose on a module screen. */
+export const monthOf = (ts: string, locale: string) =>
+  format(new Date(ts), locale, { month: 'long' })
+
 /** `12 july 07:40` — the module rail and `Previous`. */
 export function dayTimeOf(ts: string, locale: string): string {
   const at = new Date(ts)

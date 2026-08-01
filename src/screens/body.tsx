@@ -1,0 +1,109 @@
+import { useState } from 'preact/hooks'
+import type { VNode } from 'preact'
+import type { Entry } from '../data/entry'
+import { newEntry } from '../data/entry'
+import { putEntry, readEntries, readJson } from '../data/store'
+import { Previous, Timestamp, dayTimeOf, monthOf } from '../components/fields'
+import { toIso } from '../data/entry'
+import appSeed from '../seed/app.json'
+import './body.css'
+
+/** A weight and a time. That is the whole of this half of the module —
+ *  photos are P8. */
+
+/** `72.4 kg`. The unit is config, never a literal, and home reuses this so
+ *  payload knowledge stays in the module that owns the payload. */
+export function weightLine(entry: Entry, unit: string): string {
+  const weight = entry.payload['weight']
+  return `${typeof weight === 'number' ? weight : '—'} ${unit}`
+}
+
+export function Body(): VNode {
+  const config = readJson('config/app.json', appSeed)
+  const unit = config.body.weight_unit
+  const locale = config.locale
+
+  const [entries, setEntries] = useState(() => readEntries('body'))
+  const [weight, setWeight] = useState('')
+  const [ts, setTs] = useState(() => toIso(new Date()))
+
+  const log = () => {
+    putEntry(newEntry('body', { weight: weight === '' ? null : Number(weight) }, ts))
+    setEntries(readEntries('body'))
+    setWeight('')
+    setTs(toIso(new Date()))
+  }
+
+  const oldest = entries[entries.length - 1]
+  const summary =
+    oldest === undefined
+      ? 'Nothing recorded yet.'
+      : `${entries.length} ${entries.length === 1 ? 'weight' : 'weights'} since ` +
+        `${monthOf(oldest.ts, locale)}. Not enough to draw a line yet.`
+
+  return (
+    <main class="body">
+      <header class="body-strip">
+        <a class="body-back hit" href="#/">
+          ← &nbsp;body
+        </a>
+        <span>{dayTimeOf(ts, locale)}</span>
+      </header>
+
+      <div class="body-split">
+        <section class="body-rail">
+          <h2 class="body-rail-label">recorded</h2>
+          <div class="body-rail-list">
+            {entries.map((entry) => (
+              <div class="body-rail-row" key={entry.id}>
+                <span class="body-rail-when">{dayTimeOf(entry.ts, locale)}</span>
+                <span class="body-rail-what">{weightLine(entry, unit)}</span>
+              </div>
+            ))}
+          </div>
+          <p class="body-rail-progress">
+            {`progress · ${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
+          </p>
+        </section>
+
+        <section class="body-fields">
+          <h1 class="body-title">weight</h1>
+
+          <Previous
+            entry={entries[0] ?? null}
+            locale={locale}
+            render={(entry) => weightLine(entry, unit)}
+          />
+
+          <div class="body-inputs">
+            <div class="body-weight">
+              <input
+                class="body-weight-value"
+                type="number"
+                step="any"
+                inputMode="decimal"
+                aria-label="weight"
+                value={weight}
+                onInput={(e) => setWeight(e.currentTarget.value)}
+              />
+              <span class="body-weight-unit">{unit}</span>
+            </div>
+
+            <div class="body-when">
+              <span class="body-when-label">when</span>
+              <Timestamp value={ts} onChange={setTs} locale={locale} />
+            </div>
+          </div>
+
+          <div class="body-actions">
+            <button type="button" class="body-log hit" onClick={log}>
+              log it
+            </button>
+          </div>
+
+          <p class="body-summary">{summary}</p>
+        </section>
+      </div>
+    </main>
+  )
+}
