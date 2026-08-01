@@ -238,6 +238,62 @@ phase's doc. To abandon work already done, roll back with
 4. Record the full outcome in this doc under an **Outcome** heading:
 
 ```txt
+## Deviations
+
+Recorded as they happened. Each says what the doc asked for, what was built,
+and why.
+
+### T1: there is no silent sign-in, so `trySilentSignIn` does not exist
+
+**The doc asked for** `trySilentSignIn(): Promise<boolean>`, called on boot,
+falling back to the sign-in screen when it fails — so a reload lands on home.
+
+**What is built:** `signIn(): Promise<boolean>` and nothing else. Every page
+load renders the sign-in screen and waits for a press.
+
+**Why:** a GIS token client has no silent mode. Every `requestAccessToken()`
+opens a popup, and a popup outside a user gesture is blocked. This is not a
+configuration problem to solve — it is what the token model is, and the phase's
+own Anti-goals close every escape from it: the token is memory-only, there is
+no refresh token, and there is no server to hold one.
+
+Built as written first, and it hung: on boot the popup opened, nothing could
+complete it, and **GIS calls neither `callback` nor `error_callback` when a
+popup is blocked** — so the promise never settled and the app rendered an empty
+page. Verified in the browser: the popup tab opened at `accounts.google.com`
+and sat there, and `window.open` without a gesture is refused outright.
+
+**Consequence for the doc:** T1's Verify says *"Reload → home renders without a
+second consent prompt."* Half of that holds — Google does not ask for consent
+again — but a press is needed on every load. Rewritten in practice as: reload →
+sign-in screen → one press → home, no consent prompt. Confirmed by the user.
+
+**For the planner:** the only way to remove that press is to persist a
+credential, which the Anti-goals forbid. Worth deciding whether the press is
+accepted permanently (it is honest — the app holds nothing) or whether the
+memory-only rule is worth revisiting. Not a decision this phase should make.
+
+### T1: a blocked popup leaves the button silent
+
+If a browser blocks the popup, `signIn()` never settles and the button appears
+dead — GIS logs to the console and tells the app nothing. Not handled, because
+the doc specifies the sign-in screen as *"one line of serif text naming the
+app, one steel button… nothing else"*, and any feedback is a third element.
+Low stakes for one user who grants popups once, but it is the screen's only
+failure mode and it is invisible. A planner call.
+
+### T1: `src/screens/signin.css` is outside the Touch list
+
+The doc lists `src/screens/signin.tsx` only. P1 established that per-screen CSS
+lives beside the screen as `src/screens/{screen}.css`, and P2 followed it; the
+button needs a `:hover` rule, which an inline style cannot carry. Four rules,
+no shared control extracted — two screens is not a pattern yet.
+
+### T1: `.gitignore` needed no edit
+
+Listed under Touch as *"ensure `.env.local` and `dist/` are ignored"*. Both were
+already there from P1. No change made.
+
 ## Outcome
 Objective: {phase goal, one line}
 HEAD: {git rev-parse --short HEAD} | Branch: {git branch --show-current}

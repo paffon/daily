@@ -5,6 +5,7 @@ import { MODULES } from './data/entry'
 import { ensureSeeded } from './data/store'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
+import { SignIn } from './screens/signin'
 
 /** Every route but home renders one of these until its phase builds it. */
 function Stub({ name }: { name: string }): VNode {
@@ -40,9 +41,17 @@ function screen(hash: string): VNode {
   return route ? route() : <Home />
 }
 
-ensureSeeded()
-
 const mount = document.getElementById('app')!
 const paint = () => render(screen(location.hash || '#/'), mount)
-addEventListener('hashchange', paint)
-paint()
+
+/** Nothing renders until there is a token: every read goes through the store,
+ *  and the mirror is not populated before sign-in. Every page load starts
+ *  here — the token is memory-only and a token request needs a user gesture,
+ *  so there is no boot path that skips the press. */
+function start(): void {
+  ensureSeeded()
+  addEventListener('hashchange', paint)
+  paint()
+}
+
+render(<SignIn onDone={start} />, mount)

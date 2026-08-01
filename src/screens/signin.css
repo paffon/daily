@@ -1,0 +1,34 @@
+/* Per-screen CSS, beside the screen — P1's convention. The button repeats
+   `body.css`'s `log it` treatment; two screens is not yet a shared control. */
+
+.signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 28px;
+  min-height: 100dvh;
+  padding: 0 clamp(24px, 7vw, 56px);
+}
+
+.signin-name {
+  margin: 0;
+  font: 200 clamp(38px, 5vw, 42px) / 1.1 var(--family-serif);
+  color: var(--ink);
+}
+
+.signin-go {
+  align-items: center;
+  justify-content: center;
+  padding: 18px 30px;
+  border: 1px solid var(--steel);
+  background: var(--steel);
+  color: var(--paper);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.signin-go:hover {
+  border-color: var(--steel-hover);
+  background: var(--steel-hover);
+}

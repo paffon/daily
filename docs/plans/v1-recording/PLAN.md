@@ -124,7 +124,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | - | - | - | - | - | - |
 | [P1: toolchain_and_home](./P1_toolchain_and_home.md) | Toolchain, design tokens, and home in its silent state | - | done | a596d41 | 2026-08-01 |
 | [P2: entry_store_and_body_weight](./P2_entry_store_and_body_weight.md) | The entry primitive, the local store, and the first thing logged | P1 | done | 1811f3d | 2026-08-01 |
-| [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | pending | | |
+| [P3: drive_store_and_offline](./P3_drive_store_and_offline.md) | Google sign-in, Drive as the durable store, offline shell and sync | P2 | in progress | 7911067 | 2026-08-01 |
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | pending | | |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | pending | | |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4 | pending | | |
