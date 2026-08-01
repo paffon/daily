@@ -128,7 +128,7 @@ origins. P3 reads it from `VITE_GOOGLE_CLIENT_ID` in `.env.local`.
 | [P4: edit_and_delete_entries](./P4_edit_and_delete_entries.md) | The generic entry editor (frame 4h) and the per-module renderer registry | P3 | done | b736ee8 | 2026-08-01 |
 | [P5: workout](./P5_workout.md) | Exercise library, kinds, the set table, next-time marks, carried comments | P4 | done | 19c476f | 2026-08-01 |
 | [P6: nutrition](./P6_nutrition.md) | Food library, per-food units, levels with examples, multipliers | P4, P5 | done | 0a32e6b | 2026-08-01 |
-| [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5, P6 | in progress | e614d5d | 2026-08-01 |
+| [P7: movement_and_dance](./P7_movement_and_dance.md) | Segments, posture blocks, dance sessions | P4, P5, P6 | done | e614d5d | 2026-08-02 |
 | [P8: photos_and_objectives](./P8_photos_and_objectives.md) | Body photos, and the objectives surface | P4 | done | 19c476f | 2026-08-01 |
 
 P5 ships two shared controls — `src/components/segmented.tsx` and
@@ -231,6 +231,17 @@ worktree again.
     `bodyLine` — body has two entry types and the function answers for either,
     returning `photo` for the one that is a photo. Payload knowledge stayed in
     `body.tsx` where P4 put it; only the name and the call site moved.
+  - *From P7, for the planner rather than for an executor — P2 is `done`.*
+    **The question you left P4 now covers four of the five modules.**
+    `detail(entry, config)` in `src/screens/home.tsx` still answers only for
+    `body`, so a walk, a posture block, a dance session and a food each show
+    their time, their module and a blank on home's `recent`. What changed is
+    that the answer got cheap: every module now has a one-line renderer for
+    exactly this sentence — `segmentLine` and `postureLine` in `movement.tsx`,
+    `sessionLine` in `dance.tsx`, `lineOf` in `nutrition.tsx` — so the registry
+    covering `recent` rows is now four one-line registrations rather than four
+    payload readers to write. `home.tsx` is in no module phase's Touch list, so
+    P7 did not touch it. P7's open question 5.
 
 ### P3: drive_store_and_offline
 
@@ -304,6 +315,15 @@ worktree again.
     number on the screen would read `NaN`. P7 adds a fifth section and writes
     it a fourth time. The duplication is the symptom; `ensureSeeded` merging
     keys is the fix, and it is still a planner decision.
+  - *From P7, for the planner rather than for an executor — P3 is `done`.*
+    **Fourth phase, same workaround, and P6 called it exactly.** P7 added a
+    `movement` section of six keys and a `dance` section of five to
+    `config/app.json`, and defends both by spreading the seed under the stored
+    section — once in `src/screens/movement.tsx` and once in
+    `src/screens/dance.tsx`. Without it an older stored file hands `undefined`
+    to a stepper's `step` and to `slice`, and the numbers on both screens stop
+    being numbers. That is four phases and six call sites now. Every phase that
+    adds a config key inherits it until `ensureSeeded` merges.
 
 ### P4: edit_and_delete_entries
 
@@ -363,6 +383,24 @@ worktree again.
     Your not-built-yet branch is **down to two modules**, movement and dance.
     Whoever runs P7 registers both and makes it unreachable, which is the call
     P8's comment above already handed forward.
+  - *From P7, for the planner rather than for an executor — P4 is `done`.*
+    **Your not-built-yet branch is now unreachable, and this is the call your
+    own comment handed forward.** All five modules have editors as of this
+    phase. `src/screens/edit_entry.test.tsx:102` still passes, but only because
+    that file imports no module screen and so nothing registers — the branch is
+    covered by an import-order accident rather than by any state the app can
+    reach. Deleting it is yours to decide, not P7's; the read-only JSON dump
+    and the line saying an editor is not built are both dead.
+  - *From P7, for the planner rather than for an executor — P4 is `done`.*
+    **A backdated entry is saved and then vanishes from the screen that saved
+    it.** P7's capsule calls logging yesterday's walk today the ordinary case,
+    and the editable timestamp makes it one press — but every module rail
+    filters on the wall-clock day, so the entry is written correctly and shows
+    nowhere. The likely next action is to log it again, silently duplicating
+    it. This is not P7's to fix: `body.tsx` and `nutrition.tsx` filter the same
+    way, so it is one decision across three screens — the rail follows the day
+    the *timestamp* names, or the honest empty says something about entries
+    filed on other days. P7's open question 2.
   - *From P6, for the planner.* A nutrition entry's row on home renders an
     empty detail. `detail(entry, config)` in `src/screens/home.tsx` still
     switches on the module and answers only for `body`, so a logged food shows
@@ -516,6 +554,18 @@ worktree again.
     `edit_entry.tsx` — the Files line in your doc may say otherwise, but
     putting it there creates an import cycle. P4's comment and P5's deviation 3
     both cover this.
+  - *From P7, for the planner rather than for an executor — P6 is `done`.*
+    **An emptied `AmountStepper` box shows blank and logs the number it used to
+    hold.** Suppressing `onChange` for an unreadable box is right — half a
+    typed number is not a number — but the field then reads empty while the
+    payload keeps the old figure, and pressing log saves it. It shows worst on
+    P7's posture form, where the bar sits directly under the box and looks like
+    a live echo of it: clear `sitting` and the bar goes on drawing the old
+    split. `amount_stepper.tsx` is yours and P7's **Do not touch** names it, so
+    this is a note rather than a fix. P7's open question 3. Also, for the
+    record: **both your scales were exactly right** — `movement.scale` and
+    `dance.scale` went on screen from `loadLevels()` with no change to
+    `levels.json` and no scale literal in either screen.
   - *From P5.* The screen shell is now written three times — `body.css`,
     `edit_entry.css` and `workout.css` all carry the same strip, back link,
     field label and 760px breakpoint. Yours is the fourth. P4 asked that this
@@ -526,18 +576,44 @@ worktree again.
 
 - **For other phases:** posture blocks are a second entry type inside the
   movement module, distinguished by a field in the payload, not a sixth module.
-- **Notes:** Started 2026-08-01 at `19c476f` and stopped before any code — the
-  table then said **Depends on: P4**, but the capsule builds on four things
-  P5 and P6 own and **Do not touch** forbids creating: `segmented.tsx`,
-  `library_picker.tsx`, `amount_stepper.tsx`, and `src/seed/levels.json` with
-  both level scales. None existed. The column now reads `P4, P5, P6` and the
-  phase is plain `pending` again — it waits its turn, nothing here is blocked.
-  Nothing else in the doc changes; every task works as written once P6 lands.
-  Full record in `P7_movement_and_dance.md` → **Prior attempt**. **Two of the
-  four are now in the tree** — `segmented.tsx` and `library_picker.tsx` came
-  with the P5 merge on 2026-08-01. The two still missing are both P6's,
-  `amount_stepper.tsx` and `src/seed/levels.json`, and they are what this phase
-  is still waiting for.
+- **Notes:** Done, 2026-08-02, on the second attempt — the first stopped before
+  any code on 2026-08-01 because the table said **Depends on: P4** while the
+  capsule builds on four things P5 and P6 own. The column was corrected to
+  `P4, P5, P6`; all four artifacts were in the tree this time and every task
+  ran as written. `P7_movement_and_dance.md` → **Prior attempt** keeps that
+  record. Five things later work should know. **A posture block is
+  `{ type: 'posture', span_hours, sitting_hours }` and a segment is
+  `{ type: 'segment', segment_id, duration_min, level }`** — one module, told
+  apart by that field, and `payload.type` is on the entry rather than inferred
+  from which fields are present, which is what lets one `registerEditor` call
+  serve both. **`src/components/posture_bar.tsx` takes `span` and `sitting`
+  and writes nothing at all**: the parts are `flex-grow`, so no percentage is
+  computed and none can be written, and sitting clamps to the span. **The
+  editors are registered in the screen files, `src/main.tsx` carries two more
+  route lines, and `src/seed/app.json` gained a `movement` and a `dance`
+  section** rather than the single key the doc named — six numbers this phase
+  puts on screen would otherwise have been literals. **`src/data/segment.ts`
+  is `loadSegments()` and `hintOf()` and nothing else.** And the fresh review
+  caught one real data defect: dance's duration box could not be typed into,
+  because its `onChange` shared a handler with the shortcut buttons and that
+  handler bumps the stepper's remount key — a session meant to be 45 minutes
+  logged as 4, with nothing on screen having said so. Fixed, watched to fail
+  first, and walked in a browser. Six deviations, five assumptions and six open
+  questions are in `P7_movement_and_dance.md` → **Deviations**,
+  **Assumptions**, **Fresh review**, **Open questions**, **Outcome**. The one
+  to read is question 1: **this doc ordered a three-part bar and specified a
+  two-number payload, so the third part is 0px wide for every possible input**
+  — measured in the browser, not reasoned about.
+- **The suite is now 196 tests over 14 files**, which supersedes the 120-over-11
+  figure in **Test commands** above — P6 added one file and P7 two, and the
+  worktree collection that made the older numbers untrustworthy is still fixed.
+  A count far above 196 still means something is collecting a worktree.
+- **The saving half of the Exit walkthrough was not run.** Rendering was: the
+  seeded library, `2.8 km · mixed`, the bar at 615.75 / 205.25 / 0 px with no
+  `%` or ratio text anywhere, `last 4`, the three shortcuts, no mark control,
+  no graph. Actually pressing `log it` would write four entries into the user's
+  own body log and sync them to their Drive, so it was left for them; each
+  bullet is covered by a test.
 - **Incoming comments:**
   - *From P5.* The two shared controls are built; their signatures are in P5's
     Notes above. Your two level scales (`stroll / steady / brisk` and
