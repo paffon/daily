@@ -20,9 +20,9 @@ One logged occurrence: a timestamp plus whatever its module records. Every entry
 in every module is editable and deletable, timestamp included.
 
 **Kind** (exercise):
-Which fields an exercise's set rows record — loaded, bodyweight, hold, distance,
-machine. What stops a weight box appearing for running. Per-exercise field lists
-override it.
+Which fields an exercise's set rows record — loaded, bodyweight, count, hold,
+distance, machine. What stops a weight box appearing for running, or a clock
+appearing for skipping rope. Per-exercise field lists override it.
 _Avoid_: type, category, shape (taken — see below)
 
 **Level**:

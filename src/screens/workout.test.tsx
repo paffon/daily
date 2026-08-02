@@ -100,6 +100,16 @@ describe('the exercise library', () => {
     expect(fieldsFor(rowing).map((field) => field.unit)).toContain('m')
   })
 
+  it('counts what is counted and clocks what is held, and never both', () => {
+    /* a skip is a count. Neither the clock nor a weight box belongs on it */
+    expect(fieldsFor(named('jump rope')).map((field) => field.name)).toEqual(['count'])
+    /* and the load is the whole of a carry, so it is not the optional one */
+    expect(fieldsFor(named('farmer carry'))).toEqual([
+      { name: 'weight', unit: 'kg' },
+      { name: 'duration', unit: 's', sep: '/' },
+    ])
+  })
+
   it('covers every body part and every kind it ships', () => {
     const { exercises, kinds } = loadExercises()
     expect(new Set(exercises.map((item) => item.body_part))).toEqual(

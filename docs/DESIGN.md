@@ -218,6 +218,7 @@ shows. A weight box never appears for running.
 | :- | :- | :- |
 | loaded | weight × reps | `42.5 × 10` |
 | bodyweight | reps, optional added or assisted weight | `12`, `12 +10`, `8 −20` |
+| count | a count, and nothing else | `100` |
 | hold | duration, optional weight | `45 s`, `60 s +10` |
 | distance | distance + duration, optional incline | `5 km / 28 min` |
 | machine | duration + level, optional distance | `20 min @ 8` |

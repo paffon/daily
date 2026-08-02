@@ -8,6 +8,7 @@
       { "name": "reps", "unit": "" },
       { "name": "weight", "unit": "kg", "optional": true }
     ],
+    "count": [{ "name": "count", "unit": "" }],
     "hold": [
       { "name": "duration", "unit": "s" },
       { "name": "weight", "unit": "kg", "optional": true }
@@ -69,7 +70,16 @@
     { "id": "biceps-curl", "name": "biceps curl", "body_part": "hands", "kind": "loaded" },
     { "id": "hammer-curl", "name": "hammer curl", "body_part": "hands", "kind": "loaded" },
     { "id": "triceps-rope", "name": "triceps rope", "body_part": "hands", "kind": "loaded" },
-    { "id": "farmer-carry", "name": "farmer carry", "body_part": "hands", "kind": "hold" },
+    {
+      "id": "farmer-carry",
+      "name": "farmer carry",
+      "body_part": "hands",
+      "kind": "hold",
+      "fields": [
+        { "name": "weight", "unit": "kg" },
+        { "name": "duration", "unit": "s", "sep": "/" }
+      ]
+    },
     {
       "id": "leg-press",
       "name": "leg press",
@@ -103,7 +113,7 @@
       "body_part": "heartrate",
       "kind": "distance"
     },
-    { "id": "treadmill", "name": "treadmill", "body_part": "heartrate", "kind": "machine" },
+    { "id": "treadmill", "name": "treadmill", "body_part": "heartrate", "kind": "distance" },
     { "id": "elliptical", "name": "elliptical", "body_part": "heartrate", "kind": "machine" },
     {
       "id": "stationary-bike",
@@ -122,6 +132,6 @@
         { "name": "level", "unit": "", "optional": true, "sep": "@" }
       ]
     },
-    { "id": "jump-rope", "name": "jump rope", "body_part": "heartrate", "kind": "hold" }
+    { "id": "jump-rope", "name": "jump rope", "body_part": "heartrate", "kind": "count" }
   ]
 }
