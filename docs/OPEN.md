@@ -20,16 +20,6 @@ sites, and every future config key inherits that workaround. Merging on read
 in `src/data/store.ts` removes all six. See
 [ADR 0003](./adr/0003-every-number-is-seeded-data.md).
 
-**A backdated food entry saves and then vanishes from the screen that saved
-it.** Logging yesterday's lunch today is one press on the editable timestamp,
-but `src/screens/nutrition.tsx:148` filters the rail to the wall-clock day and
-renders nothing for the rest. The entry is written correctly and shows
-nowhere, which reads as a failed save, and the obvious next press logs it
-twice. The other four screens have already answered this: `workout.tsx:197`
-and `movement.tsx` render a `today` section and an `earlier` one below it, the
-second shown only when it has something in it; `body.tsx` and `dance.tsx` never
-day-filtered. Nutrition is the one left, and the shape to copy is workout's.
-
 **An emptied amount box logs the number it used to hold.**
 `src/components/amount_stepper.tsx` suppresses `onChange` for an unreadable
 box, which is right — half a typed number is not a number — but the field then

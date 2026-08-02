@@ -136,6 +136,29 @@ describe('the dance screen', () => {
     expect(render(<Dance />).container.querySelectorAll('.dance-rail-row')).toHaveLength(4)
   })
 
+  it('logs last night’s session at last night’s date, without a second pass', () => {
+    const { container } = render(<Dance />)
+    press(container, '.field-stamp-box')
+
+    // pressing the box focuses it, and the panel replaces it the same tick —
+    // so the browser fires focusout with a null relatedTarget before the two
+    // fields are on screen. Anything reading that as leaving shuts the panel
+    // on every press, and the date becomes editable only from the edit screen
+    fireEvent.focusOut(container.querySelector('.field-stamp')!, { relatedTarget: null })
+    const fields = container.querySelector('.field-stamp-edit')
+    expect(fields).not.toBeNull()
+
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    fireEvent.input(fields!.querySelector<HTMLInputElement>('input[type="date"]')!, {
+      target: { value: yesterday },
+    })
+    shortcut(container, '75')
+    press(container, '.dance-log')
+
+    expect(readEntries('dance')[0]?.ts.slice(0, 10)).toBe(yesterday)
+    expect(readEntries('dance')[0]?.rev).toBe(1)
+  })
+
   it('draws no graph, and says plainly what there is instead', () => {
     const { container } = render(<Dance />)
     expect(container.querySelector('svg, canvas')).toBeNull()

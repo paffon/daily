@@ -12,7 +12,7 @@ import {
   nutritionLine,
   unitOf,
 } from '../data/food'
-import { Previous, Timestamp, clockOf } from '../components/fields'
+import { Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
@@ -129,6 +129,21 @@ export function Nutrition(): VNode {
   const food = picked === null ? null : asFood(picked.food_id, library)
   const nutrition = picked === null || food === null ? null : nutritionFor(food, picked.amount, picked.level)
 
+  /** One row. Today's carries the clock and an older one its date, because
+   *  "which day" is the whole question about an entry that is not today's. */
+  const railRow = (entry: Entry) => (
+    <a class="nutrition-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
+      <span class="nutrition-rail-when">
+        {isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}
+      </span>
+      <span class="nutrition-rail-what">
+        {`${asFood(loggedIn(entry).food_id, library).name} · ${lineOf(loggedIn(entry), library)}`}
+      </span>
+    </a>
+  )
+
+  const earlier = past.filter((entry) => !isToday(entry))
+
   return (
     <main class="nutrition">
       <header class="nutrition-strip">
@@ -144,16 +159,20 @@ export function Nutrition(): VNode {
           {/* a flat timeline, newest first — no grouping, no header per part of
               the day, and it simply gets longer */}
           {/* `readEntries` already hands these back newest first */}
-          {past
-            .filter(isToday)
-            .map((entry) => (
-              <a class="nutrition-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-                <span class="nutrition-rail-when">{clockOf(entry.ts, locale)}</span>
-                <span class="nutrition-rail-what">
-                  {`${asFood(loggedIn(entry).food_id, library).name} · ${lineOf(loggedIn(entry), library)}`}
-                </span>
-              </a>
-            ))}
+          {past.filter(isToday).map(railRow)}
+
+          {/* the editable timestamp makes logging yesterday's lunch today one
+              press, so an entry filed on another day has to land somewhere it
+              can be seen — or the screen that just saved it reads as if it had
+              not, and the obvious next press logs it twice. Workout's rail
+              answered this first and movement's copied it; these are the same
+              two groups, the second shown only when it holds something. */}
+          {earlier.length > 0 && (
+            <>
+              <h2 class="nutrition-rail-label">earlier</h2>
+              {earlier.map(railRow)}
+            </>
+          )}
 
           <p class="nutrition-rail-progress">
             {`progress · ${past.length} ${past.length === 1 ? 'entry' : 'entries'}, not enough to draw`}

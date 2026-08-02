@@ -49,7 +49,15 @@ export function whenOf(ts: string, locale: string, weekdayWithinDays: number): s
  *
  *  `expanded` is the edit screen: the two fields stand open from the start
  *  because moving an entry to when it happened is why that screen was opened,
- *  and the distance from now is the point there rather than a remark on it. */
+ *  and the distance from now is the point there rather than a remark on it.
+ *
+ *  Nothing collapses it again, and a close-on-blur is the one thing that must
+ *  not go back in: pressing the box focuses it, and the panel replaces it in
+ *  the same tick, so the browser fires `focusout` with a null `relatedTarget`
+ *  before the two fields are ever on screen. Read as leaving, that shut the
+ *  panel on every press — which left the timestamp editable only after the
+ *  fact, from the edit screen. Staying open is the truthful state anyway: it
+ *  was opened to move an entry off now, and leaving the screen remounts it. */
 export function Timestamp({
   value,
   onChange,
@@ -81,12 +89,7 @@ export function Timestamp({
   }
 
   return (
-    <div
-      class="field-stamp"
-      onFocusOut={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false)
-      }}
-    >
+    <div class="field-stamp">
       {open || expanded ? (
         <div class="field-stamp-edit">
           <input type="date" value={day} onInput={(e) => edit(e.currentTarget.value, time)} />

@@ -310,6 +310,30 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.nutrition-actions')?.textContent).toBe('log it')
   })
 
+  it('shows an entry logged for another day rather than swallowing it', () => {
+    const { container } = render(<Nutrition />)
+
+    // logging yesterday's lunch today is one press on the strip. If the rail
+    // only ever shows the wall-clock day the entry is saved and shows nowhere,
+    // which reads as a failed save, and the obvious next press logs it twice
+    const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
+    if (collapsed !== null) fireEvent.click(collapsed)
+    const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.field-stamp-edit input[type="date"]')!, {
+      target: { value: yesterday },
+    })
+
+    logPizza(container)
+
+    expect(readEntries('nutrition')).toHaveLength(1)
+    expect(railLines(container)).toEqual(['pizza · 2 slices · loaded'])
+    expect([...container.querySelectorAll('.nutrition-rail-label')].map((h) => h.textContent)).toEqual(
+      ['today', 'earlier'],
+    )
+    // and the row says which day, since that is the whole question about it
+    expect(container.querySelector('.nutrition-rail-when')?.textContent).toMatch(/\d/)
+  })
+
   it('knows nothing about what a container of food would be called', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
