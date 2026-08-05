@@ -76,11 +76,14 @@ export function SetTable({
                   back mid-keystroke would eat the dot as `47.` parses to 47 */}
               {/* text, not a decimal keypad: the phone must still offer the
                   signs the fast input is typed with */}
+              {/* the value is `?? ''` and not a null check: a row carried over
+                  from another field list has no key here at all, and `String`
+                  of that would print the word undefined into the box */}
               <input
                 class={field.optional ? 'set-input set-input-optional' : 'set-input'}
                 type="text"
                 aria-label={`set ${at + 1} ${field.name}`}
-                defaultValue={row[field.name] === null ? '' : String(row[field.name])}
+                defaultValue={String(row[field.name] ?? '')}
                 onInput={(e) => {
                   const { value, mark } = parseMark(e.currentTarget.value)
                   /* the first box is the fast input, but only a number with a

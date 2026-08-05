@@ -301,11 +301,132 @@ describe('the workout screen', () => {
     expect(loadExercises().exercises.some((item) => item.name === 'dips blue machine')).toBe(true)
   })
 
+  it('answers a press with nothing typed by putting the cursor where the name goes', () => {
+    // the button used to disable itself, which reads as broken: its label is
+    // the only thing tying the press to the box, and greying it out says less
+    // than nothing about what to type where
+    const { container } = render(<Workout />)
+    const button = container.querySelector<HTMLButtonElement>('.picker-new')!
+
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+
+    expect(document.activeElement).toBe(container.querySelector('.picker-filter'))
+    // and no nameless exercise was made on the way there
+    expect(loadExercises().exercises.some((item) => item.name === '')).toBe(false)
+    expect(container.querySelector('.workout-title')?.textContent).toBe('exercise')
+  })
+
+  it('says in the box that typing there names a new one, not only that it filters', () => {
+    const { container } = render(<Workout />)
+    expect(container.querySelector('.picker-filter')?.getAttribute('placeholder')).toBe(
+      'find one, or name a new one',
+    )
+  })
+
   it('draws no graph, and says plainly what there is instead', () => {
     const { container } = render(<Workout />)
     expect(container.querySelector('svg, canvas')).toBeNull()
     expect(container.querySelector('.workout-rail-progress')?.textContent).toBe(
       'progress · 0 workouts, not enough to draw',
+    )
+  })
+})
+
+/** An exercise made inline used to keep a blank body part and the library's
+ *  first kind permanently — nothing in `src/` could change either. So a route
+ *  added as `run · park loop` drew a weight box, against `RULES.md`'s "never
+ *  show a field the thing does not have", and the body part objectives count
+ *  against was empty for every exercise the user ever added. */
+describe('the kind and body part of an exercise made inline', () => {
+  const make = (name: string) => {
+    const screen = render(<Workout />)
+    fireEvent.input(screen.container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: name },
+    })
+    press(screen.container, '.picker-new')
+    return screen
+  }
+
+  const set = (container: Element, label: string, value: string) =>
+    fireEvent.change(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
+      target: { value },
+    })
+
+  const made = (name: string) => loadExercises().exercises.find((item) => item.name === name)
+
+  it('offers every kind the library carries, and nothing written in source', () => {
+    const { container } = make('run · park loop')
+    const kinds = [...container.querySelectorAll('[aria-label="kind"] option')].map(
+      (option) => option.textContent,
+    )
+    expect(kinds).toEqual(Object.keys(loadExercises().kinds))
+  })
+
+  it('swaps the set row to the fields the chosen kind records', () => {
+    const { container } = make('run · park loop')
+    expect(box(container, 'set 1 weight')).not.toBeNull()
+
+    set(container, 'kind', 'distance')
+
+    expect(box(container, 'set 1 weight')).toBeNull()
+    expect(box(container, 'set 1 distance')).not.toBeNull()
+    expect(box(container, 'set 1 duration')).not.toBeNull()
+    expect(made('run · park loop')?.kind).toBe('distance')
+  })
+
+  it('drops rows typed under the old kind rather than carrying half of them', () => {
+    // the boxes are uncontrolled and the columns are now different ones, so a
+    // row kept would put a weight under `distance` or the word undefined in a box
+    const { container } = make('run · park loop')
+    type(container, 'set 1 weight', '47.5')
+
+    set(container, 'kind', 'distance')
+
+    expect(container.querySelectorAll('.set-row')).toHaveLength(1)
+    expect(box(container, 'set 1 distance')?.value).toBe('')
+
+    type(container, 'set 1 distance', '5')
+    type(container, 'set 1 duration', '28')
+    press(container, '.workout-end')
+
+    // the new kind's fields and only those — no `weight` left over from the old one
+    expect(loggedExercises()[0]?.sets).toEqual([
+      { distance: 5, duration: 28, incline: null, mark: 'same' },
+    ])
+  })
+
+  it('writes the body part onto the library, where an objective can count it', () => {
+    const { container } = make('run · park loop')
+    expect(made('run · park loop')?.body_part).toBe('')
+
+    set(container, 'body part', 'legs')
+    press(container, '.workout-end')
+
+    expect(made('run · park loop')?.body_part).toBe('legs')
+    expect(readEntries('workout')[0]!.payload['body_parts']).toEqual(['legs'])
+  })
+
+  it('offers the parts already in the library without closing the list to them', () => {
+    const { container } = make('hip airplane')
+    const offered = [...container.querySelectorAll('#workout-body-parts option')].map((option) =>
+      option.getAttribute('value'),
+    )
+    expect(offered).toContain('back')
+    expect(offered).toContain('legs')
+
+    // a datalist suggests; it does not constrain, and the taxonomy is the user's
+    set(container, 'body part', 'hips')
+    expect(made('hip airplane')?.body_part).toBe('hips')
+  })
+
+  it('retags a seeded exercise too — a seeded item is no more protected', () => {
+    const { container } = render(<Workout />)
+    pick(container, 'pull ups')
+    set(container, 'body part', 'shoulders')
+
+    expect(loadExercises().exercises.find((item) => item.name === 'pull ups')?.body_part).toBe(
+      'shoulders',
     )
   })
 })

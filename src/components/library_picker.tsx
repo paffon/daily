@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useRef, useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import './library_picker.css'
 
@@ -22,6 +22,7 @@ export function LibraryPicker({
   newLabel: string
 }): VNode {
   const [typed, setTyped] = useState('')
+  const filter = useRef<HTMLInputElement>(null)
   const needle = typed.trim().toLowerCase()
   const shown = items.filter((item) =>
     `${item.name} ${item.hint ?? ''}`.toLowerCase().includes(needle),
@@ -29,10 +30,14 @@ export function LibraryPicker({
 
   return (
     <div class="picker">
+      {/* the box names the new item as well as narrowing the list, and a bare
+          search box says only the second half of that */}
       <input
         class="picker-filter"
         type="search"
         aria-label="filter"
+        placeholder="find one, or name a new one"
+        ref={filter}
         value={typed}
         onInput={(e) => setTyped(e.currentTarget.value)}
       />
@@ -51,13 +56,20 @@ export function LibraryPicker({
         ))}
       </div>
 
-      {/* what is typed names the new item, so with nothing typed there is
-          nothing to make — said in the control rather than by ignoring a press */}
+      {/* What is typed names the new item, so with nothing typed there is
+          nothing to make. It used to disable itself for that, which reads as a
+          broken button: the label is the only thing on screen tying the press
+          to the box, and greying it out takes that away rather than saying it.
+          The press instead puts the cursor where the name goes — one tap, the
+          keyboard is up, and the second press makes the item. */}
       <button
         type="button"
         class="picker-new hit"
-        disabled={needle === ''}
         onClick={() => {
+          if (needle === '') {
+            filter.current?.focus()
+            return
+          }
           onNew(typed.trim())
           setTyped('')
         }}

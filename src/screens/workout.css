@@ -128,13 +128,36 @@
   color: var(--ink);
 }
 
-.workout-kind {
+/* the kind and the body part are controls rather than captions: both are
+   editable here, and this is the only surface either is reachable from */
+
+.workout-kind,
+.workout-part {
   padding: 5px 8px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-control);
+  background: none;
   font: 400 10.5px/1 var(--family-mono);
   letter-spacing: 0.1em;
   color: var(--mono);
+}
+
+.workout-kind {
+  cursor: pointer;
+}
+
+.workout-part {
+  width: 11ch;
+}
+
+.workout-kind:focus,
+.workout-part:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.workout-part::placeholder {
+  color: var(--mono-faint);
 }
 
 .workout-scheme {

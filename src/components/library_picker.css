@@ -23,6 +23,11 @@
   outline: none;
 }
 
+.picker-filter::placeholder {
+  color: var(--mono-faint);
+  font-size: 14px;
+}
+
 .picker-list {
   display: flex;
   flex-direction: column;
@@ -66,9 +71,4 @@
   color: var(--steel-text);
   font: 400 14.5px/1 var(--family-mono);
   cursor: pointer;
-}
-
-.picker-new:disabled {
-  color: var(--mono-faint);
-  cursor: default;
 }
