@@ -4,9 +4,14 @@
  *  expiry mid-session just re-prompts on the next sync, and the mirror means
  *  nothing is lost meanwhile. */
 
-/** Per-file access — the app sees only files it created itself. The narrowest
- *  scope that works, and the reason no consent-screen review is needed. */
-const SCOPE = 'https://www.googleapis.com/auth/drive.file'
+/** Per-file access — the app sees only files it created itself — and the name
+ *  on the account, which the app shows above every screen so it is never a
+ *  question whose log is open. Both are non-sensitive scopes, so the pair is
+ *  still the narrowest that works and still needs no consent-screen review. */
+const SCOPE = [
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/userinfo.profile',
+].join(' ')
 
 /** The slice of Google Identity Services this app touches. Declaring it beats
  *  a types package for one call. The script tag in `index.html` defines it. */
@@ -28,10 +33,19 @@ declare const google: {
 }
 
 let accessToken = ''
+let accountName = ''
 
 /** Empty until a sign-in succeeds. */
 export function token(): string {
   return accessToken
+}
+
+/** The name on the signed-in account. Memory only, beside the token and for
+ *  the same reasons — it is the token's fact, so it arrives with one and goes
+ *  when one is dropped. Empty when nobody is signed in, and empty in the one
+ *  case where a token arrived but the profile call did not. */
+export function account(): string {
+  return accountName
 }
 
 /** Read at call time, not at module load, so importing this file in a test
@@ -59,12 +73,27 @@ export function signIn(): Promise<boolean> {
         prompt: '',
         callback: (response) => {
           accessToken = response.access_token ?? ''
-          resolve(accessToken !== '')
+          if (accessToken === '') return resolve(false)
+          /* Resolved only once the name is in, so the first painted frame
+             already carries it rather than filling in a beat later. */
+          void whoAmI().then(() => resolve(true))
         },
         error_callback: () => resolve(false),
       })
       .requestAccessToken()
   })
+}
+
+/** The name behind the token. A failure here is not a failed sign-in — Drive
+ *  is reachable either way — so it is swallowed and the band above the app
+ *  simply carries nothing. */
+async function whoAmI(): Promise<void> {
+  try {
+    const who = await (await api('/oauth2/v3/userinfo')).json()
+    accountName = (who.name as string | undefined) ?? ''
+  } catch {
+    accountName = ''
+  }
 }
 
 /* There is no `trySilentSignIn`, though the phase doc asks for one. A GIS
@@ -106,7 +135,10 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
      write keeps firing passes that can only fail, silently, forever. Dropping
      it makes `token()` empty again, which is what the rest of the app reads
      to mean "nothing can reach Drive right now". */
-  if (response.status === 401) accessToken = ''
+  if (response.status === 401) {
+    accessToken = ''
+    accountName = ''
+  }
   if (!response.ok) throw new Error(`drive ${response.status} on ${path}`)
   return response
 }

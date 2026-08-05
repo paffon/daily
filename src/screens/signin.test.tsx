@@ -1,51 +1,53 @@
-/** The band is the whole of what a signed-out app says, so what it says and
- *  what it offers are both worth pinning down. Google is faked; nothing here
+/** The door is the whole of what a signed-out app shows, and the band is what
+ *  a signed-in one says about whose log it is. Google is faked; nothing here
  *  is about GIS. */
 
-vi.mock('../data/drive', () => ({ signIn: vi.fn() }))
+vi.mock('../data/drive', () => ({ signIn: vi.fn(), account: vi.fn() }))
 
 import { fireEvent, render } from '@testing-library/preact'
-import { signIn } from '../data/drive'
-import { SignInBand } from './signin'
+import { account, signIn } from '../data/drive'
+import { AccountBand, SignIn } from './signin'
 
 const asked = vi.mocked(signIn)
-
-/** `navigator.onLine` is a getter on the prototype in jsdom, so it is replaced
- *  rather than spied on. */
-const pretendOffline = (offline: boolean) =>
-  Object.defineProperty(navigator, 'onLine', { value: !offline, configurable: true })
+const named = vi.mocked(account)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  pretendOffline(false)
   asked.mockResolvedValue(true)
+  named.mockReturnValue('')
 })
 
-describe('the sign-in band', () => {
-  it('states that nothing is reaching Drive, and offers the way back', async () => {
+describe('the sign-in screen', () => {
+  it('opens the app once a token arrives', async () => {
     const done = vi.fn()
-    const { container } = render(<SignInBand onDone={done} />)
-    expect(container.textContent).toContain('not syncing')
+    const { container } = render(<SignIn onDone={done} />)
 
-    fireEvent.click(container.querySelector<HTMLButtonElement>('.signin-band-go')!)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.signin-go')!)
     await vi.waitFor(() => expect(done).toHaveBeenCalled())
   })
 
-  it('leaves the app alone when the press wins no token', async () => {
+  it('stays where it is when the press wins no token', async () => {
     asked.mockResolvedValue(false)
     const done = vi.fn()
-    const { container } = render(<SignInBand onDone={done} />)
+    const { container } = render(<SignIn onDone={done} />)
 
-    fireEvent.click(container.querySelector<HTMLButtonElement>('.signin-band-go')!)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.signin-go')!)
     await vi.waitFor(() => expect(asked).toHaveBeenCalled())
     expect(done).not.toHaveBeenCalled()
   })
+})
 
-  it('offers no door offline, where a token request cannot open one', () => {
-    pretendOffline(true)
-    const { container } = render(<SignInBand onDone={vi.fn()} />)
+describe('the account band', () => {
+  it('carries the name on the signed-in account', () => {
+    named.mockReturnValue('Omri Nardin')
+    const { container } = render(<AccountBand />)
 
-    expect(container.textContent).toContain('not syncing')
-    expect(container.querySelector('.signin-band-go')).toBeNull()
+    expect(container.querySelector('.account-name')?.textContent).toBe('Omri Nardin')
+  })
+
+  it('draws nothing at all rather than an empty strip when there is no name', () => {
+    const { container } = render(<AccountBand />)
+
+    expect(container.querySelector('.account-band')).toBeNull()
   })
 })

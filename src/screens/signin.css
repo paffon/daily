@@ -33,13 +33,13 @@
   background: var(--steel-hover);
 }
 
-/* The band. Chrome above whatever screen is showing, sized like the module
-   strip so it reads as part of the frame rather than as an alarm. */
+/* The account band. Chrome above whatever screen is showing, sized like the
+   module strip so it reads as part of the frame. It carries one thing, so it
+   is quiet: mono, faint, top left, out of the way of what is being logged. */
 
-.signin-band {
+.account-band {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-height: var(--hit-min);
   padding: 0 clamp(24px, 7vw, 56px);
   border-bottom: 1px solid var(--rule);
@@ -49,24 +49,8 @@
   color: var(--mono);
 }
 
-/* steel means "this is the live one" — here, the one thing on the band that
-   can be pressed */
-.signin-band-go {
-  align-items: center;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  letter-spacing: inherit;
-  color: var(--steel-text);
-  cursor: pointer;
-}
-
-.signin-band-go::before {
-  content: '· ';
-  color: var(--mono-faint);
-}
-
-.signin-band-go:hover {
-  color: var(--steel-hover);
+.account-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

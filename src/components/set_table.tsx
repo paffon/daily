@@ -1,3 +1,4 @@
+import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Exercise, SetRow } from '../data/exercise'
 import { fieldsFor, loadExercises, parseMark } from '../data/exercise'
@@ -38,6 +39,21 @@ export function SetTable({
 
   const write = (at: number, row: SetRow) => onChange(rows.map((s, i) => (i === at ? row : s)))
 
+  /** Bumped on every removal, and part of each row's key. The boxes are
+   *  uncontrolled, so dropping set 2 of 3 would otherwise leave set 3's typed
+   *  text sitting in the box that is now set 2 — the rows below it shift up in
+   *  the state but not in the DOM. A new generation rebuilds them all from what
+   *  the state now says. */
+  const [gen, setGen] = useState(0)
+
+  /** Removing the only row clears it: `+ set` put it there, so taking it back
+   *  out is the same gesture, and a row typed into by mistake needs undoing
+   *  whether or not it is the first. */
+  const drop = (at: number) => {
+    setGen(gen + 1)
+    onChange(rows.filter((_, i) => i !== at))
+  }
+
   return (
     <div class="sets">
       <div class="set-head">
@@ -51,7 +67,7 @@ export function SetTable({
       </div>
 
       {rows.map((row, at) => (
-        <div class="set-row" key={at}>
+        <div class="set-row" key={`${gen}:${at}`}>
           <span class="set-index">{at + 1}</span>
 
           {fields.map((field, column) => (
@@ -88,6 +104,15 @@ export function SetTable({
               label={`set ${at + 1} next time`}
             />
           </div>
+
+          <button
+            type="button"
+            class="set-drop hit"
+            aria-label={`remove set ${at + 1}`}
+            onClick={() => drop(at)}
+          >
+            ×
+          </button>
         </div>
       ))}
 

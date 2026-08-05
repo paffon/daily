@@ -77,12 +77,20 @@ are duplicated across `body.css`, `edit_entry.css`, `workout.css`,
 `nutrition.css`, `movement.css` and `dance.css`. Raised before the third copy
 and again at the fifth; the fix crosses files no module phase owned.
 
-**There is no silent sign-in, and the app cannot be entered offline at all.**
-Google Identity Services token clients have no silent mode, so every page load
-renders the sign-in screen and needs one press. The offline shell exists but
-cannot be reached without that press, which partly defeats the goal of the
-phase that built it. The fix is small and breaks no anti-goal, but it needs a
-decision about what a signed-out app shows.
+**The app cannot be entered offline at all, and that is now deliberate.** The
+question this entry used to ask — what a signed-out app shows — was decided on
+2026-08-05: nothing. No token, no modules and no mirror, on every screen. Google
+Identity Services token clients have no silent mode and the token is memory-only,
+so that means one press per page load, and it means a browser with no signal
+cannot get in even though the mirror behind the gate holds every entry ever
+logged and would take the write.
+
+That is a live conflict with `DESIGN.md` §10, which lists offline-capable so a
+dead signal in a basement gym does not stop logging mid-set. Both cannot be true
+at once. What would settle it without giving the gate up is a way to prove a
+past sign-in that survives a reload — a stored profile, or an ID token with its
+expiry checked — so the mirror opens offline for a browser that has signed in
+before, and only for one.
 
 **Home has no top strip.** Frame 4a shows a 56/52px band carrying `daily` and
 the date above the modules; home does not render it. It was left out rather
