@@ -8,14 +8,12 @@
  *  on the account, which the app shows above every screen so it is never a
  *  question whose log is open. Both are non-sensitive scopes, so the pair is
  *  still the narrowest that works and still needs no consent-screen review. */
-const SCOPE = [
-  'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/userinfo.profile',
-].join(' ')
+const PROFILE = 'https://www.googleapis.com/auth/userinfo.profile'
+const SCOPE = ['https://www.googleapis.com/auth/drive.file', PROFILE].join(' ')
 
 /** The slice of Google Identity Services this app touches. Declaring it beats
  *  a types package for one call. The script tag in `index.html` defines it. */
-type TokenResponse = { access_token?: string }
+type TokenResponse = { access_token?: string; scope?: string }
 type TokenClient = { requestAccessToken(): void }
 
 declare const google: {
@@ -76,7 +74,7 @@ export function signIn(): Promise<boolean> {
           if (accessToken === '') return resolve(false)
           /* Resolved only once the name is in, so the first painted frame
              already carries it rather than filling in a beat later. */
-          void whoAmI().then(() => resolve(true))
+          void whoAmI(response.scope ?? '').then(() => resolve(true))
         },
         error_callback: () => resolve(false),
       })
@@ -86,13 +84,29 @@ export function signIn(): Promise<boolean> {
 
 /** The name behind the token. A failure here is not a failed sign-in — Drive
  *  is reachable either way — so it is swallowed and the band above the app
- *  simply carries nothing. */
-async function whoAmI(): Promise<void> {
+ *  simply carries nothing. But a blank band is indistinguishable from a broken
+ *  one, so each way it can fail says so in the console rather than nowhere.
+ *
+ *  `granted` is what Google actually handed over, which is not always what was
+ *  asked for: an account that consented to `drive.file` before this scope
+ *  existed can be handed a token carrying only that, and the profile call would
+ *  then 403 for a reason no error message names. */
+async function whoAmI(granted: string): Promise<void> {
+  accountName = ''
+  if (!granted.split(' ').includes(PROFILE)) {
+    console.warn(
+      `daily: signed in without ${PROFILE}, so there is no name to show. ` +
+        'Remove daily at https://myaccount.google.com/permissions and sign in again ' +
+        'to be asked for it.',
+    )
+    return
+  }
   try {
     const who = await (await api('/oauth2/v3/userinfo')).json()
     accountName = (who.name as string | undefined) ?? ''
-  } catch {
-    accountName = ''
+    if (accountName === '') console.warn('daily: the profile call named no account')
+  } catch (failure) {
+    console.warn('daily: the profile call failed', failure)
   }
 }
 
