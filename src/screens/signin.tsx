@@ -1,10 +1,10 @@
 import type { VNode } from 'preact'
-import { signIn } from '../data/drive'
+import { account, signIn } from '../data/drive'
 import './signin.css'
 
-/** Both doors do the same thing: ask for a token, and hand back only if one
- *  arrived. A refusal, a blocked popup and a dead network all resolve false and
- *  leave what is on screen exactly as it was. */
+/** Ask for a token, and hand back only if one arrived. A refusal, a blocked
+ *  popup and a dead network all resolve false and leave what is on screen
+ *  exactly as it was. */
 const press = (onDone: () => void) => () => {
   void signIn().then((ok) => {
     if (ok) onDone()
@@ -13,9 +13,13 @@ const press = (onDone: () => void) => () => {
 
 /** The only screen that exists because of a platform constraint rather than
  *  because something is being recorded. One line, one button, nothing else —
- *  no greeting, no benefits, no marketing. Reached only by a browser whose
- *  mirror is empty: with nothing recorded there is nothing to show and nothing
- *  safe to seed, so this is the one case that has to wait for a token. */
+ *  no greeting, no benefits, no marketing.
+ *
+ *  It is also the whole of a signed-out app. The mirror still holds every
+ *  entry ever logged and still takes writes, but none of it is shown or
+ *  reachable without a token: the log is the owner's, and this is the door.
+ *  Since the token lives in memory and GIS has no silent mode, that door is
+ *  one press per page load. */
 export function SignIn({ onDone }: { onDone: () => void }): VNode {
   return (
     <main class="signin">
@@ -27,24 +31,15 @@ export function SignIn({ onDone }: { onDone: () => void }): VNode {
   )
 }
 
-/** Above every screen while there is no token: after opening with no signal,
- *  and after a 401 has dropped an expired one mid-session. It states what is
- *  true — the mirror is taking writes and Drive is not seeing them — and the
- *  press is the only re-prompt there can be, since a token request is a popup
- *  and a popup needs a gesture.
- *
- *  Offline the state still holds but the door does not: the script that opens
- *  that popup is unreachable, so only the line shows rather than a button that
- *  would do nothing. */
-export function SignInBand({ onDone }: { onDone: () => void }): VNode {
+/** Above every screen once there is a token: whose log this is, and nothing
+ *  else. Blank rather than a band when Google would not say the name — an
+ *  empty strip is a rule across the top saying nothing. */
+export function AccountBand(): VNode | null {
+  const name = account()
+  if (name === '') return null
   return (
-    <div class="signin-band">
-      <span>not syncing</span>
-      {navigator.onLine && (
-        <button type="button" class="signin-band-go hit" onClick={press(onDone)}>
-          sign in
-        </button>
-      )}
+    <div class="account-band">
+      <span class="account-name">{name}</span>
     </div>
   )
 }

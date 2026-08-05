@@ -3,7 +3,7 @@ import type { VNode } from 'preact'
 import './styles/tokens.css'
 import { MODULES } from './data/entry'
 import { token } from './data/drive'
-import { ensureSeeded, readText } from './data/store'
+import { ensureSeeded } from './data/store'
 import { onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
@@ -13,7 +13,7 @@ import { Movement } from './screens/movement'
 import { Dance } from './screens/dance'
 import { Objectives } from './screens/objectives'
 import { EditEntry } from './screens/edit_entry'
-import { SignIn, SignInBand } from './screens/signin'
+import { AccountBand, SignIn } from './screens/signin'
 
 /** Every route but home renders one of these until its phase builds it. */
 function Stub({ name }: { name: string }): VNode {
@@ -57,13 +57,27 @@ function screen(hash: string): VNode {
 
 const mount = document.getElementById('app')!
 
-/** The band sits above whatever screen is showing, so a session that has
- *  stopped reaching Drive says so from wherever the app was opened, rather
- *  than only on the way in. */
+/** No token, no app — not the modules, not the mirror, not one entry. The
+ *  sign-in screen is the whole of what a signed-out browser shows, and it is
+ *  what every page load starts on, since the token lives in memory and GIS
+ *  cannot hand one back without a press.
+ *
+ *  A 401 mid-session lands here too, which is the same statement made late:
+ *  the token that dropped was the one holding the app open. Nothing is lost
+ *  by it — every write is already in the mirror, and the next sign-in carries
+ *  the dirty set up.
+ *
+ *  Signed in, the band sits above whatever screen is showing, so whose log
+ *  this is stays visible from wherever the app was opened rather than only on
+ *  the way in. */
 function paint(): void {
+  if (token() === '') {
+    render(<SignIn onDone={entered} />, mount)
+    return
+  }
   render(
     <>
-      {token() === '' && <SignInBand onDone={() => void catchUp()} />}
+      <AccountBand />
       {screen(location.hash || '#/')}
     </>,
     mount,
@@ -81,28 +95,23 @@ async function catchUp(): Promise<void> {
   paint()
 }
 
-/** An empty mirror is the one state with nothing to show and nothing safe to
- *  seed, so it — and only it — waits at the sign-in screen. Every other boot
- *  opens the app: the mirror holds every entry ever logged, which is what makes
- *  the app work in a basement, and a token is needed to *sync* rather than to
- *  read. Without one, writes pile up in the dirty set and the next sign-in
- *  carries them up. */
-const cold = readText('config/app.json') === null
-
-function enter(): void {
-  addEventListener('hashchange', paint)
-  addEventListener('online', () => {
-    paint()
-    void catchUp()
-  })
-  addEventListener('offline', paint)
-  onPass(paint)
-
-  /* A cold boot has nothing to paint, so it waits for the pull. A warm one
-     paints from the mirror and syncs behind it. */
-  if (!cold) paint()
+/** The token has landed. Open the app on it straight away — the mirror is
+ *  already the truth every screen reads, and waiting for the pass would put a
+ *  round trip between the press and the first thing loggable. The pass runs
+ *  behind it and repaints if it brought anything down. */
+function entered(): void {
+  paint()
   void catchUp()
 }
 
-if (cold) render(<SignIn onDone={enter} />, mount)
-else enter()
+addEventListener('hashchange', paint)
+addEventListener('online', () => {
+  paint()
+  void catchUp()
+})
+addEventListener('offline', paint)
+onPass(paint)
+
+/* Always the sign-in screen: the token is memory-only, so at boot there has
+   never been one. `catchUp` runs from the press, not from here. */
+paint()
