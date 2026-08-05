@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "omrinardiniri-daily",
     "public": "dist",
     "ignore": [
       "firebase.json",
