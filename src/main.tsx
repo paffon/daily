@@ -104,6 +104,29 @@ function entered(): void {
   void catchUp()
 }
 
+/** A deployed build reaches an already-open browser only when the worker
+ *  serving the old one steps aside. The generated worker does step aside on
+ *  its own — `skipWaiting` and `clientsClaim` — but taking charge does not
+ *  re-render a page whose HTML and script were handed over by the old cache
+ *  before it happened. Without this line a new build lands one reload late and
+ *  nothing asks for that reload, which is indistinguishable from a deploy that
+ *  never happened.
+ *
+ *  Only where a worker was already in charge: the first visit of all installs
+ *  one and claims immediately, and reloading there would be a reload for
+ *  nothing. Once per page either way — a worker that claimed twice would
+ *  otherwise loop.
+ *
+ *  It fires within a moment of load, before there is anything typed to lose. */
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller !== null) {
+  let reloaded = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return
+    reloaded = true
+    location.reload()
+  })
+}
+
 addEventListener('hashchange', paint)
 addEventListener('online', () => {
   paint()
