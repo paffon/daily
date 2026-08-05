@@ -105,6 +105,9 @@ export function Workout(): VNode {
   const [at, setAt] = useState(0)
   const [picking, setPicking] = useState(true)
   const [past, setPast] = useState(() => readEntries('workout'))
+  /** Bumped when the library is written, since `library` above is read on
+   *  render and nothing else here would ask for a fresher one. */
+  const [, retagged] = useState(0)
 
   const today = new Date().toDateString()
   const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
@@ -118,8 +121,9 @@ export function Workout(): VNode {
     setPicking(false)
   }
 
-  /** What was typed to filter is the new exercise's name. It carries no body
-   *  part yet and takes the library's first kind — see this phase's doc. */
+  /** What was typed to filter is the new exercise's name. Body part and kind
+   *  start blank and at the library's first kind, and the header above the set
+   *  table is where both are answered — see `retag`. */
   const create = (name: string) => {
     const exercise: Exercise = {
       id: crypto.randomUUID(),
@@ -132,6 +136,25 @@ export function Workout(): VNode {
       exercises: [...library.exercises, exercise],
     })
     start(exercise.id)
+  }
+
+  /** The library edited from the screen that logs it, which is the only place
+   *  either field is reachable: an exercise made inline otherwise kept a kind
+   *  nobody chose forever, so `run · park loop` drew a weight box against
+   *  `RULES.md`, and the blank body part is the one `DESIGN.md` §8.1 calls the
+   *  reason the field exists — objectives count against it.
+   *
+   *  A kind decides which fields a set row records, so changing it makes the
+   *  rows already typed rows of something else. They are cleared rather than
+   *  carried over half-filled; in the case this exists for — a kind chosen
+   *  right after making the exercise — there is nothing there to lose. */
+  const retag = (id: string, patch: Partial<Exercise>) => {
+    writeJson('library/exercises.json', {
+      ...library,
+      exercises: library.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    })
+    retagged((n) => n + 1)
+    if (patch.kind !== undefined && current !== undefined) write({ ...current, sets: [] })
   }
 
   /** `ended` is optional and is left out rather than guessed: pressing this
@@ -155,6 +178,11 @@ export function Workout(): VNode {
 
   const current = performed[at]
   const exercise = current === undefined ? undefined : asExercise(current, library.exercises)
+
+  /** What the library already calls a body part, offered rather than enforced. */
+  const bodyParts = [
+    ...new Set(library.exercises.map((item) => item.body_part).filter((part) => part !== '')),
+  ].sort()
 
   const rail = (entries: Entry[]) =>
     entries.map((entry) => (
@@ -231,10 +259,38 @@ export function Workout(): VNode {
             <>
               <div class="workout-head">
                 <h1 class="workout-title">{exercise.name}</h1>
-                <span class="workout-kind">{exercise.kind}</span>
-                <span class="workout-scheme">
-                  {[exercise.body_part, exercise.rep_scheme].filter(Boolean).join(' · ')}
-                </span>
+                {/* the kinds map, never a list written here — a kind added to
+                    the library shows up in this control without a build */}
+                <select
+                  class="workout-kind hit"
+                  aria-label="kind"
+                  value={exercise.kind}
+                  onChange={(e) => retag(exercise.id, { kind: e.currentTarget.value })}
+                >
+                  {Object.keys(library.kinds).map((kind) => (
+                    <option value={kind} key={kind}>
+                      {kind}
+                    </option>
+                  ))}
+                </select>
+                {/* the parts already in the library are offered, and a new one
+                    is still typeable: the taxonomy is the user's, not a fixed
+                    set this file knows */}
+                <input
+                  class="workout-part"
+                  type="text"
+                  aria-label="body part"
+                  placeholder="body part"
+                  list="workout-body-parts"
+                  value={exercise.body_part}
+                  onChange={(e) => retag(exercise.id, { body_part: e.currentTarget.value.trim() })}
+                />
+                <datalist id="workout-body-parts">
+                  {bodyParts.map((part) => (
+                    <option value={part} key={part} />
+                  ))}
+                </datalist>
+                <span class="workout-scheme">{exercise.rep_scheme}</span>
               </div>
               {exercise.notes !== undefined && <p class="workout-notes">{exercise.notes}</p>}
 
@@ -251,11 +307,12 @@ export function Workout(): VNode {
                 }}
               />
 
-              {/* keyed on the position in the workout: two exercises share the
-                  set table's inputs, and an uncontrolled box keeps what was
-                  typed unless the subtree is rebuilt */}
+              {/* keyed on the position in the workout, and on the kind: two
+                  exercises share the set table's inputs, and an uncontrolled
+                  box keeps what was typed unless the subtree is rebuilt — a
+                  kind changed under it swaps the columns the same way */}
               <SetTable
-                key={at}
+                key={`${at}:${exercise.kind}`}
                 exercise={exercise}
                 sets={current.sets}
                 onChange={(sets) => write({ ...current, sets })}

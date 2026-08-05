@@ -28,9 +28,14 @@ Worst on the posture form, where the bar sits directly under the box and looks
 like a live echo of it.
 
 **An exercise created inline gets a blank body part and the library's first
-kind, permanently.** So a route added as `run · park loop` gets a weight box,
-and the body part that objectives count against is empty. `DESIGN.md` calls
-that field the only reason the kind exists.
+kind, permanently.** Closed on 2026-08-05. The workout header now carries a
+`<select>` over the library's kinds map and a body-part box backed by a
+`datalist` of the parts already in use, both writing straight to
+`library/exercises.json`, and both reachable for a seeded exercise as well as an
+added one. Changing the kind clears the rows already typed — they are rows of
+something else once the field list moves. Still open underneath it: an
+exercise's own `fields` override, which `DESIGN.md` §8.1 also calls editable, has
+no surface — the kind is the whole of what can be chosen.
 
 ## Data left behind
 
