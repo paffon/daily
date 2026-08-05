@@ -54,9 +54,27 @@ function clientId(): string {
   return id
 }
 
+/** Set when a token comes back carrying less than was asked for, which happens
+ *  to an account that consented before a scope was added: `prompt: ''` asks for
+ *  no consent already given, so the old grant is handed back unchanged forever.
+ *
+ *  In `localStorage` rather than memory because the token is memory-only — the
+ *  short-scoped token and the press that could fix it are always on opposite
+ *  sides of a reload, so a flag that did not survive one would never be read.
+ *
+ *  Revoking the app at myaccount.google.com would also fix it, and is the wrong
+ *  advice: under `drive.file` Google holds the app's per-file access alongside
+ *  the grant, so dropping the grant can lose the app sight of the very files it
+ *  wrote. Asking for consent again keeps the grant and widens it. */
+const CONSENT_KEY = 'daily:needs-consent'
+
 /** `prompt: ''` shows the consent screen only the first time; after that the
- *  popup opens and closes on its own. It must still be a popup, so this can
- *  only be called from a user gesture — see the note above `signIn`.
+ *  popup opens and closes on its own. `'consent'` forces it, which is how a
+ *  grant made before `PROFILE` existed gets widened — once, on the press after
+ *  the short token, and never again once it worked.
+ *
+ *  It must still be a popup, so this can only be called from a user gesture —
+ *  see the note above `signIn`.
  *
  *  Resolves `false` instead of throwing: offline, consent declined and
  *  script-never-loaded all land back on the sign-in screen, so the caller has
@@ -68,7 +86,7 @@ export function signIn(): Promise<boolean> {
       .initTokenClient({
         client_id: clientId(),
         scope: SCOPE,
-        prompt: '',
+        prompt: localStorage.getItem(CONSENT_KEY) === null ? '' : 'consent',
         callback: (response) => {
           accessToken = response.access_token ?? ''
           if (accessToken === '') return resolve(false)
@@ -94,13 +112,20 @@ export function signIn(): Promise<boolean> {
 async function whoAmI(granted: string): Promise<void> {
   accountName = ''
   if (!granted.split(' ').includes(PROFILE)) {
+    /* The press that could widen this grant is on the far side of a reload, so
+       the flag goes down now and the next one asks for consent rather than
+       reusing the grant that just came up short. */
+    localStorage.setItem(CONSENT_KEY, 'yes')
     console.warn(
       `daily: signed in without ${PROFILE}, so there is no name to show. ` +
-        'Remove daily at https://myaccount.google.com/permissions and sign in again ' +
-        'to be asked for it.',
+        'Reload and sign in again — the consent screen will ask for it this time. ' +
+        'If it does not, the scope is missing from the OAuth client in Google Cloud console.',
     )
     return
   }
+  /* Granted. Whatever this browser had to force to get here, it is over —
+     later sign-ins go back to the silent popup. */
+  localStorage.removeItem(CONSENT_KEY)
   try {
     const who = await (await api('/oauth2/v3/userinfo')).json()
     accountName = (who.name as string | undefined) ?? ''
