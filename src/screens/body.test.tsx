@@ -108,6 +108,31 @@ describe('the body screen', () => {
     expect(localStorage.getItem('daily:photos/2026-08-01.jpg')).toBeNull()
   })
 
+  it('adds a photo without taking the typed weight or the chosen time with it', async () => {
+    const { container } = render(<Body />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.field-stamp-box')!)
+    fireEvent.input(
+      container.querySelector<HTMLInputElement>('.field-stamp-edit input[type=date]')!,
+      { target: { value: '2026-07-12' } },
+    )
+    const weight = container.querySelector<HTMLInputElement>('.body-weight-value')!
+    fireEvent.input(weight, { target: { value: '72.4' } })
+
+    choosePhoto(container)
+    await waitFor(() => expect(readEntries('body')).toHaveLength(1))
+
+    /* the photo is an addition — what was half-typed is still there to log */
+    expect(weight.value).toBe('72.4')
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.body-log')!)
+
+    const entries = readEntries('body')
+    const logged = entries.find((entry) => entry.payload['weight'] !== undefined)!
+    const photo = entries.find((entry) => entry.payload['photo'] !== undefined)!
+    expect(logged.payload['weight']).toBe(72.4)
+    expect(logged.ts).toBe(photo.ts)
+    expect(logged.ts.startsWith('2026-07-12')).toBe(true)
+  })
+
   it('counts photos in the rail with their months, rather than listing them', async () => {
     putEntry(newEntry('body', { photo: 'photos/2026-04-06.jpg' }, '2026-04-06T08:00:00+03:00'))
     putEntry(newEntry('body', { photo: 'photos/2026-05-02.jpg' }, '2026-05-02T08:00:00+03:00'))
