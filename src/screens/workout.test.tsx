@@ -31,6 +31,9 @@ const type = (container: Element, label: string, value: string) =>
 const addSet = (container: Element) =>
   fireEvent.click(container.querySelector<HTMLButtonElement>('.set-add-press')!)
 
+const drop = (container: Element, set: number) =>
+  fireEvent.click(container.querySelector<HTMLButtonElement>(`[aria-label="remove set ${set}"]`)!)
+
 const markOf = (container: Element, row: number) =>
   container
     .querySelectorAll('.set-row')
@@ -204,6 +207,34 @@ describe('the set table', () => {
     const { container } = render(<Table exercise={named('chest press')} />)
     expect(container.querySelectorAll('.set-row')).toHaveLength(1)
     expect(markOf(container, 0)).toBe('same')
+  })
+
+  it('removes a set from the middle and shifts what was below it up', () => {
+    // the boxes are uncontrolled: what set 3 was typed with has to land in the
+    // box that is now set 2, rather than the DOM keeping row 2's old text
+    const { container } = render(<Table exercise={named('chest press')} />)
+
+    type(container, 'set 1 weight', '40')
+    addSet(container)
+    type(container, 'set 2 weight', '45')
+    addSet(container)
+    type(container, 'set 3 weight', '50')
+
+    drop(container, 2)
+
+    expect(container.querySelectorAll('.set-row')).toHaveLength(2)
+    expect(box(container, 'set 1 weight')?.value).toBe('40')
+    expect(box(container, 'set 2 weight')?.value).toBe('50')
+  })
+
+  it('clears the only row rather than leaving it there', () => {
+    const { container } = render(<Table exercise={named('chest press')} />)
+
+    type(container, 'set 1 weight', '47.5')
+    drop(container, 1)
+
+    expect(container.querySelectorAll('.set-row')).toHaveLength(1)
+    expect(box(container, 'set 1 weight')?.value).toBe('')
   })
 })
 
