@@ -113,7 +113,11 @@ export function Body(): VNode {
 
   /** The bytes go up before the entry is written, so nothing is ever recorded
    *  pointing at a photo that is not there. Offline this is the one press in
-   *  the app that cannot work, and saying so beats doing nothing visibly. */
+   *  the app that cannot work, and saying so beats doing nothing visibly.
+   *
+   *  A photo is an addition, not an alternative: the weight box and the time
+   *  are left as they are, so a weight typed before the picker still logs
+   *  afterwards, at the same moment the photo was filed under. */
   const addPhoto = async (picker: HTMLInputElement) => {
     const file = picker.files?.[0]
     /* cleared so choosing the same file again is still a change event */
@@ -124,7 +128,6 @@ export function Body(): VNode {
       const path = await putPhoto(file, ts)
       putEntry(newEntry('body', { photo: path }, ts))
       setEntries(readEntries('body'))
-      setTs(toIso(new Date()))
     } catch {
       setTrouble('the photo did not reach drive — it is the one thing here that needs a signal.')
     }
@@ -210,10 +213,10 @@ export function Body(): VNode {
                 type="file"
                 accept="image/*"
                 hidden
-                aria-label="add a photo instead"
+                aria-label="add a photo"
                 onChange={(e) => void addPhoto(e.currentTarget)}
               />
-              add a photo instead
+              add a photo
             </label>
           </div>
 
