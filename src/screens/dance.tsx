@@ -218,17 +218,21 @@ export function Dance(): VNode {
         </button>
 
         <h2 class="dance-rail-label">danced</h2>
-        {past.map((entry) => (
-          <button
-            type="button"
-            class="dance-rail-row hit"
-            key={entry.id}
-            onClick={() => setOpen(entry)}
-          >
-            <span class="dance-rail-when">{dayTimeOf(entry.ts, locale)}</span>
-            <span class="dance-rail-what">{sessionLine(entry.payload as Session)}</span>
-          </button>
-        ))}
+        {/* the rows are one grid rather than one each, so the dates and the
+            sessions read down two columns however long a date runs */}
+        <div class="dance-rail-rows">
+          {past.map((entry) => (
+            <button
+              type="button"
+              class="dance-rail-row hit"
+              key={entry.id}
+              onClick={() => setOpen(entry)}
+            >
+              <span class="dance-rail-when">{dayTimeOf(entry.ts, locale)}</span>
+              <span class="dance-rail-what">{sessionLine(entry.payload as Session)}</span>
+            </button>
+          ))}
+        </div>
 
         <p class="dance-rail-progress">
           {`progress · ${past.length} ${past.length === 1 ? 'session' : 'sessions'}, not enough to draw`}
