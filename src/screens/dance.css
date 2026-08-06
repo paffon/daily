@@ -61,10 +61,19 @@
   color: var(--mono);
 }
 
+/* one grid for the whole list: the `when` column takes the widest date there
+   is and the sessions start at the same place under each other, rather than
+   every row pushing its own two halves to opposite edges */
+.dance-rail-rows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+}
+
 .dance-rail-row {
-  display: flex;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   width: 100%;
   padding: 11px 24px;
