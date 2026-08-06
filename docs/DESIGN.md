@@ -47,6 +47,12 @@ creating both live on the profiles screen and nowhere else. Home names whose log
 it is showing and offers the single link there; making a second person is not a
 thing the front page of a logging app should suggest.
 
+One profile in the registry is **starred**: what a browser opens on before it
+has been switched, so a new phone or a cleared cache lands on the log actually
+being kept rather than on whichever profile happens to be the original. The star
+is shared like the registry holding it, and a device that has switched since
+stays where it was put (ADR 0004).
+
 ## 3. What changed, and why
 
 | the previous design | now |

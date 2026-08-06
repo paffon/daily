@@ -75,7 +75,9 @@ feature that made the sheet worth opening.
 One log among several in the same Drive (added 2026-08-06 — ADR 0004).
 Profiles share the catalog — the libraries, their pictures, the app's
 configuration — and own their entries and body photos. Which one a device is on
-is the device's own state and never syncs.
+is the device's own state and never syncs. Which one is **starred** — what a
+browser that has never been switched opens on — is shared, like the registry it
+is written in.
 _Avoid_: user, account (the account is Google's, and every profile lives in one)
 
 **Segment**:

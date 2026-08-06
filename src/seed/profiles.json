@@ -1,3 +1,4 @@
 {
-  "profiles": [{ "id": "main", "name": "main" }]
+  "profiles": [{ "id": "main", "name": "main" }],
+  "default": "main"
 }

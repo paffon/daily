@@ -39,22 +39,54 @@
   border-top: 1px solid var(--rule);
 }
 
+/* two controls, so the row is the rule between them and neither one of them:
+   the name switches, the star says what opens. A hover that lit the whole row
+   would promise a single target the row no longer is. */
 .profiles-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+.profiles-pick {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 62px;
   padding: 8px 0;
   border: none;
-  border-bottom: 1px solid var(--rule-light);
   background: transparent;
   text-align: left;
   cursor: pointer;
 }
 
-.profiles-row:hover {
+.profiles-pick:hover {
   background: var(--paper-hover);
+}
+
+/* the mark, in the same grey as `current` and for the same reason — which
+   profile opens is a fact about the registry, not a live target, and steel is
+   reserved for what is behind */
+.profiles-star {
+  align-items: center;
+  justify-content: flex-end;
+  flex: none;
+  align-self: stretch;
+  padding-left: 16px;
+  border: none;
+  background: transparent;
+  color: var(--mono-faint);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.profiles-star[aria-pressed='true'],
+.profiles-star:hover {
+  color: var(--mono);
 }
 
 .profiles-name {

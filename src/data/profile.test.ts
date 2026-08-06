@@ -1,6 +1,15 @@
 import { newEntry } from './entry'
 import type { Entry } from './entry'
-import { activeId, activeProfile, createProfile, readProfiles, scope, switchTo } from './profile'
+import {
+  activeId,
+  activeProfile,
+  createProfile,
+  defaultId,
+  makeDefault,
+  readProfiles,
+  scope,
+  switchTo,
+} from './profile'
 import { bodyPhotoPath, itemPhotoPath } from './photos'
 import {
   getEntry,
@@ -37,6 +46,56 @@ describe('the profile registry', () => {
     expect(activeProfile()).toEqual(made)
     switchTo('never-synced')
     expect(activeProfile().name).toBe('never-synced')
+  })
+})
+
+/* a browser that has never been switched. `localStorage.clear()` cannot stand
+   in for it — the mirror is in there too, and clearing takes the registry the
+   default is stored in with it */
+const neverSwitched = (): void => localStorage.removeItem('daily:profile')
+
+describe('the starred profile', () => {
+  it('is the original one until something is starred', () => {
+    expect(defaultId()).toBe('main')
+    expect(activeId()).toBe('main')
+  })
+
+  it('is what a device with no answer of its own opens on', () => {
+    const made = createProfile('maya')
+    makeDefault(made.id)
+    neverSwitched()
+    expect(activeId()).toBe(made.id)
+    expect(scope()).toBe(`${made.id}~`)
+  })
+
+  it('is shared data, and switches the device that starred it', () => {
+    const made = createProfile('maya')
+    makeDefault(made.id)
+    expect(defaultId()).toBe(made.id)
+    expect(activeId()).toBe(made.id)
+    /* the star is written into the registry beside the profiles, never over
+       them — the same file holds both */
+    expect(readProfiles().map((profile) => profile.name)).toEqual(['main', 'maya'])
+  })
+
+  it('survives a profile created after it', () => {
+    const made = createProfile('maya')
+    makeDefault(made.id)
+    createProfile('noa')
+    expect(defaultId()).toBe(made.id)
+  })
+
+  it('loses to a device that has switched somewhere else', () => {
+    makeDefault(createProfile('maya').id)
+    switchTo('main')
+    expect(activeId()).toBe('main')
+  })
+
+  it('reads as the original profile from a registry written before starring', () => {
+    writeJson('config/profiles.json', { profiles: [{ id: 'main', name: 'main' }] })
+    neverSwitched()
+    expect(defaultId()).toBe('main')
+    expect(activeId()).toBe('main')
   })
 })
 

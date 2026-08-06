@@ -6,6 +6,17 @@ as lives in `localStorage` (`daily:profile`), beside the mirror rather than in
 it: device state, not data, so each device is on whatever it was last switched
 to and switching never syncs.
 
+A device that has never been switched has no such state, and since 2026-08-07
+the registry says what it opens on instead of the code: `default` names the
+**starred** profile and `activeId()` falls back to it rather than to the
+original. Shared, because `config/profiles.json` is — a star set on the laptop
+is the phone's first profile too — while the active id beside it stays the
+device's own. Starring also switches the device that set it: the one browser
+able to see the star is the one already holding an answer of its own, and a
+control that changed nothing there would read as broken. A registry written
+before the key existed has no `default`, and `ensureSeeded` never backfills one
+(`docs/OPEN.md`), so a missing key answers with the original profile.
+
 What is one copy and what is one per profile:
 
 | shared — one copy | owned — one per profile |

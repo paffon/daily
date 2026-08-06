@@ -14,6 +14,11 @@ import profilesSeed from '../seed/profiles.json'
 
 export type Profile = { id: string; name: string }
 
+/** The registry file: the profiles, and which of them is starred. `default`
+ *  is optional because a registry written before starring existed has no such
+ *  key, and `ensureSeeded` never backfills one — see `docs/OPEN.md`. */
+type Registry = { profiles: Profile[]; default?: string }
+
 /** The one profile whose files carry no prefix. */
 export const ORIGINAL = 'main'
 
@@ -22,7 +27,10 @@ export const ORIGINAL = 'main'
  *  whatever profile it was last switched to. */
 const ACTIVE_KEY = 'daily:profile'
 
-export const activeId = (): string => localStorage.getItem(ACTIVE_KEY) ?? ORIGINAL
+/** The device's own answer, and the registry's for a device that has none.
+ *  A browser that has never been switched — a new phone, a cleared cache —
+ *  opens on the starred profile rather than on the original one. */
+export const activeId = (): string => localStorage.getItem(ACTIVE_KEY) ?? defaultId()
 
 /** `4fd1a2b3~`, or nothing for the original profile. Applied to a filename and
  *  never to a folder, so Drive's layout stays exactly two segments deep and
@@ -36,8 +44,15 @@ const PATH = 'config/profiles.json'
 
 /** The registry is shared data like the libraries are: a profile created on
  *  one device is a profile everywhere. */
-export const readProfiles = (): Profile[] =>
-  readJson<{ profiles: Profile[] }>(PATH, profilesSeed).profiles
+const registry = (): Registry => readJson<Registry>(PATH, profilesSeed)
+
+export const readProfiles = (): Profile[] => registry().profiles
+
+/** The starred profile — what a browser opens on before it has an answer of
+ *  its own. Shared like the rest of the file, so a star set on the laptop is
+ *  the phone's first profile too; the active id beside it stays the device's.
+ *  Nothing starred, or a registry older than starring, is the original one. */
+export const defaultId = (): string => registry().default ?? ORIGINAL
 
 /** Never null — a registry that has not synced yet still has to put a name on
  *  home, so an unlisted id answers with itself. */
@@ -52,10 +67,20 @@ export const activeProfile = (): Profile =>
  *  dashes only, so it cannot collide with the `~` it is fenced by. */
 export function createProfile(name: string): Profile {
   const profile = { id: crypto.randomUUID().slice(0, 8), name }
-  writeJson(PATH, { profiles: [...readProfiles(), profile] })
+  const held = registry()
+  writeJson(PATH, { ...held, profiles: [...held.profiles, profile] })
   return profile
 }
 
 export function switchTo(id: string): void {
   localStorage.setItem(ACTIVE_KEY, id)
+}
+
+/** Star a profile. It is a statement about what loads, so it loads it: the
+ *  registry gains the default and this device follows it now. Setting only
+ *  the registry would look like nothing happened on the one browser that can
+ *  see it — this device already holds an answer, and its own answer wins. */
+export function makeDefault(id: string): void {
+  writeJson(PATH, { ...registry(), default: id })
+  switchTo(id)
 }

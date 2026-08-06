@@ -101,3 +101,16 @@ with the one worked line that read it, and `CONTEXT.md` has lost the
 **Objective** entry and gained a *Retired* row for the vocabulary that went with
 it. **Staleness** there also gained the sentence it was missing: since
 2026-08-06 it is what orders the exercise list.
+
+### 2026-08-07 · the starred profile
+
+| decided | written in |
+| :- | :- |
+| the registry names a starred profile, and a browser that has never been switched opens on it rather than on the original | [§2](DESIGN.md#2-who-it-is-for), [ADR 0004](adr/0004-profiles-share-the-catalog-and-own-their-records.md) |
+| the star is shared data; which profile a device is on after it has switched stays the device's own | [ADR 0004](adr/0004-profiles-share-the-catalog-and-own-their-records.md) |
+| starring also switches the device that set it, so the star is never a control that appears to do nothing | [ADR 0004](adr/0004-profiles-share-the-catalog-and-own-their-records.md) |
+
+Built on the day it was decided. `DESIGN.md` §2 and the **Profile** entry in
+`CONTEXT.md` carry the behaviour; ADR 0004 gains the paragraph rather than a
+record of its own, since starring is a fallback the existing decision left to a
+source constant and reversing it is an afternoon.
