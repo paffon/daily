@@ -4,17 +4,25 @@ name: deploy
 # merged pull request that reached nobody, which happened often enough to be
 # worth a machine. `workflow_dispatch` is the same pipeline on a button, for a
 # redeploy that has no new commit behind it.
+#
+# A pull request runs this same job with the last step switched off, because the
+# first thing this pipeline ever did was fail on a merge — and a merge is the
+# worst moment to learn that the build is broken, since by then the only way out
+# is another commit. Every gate a deploy must clear, a pull request clears first.
 on:
   push:
+    branches: [master]
+  pull_request:
     branches: [master]
   workflow_dispatch:
 
 # One deploy at a time, newest commit wins. Two merges a minute apart would
 # otherwise race to upload and the older build could be the one that lands.
 # Cancelling mid-run is safe: a Firebase release is activated at the end, so a
-# deploy that never finishes never goes live.
+# deploy that never finishes never goes live. Keyed by ref so that a pull
+# request pushed during a deploy queues nothing and cancels nothing.
 concurrency:
-  group: deploy
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -56,7 +64,10 @@ jobs:
           test -n "$CLIENT_ID" || { echo "VITE_GOOGLE_CLIENT_ID is not set on this repository"; exit 1; }
           grep -rqF "$CLIENT_ID" dist/assets || { echo "the client id is absent from the built bundle"; exit 1; }
 
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      # The one step a pull request does not run. Everything above it has
+      # already proved the build; this only publishes it.
+      - if: github.event_name != 'pull_request'
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OMRINARDINIRI }}
           projectId: omrinardiniri
