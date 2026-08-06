@@ -49,6 +49,7 @@ change back looks like the decision it would be, rather than a correction.
 | No grams, ever — portion is expressed only as a level | Amount is in the food's own unit; grams where grams are natural |
 | Escalation by stored rungs and qualifying actions | Escalation is the specificity cascade. No stored state |
 | Nothing groups food entries — only what was eaten and when | A meal groups them (2026-08-06): an untyped container, started like a workout. Breakfast, lunch and dinner stay gone |
+| No second user — one person, one log | The one account holds profiles (2026-08-06): the catalog is shared, the records are each profile's own. See ADR 0004 |
 
 ## The coach's voice
 

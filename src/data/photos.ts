@@ -8,6 +8,7 @@
 import type { Entry } from './entry'
 import { monthKey } from './entry'
 import { getBlob, putFile } from './drive'
+import { scope } from './profile'
 import { readJson } from './store'
 import { monthOf } from '../components/fields'
 import appSeed from '../seed/app.json'
@@ -59,11 +60,14 @@ export async function resize(file: Blob): Promise<Blob> {
 export const putBinary = (path: string, blob: Blob): Promise<string> => putFile(path, blob)
 
 /** `photos/2026-08-01.jpg`, and a second photo the same day replaces the
- *  first — one per day is what the storage layout's filename allows, and the
- *  photo is a roughly monthly thing. `ts` carries its own offset, so its date
- *  part is already the local date. */
+ *  first — one per day per profile is what the storage layout's filename
+ *  allows, and the photo is a roughly monthly thing. A body photo is the
+ *  body's, so it carries the profile scope the way an entries file does; the
+ *  entry stores the full path, which is what keeps old lines pointing at the
+ *  bare legacy names. `ts` carries its own offset, so its date part is
+ *  already the local date. */
 export async function putPhoto(file: Blob, ts: string): Promise<string> {
-  const path = `photos/${ts.slice(0, 10)}.jpg`
+  const path = `photos/${scope()}${ts.slice(0, 10)}.jpg`
   await putBinary(path, await resize(file))
   return path
 }

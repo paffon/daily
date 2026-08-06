@@ -39,8 +39,10 @@ Goal: **body recomposition** — rebuild strength, muscle and conditioning, and
 make food consistent, at roughly stable weight. Not aggressive fat loss. Not a
 bulk.
 
-Not a product. No second user, no onboarding for strangers, no account system
-beyond the owner's own Google sign-in.
+Not a product. No onboarding for strangers, no account system beyond the
+owner's own Google sign-in. Since 2026-08-06 that one account can hold more
+than one **profile** — the same libraries and configuration, separate records
+(ADR 0004) — and that is as far toward a second user as this goes.
 
 ## 3. What changed, and why
 

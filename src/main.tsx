@@ -11,6 +11,7 @@ import { Nutrition } from './screens/nutrition'
 import { Movement } from './screens/movement'
 import { Dance } from './screens/dance'
 import { Objectives } from './screens/objectives'
+import { Profiles } from './screens/profiles'
 import { EditEntry } from './screens/edit_entry'
 import { AccountBand, SignIn } from './screens/signin'
 
@@ -20,6 +21,10 @@ import { AccountBand, SignIn } from './screens/signin'
 const ROUTES: Record<string, () => VNode> = {
   '#/': () => <Home />,
   '#/objectives': () => <Objectives />,
+  '#/profiles': () => <Profiles />,
+  /* the same screen with the name box focused — home's `new profile` lands
+     here, so the press that asked to type is already typing */
+  '#/profiles/new': () => <Profiles startNew />,
   '#/body': () => <Body />,
   '#/workout': () => <Workout />,
   '#/nutrition': () => <Nutrition />,

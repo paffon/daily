@@ -1,0 +1,120 @@
+/* Profiles. The module screens' 52/56px strip and 760px breakpoint, and the
+   objectives screen's row-list arrangement — a registry is closer to a list of
+   targets than to a log. */
+
+.profiles {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.profiles-strip {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.profiles-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.profiles-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px 24px 0;
+  min-height: 0;
+}
+
+.profiles-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+.profiles-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profiles-row:hover {
+  background: var(--paper-hover);
+}
+
+.profiles-name {
+  flex: 1;
+  font: 300 clamp(19px, 3vw, 23px) / 1.2 var(--family-serif);
+  color: var(--ink-body);
+}
+
+/* a statement of which one is live, in the register of every other measured
+   thing here — not an accent, because nothing on this screen is behind */
+.profiles-current {
+  font: 400 13px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.profiles-new {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0 0;
+}
+
+.profiles-input {
+  height: var(--hit-min);
+  padding: 0 12px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  font: 400 15px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.profiles-add {
+  align-items: center;
+  min-height: 60px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--steel-text);
+  font: 400 14.5px/1 var(--family-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profiles-note {
+  margin: auto 0 0;
+  padding: 36px 0;
+  max-width: 660px;
+  font: 300 19px/1.55 var(--family-serif);
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+
+@media (min-width: 760px) {
+  .profiles-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .profiles-body {
+    padding: 40px 120px 0;
+  }
+}

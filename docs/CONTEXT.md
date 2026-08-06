@@ -75,6 +75,13 @@ it was, the numbers, and the comment. Unconditional and always present, in every
 module. Not the coach speaking. Inherited from Gym v.3, where it was the single
 feature that made the sheet worth opening.
 
+**Profile**:
+One log among several in the same Drive (added 2026-08-06 — ADR 0004).
+Profiles share the catalog — the libraries, their pictures, the app's
+configuration — and own their entries, objectives and body photos. Which one a
+device is on is the device's own state and never syncs.
+_Avoid_: user, account (the account is Google's, and every profile lives in one)
+
 **Segment**:
 A named route in the movement library — `to work`, `from work` — carrying a
 distance and a gradient. Also, loosely, one logged movement event.

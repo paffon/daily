@@ -7,6 +7,7 @@
  *  target is something that happened rather than a debt. */
 
 import type { Entry, Module } from './entry'
+import { scope } from './profile'
 import { readJson, writeJson } from './store'
 import appSeed from '../seed/app.json'
 import objectivesSeed from '../seed/objectives.json'
@@ -34,11 +35,13 @@ export type Target = CountTarget | DirectionTarget
  *  never parses it. It is stored and shown, and that is all. */
 export type Objectives = { statement: string; targets: Target[] }
 
-const PATH = 'config/objectives.json'
+/** Targets are the one config that is a person's rather than the app's, so
+ *  each profile keeps its own file — the original under the bare legacy name. */
+const path = (): string => `config/${scope()}objectives.json`
 
-export const readObjectives = (): Objectives => readJson(PATH, objectivesSeed as Objectives)
+export const readObjectives = (): Objectives => readJson(path(), objectivesSeed as Objectives)
 
-export const writeObjectives = (next: Objectives): void => writeJson(PATH, next)
+export const writeObjectives = (next: Objectives): void => writeJson(path(), next)
 
 /** Sunday to Saturday, from `config/app.json`. Local throughout — the week is
  *  the user's, so its edges are midnights on their clock rather than an offset
