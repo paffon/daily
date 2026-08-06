@@ -59,7 +59,8 @@
 }
 
 /* quiet until hovered, and never the row's own action — a mis-tap here must
-   read as a near miss, not as picking the item */
+   read as a near miss, not as picking the item. Ink, not danger: `delete this
+   entry` stays the one control in the app that wears danger */
 .picker-delete {
   align-items: center;
   justify-content: center;
@@ -73,7 +74,7 @@
 
 .picker-delete:hover,
 .picker-delete.armed {
-  color: var(--danger);
+  color: var(--ink);
 }
 
 .picker-delete.armed {

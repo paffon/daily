@@ -439,7 +439,7 @@ describe('removing an exercise from the library', () => {
     const { container } = render(<Workout />)
 
     fireEvent.click(del(container, 'pec deck'))
-    expect(del(container, 'pec deck').textContent).toBe('sure?')
+    expect(del(container, 'pec deck').textContent).toBe('press again')
     expect(loadExercises().exercises.some((item) => item.name === 'pec deck')).toBe(true)
 
     fireEvent.click(del(container, 'pec deck'))

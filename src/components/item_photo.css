@@ -23,8 +23,10 @@
   cursor: pointer;
 }
 
+/* the same sentence the body module shows, in the same register — danger
+   stays with `delete this entry` alone */
 .item-photo-trouble {
   margin: 0;
   font: 400 11.5px/1.5 var(--family-mono);
-  color: var(--danger);
+  color: var(--mono);
 }

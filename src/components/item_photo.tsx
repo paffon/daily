@@ -23,6 +23,10 @@ export function ItemPhoto({
   /** The object URL on screen, held for revoking — swapping items or leaving
    *  the screen must not leave decoded JPEGs pinned in memory. */
   const held = useRef('')
+  /** Which item is on screen right now. An upload runs across awaits, and the
+   *  item can change under it — its photo must not land on the next one. */
+  const showing = useRef('')
+  showing.current = `${kind}:${id}`
 
   const show = (next: string) => {
     if (held.current !== '') URL.revokeObjectURL(held.current)
@@ -58,12 +62,15 @@ export function ItemPhoto({
     picker.value = ''
     if (file === undefined) return
     setTrouble('')
+    const item = showing.current
     try {
       const small = await resize(file)
       await putBinary(itemPhotoPath(kind, id), small)
-      show(URL.createObjectURL(small))
+      if (showing.current === item) show(URL.createObjectURL(small))
     } catch {
-      setTrouble('the photo did not reach drive — it is the one thing here that needs a signal.')
+      if (showing.current === item) {
+        setTrouble('the photo did not reach drive — it is the one thing here that needs a signal.')
+      }
     }
   }
 

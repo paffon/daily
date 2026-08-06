@@ -406,7 +406,7 @@ describe('the nutrition screen', () => {
     const del = () => container.querySelector<HTMLButtonElement>('[aria-label="delete pizza"]')!
 
     fireEvent.click(del())
-    expect(del().textContent).toBe('sure?')
+    expect(del().textContent).toBe('press again')
     expect(loadFoods().foods.some((food) => food.id === 'pizza')).toBe(true)
 
     fireEvent.click(del())

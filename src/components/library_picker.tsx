@@ -82,7 +82,7 @@ export function LibraryPicker({
                   onDelete(item.id)
                 }}
               >
-                {armed === item.id ? 'sure?' : '×'}
+                {armed === item.id ? 'press again' : '×'}
               </button>
             )}
           </div>

@@ -394,7 +394,9 @@ file drop, not a feature. Resize on import, lazy load, cache for offline.
 Since 2026-08-06 the logging screens also take one directly — *+ add a photo
 for this exercise / food* — resized on import and filed under the same naming
 convention (`photos/exercise-<id>.jpg`, `photos/food-<id>.jpg`). Food items get
-the same treatment as exercises.
+the same treatment as exercises. Like the body module's photos these are never
+mirrored: the bytes are fetched from Drive when the item is on screen, so a
+photo is absent offline, and the caching this section asks for is still open.
 
 Photographs will eventually beat any stock set here, because the exercise names
 are specific to one gym: an illustration of a generic cable machine says nothing

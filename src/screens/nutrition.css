@@ -132,7 +132,7 @@
 }
 
 .nutrition-meal-drop:hover {
-  color: var(--danger);
+  color: var(--ink);
 }
 
 .nutrition-rail-add {

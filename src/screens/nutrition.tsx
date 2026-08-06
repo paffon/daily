@@ -304,7 +304,6 @@ export function Nutrition(): VNode {
                   /* the last of it in that meal, not the first — a second
                      helping is the newer answer */
                   const last = [...foodsIn(entry)]
-                    .reverse()
                     .find((food) => food.food_id === current.food_id)
                   return last === undefined ? null : lineOf(last, library)
                 }}
@@ -317,7 +316,7 @@ export function Nutrition(): VNode {
                       what was typed, and the same food twice in one meal is
                       two different numbers */}
                   <AmountStepper
-                    key={`${at}:${current.food_id}`}
+                    key={current.food_id}
                     value={current.amount}
                     unit={unitOf(library, food, current.amount)}
                     step={config.amount_step}
