@@ -22,10 +22,17 @@
   color: var(--mono);
 }
 
+/* a link on the list, a button in the builder — one look for both */
 .nutrition-back {
   align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
   color: inherit;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .nutrition-split {
@@ -79,6 +86,91 @@
   padding: 16px 24px 28px;
   font: 400 11.5px/1.5 var(--family-mono);
   color: var(--mono);
+}
+
+/* the module's landing: the list of past meals, `+ new` above them */
+
+.nutrition-rail-page {
+  order: 0;
+  flex: 1;
+  padding-top: 12px;
+}
+
+.nutrition-new {
+  align-items: center;
+  justify-content: center;
+  margin: 8px 24px 20px;
+  padding: 16px 30px;
+  border: 1px solid var(--steel);
+  border-radius: var(--radius-control);
+  background: var(--steel);
+  color: var(--paper);
+  font: 400 15px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+/* this meal — the entry being built, before it is written. The same shape as
+   workout's "this workout" rows, because a meal is started the same way. */
+
+.nutrition-meal-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.nutrition-meal-food {
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 0 0 0 24px;
+  border: none;
+  border-left: 3px solid transparent;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nutrition-meal-food.live {
+  border-left-color: var(--steel);
+  background: var(--paper-panel-sel);
+}
+
+.nutrition-meal-name {
+  font: 400 16px/1 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.nutrition-meal-line {
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+/* session state only — nothing written yet, so it neither arms nor warns */
+.nutrition-meal-drop {
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--mono-faint);
+  font: 400 14px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.nutrition-meal-drop:hover {
+  color: var(--ink);
+}
+
+.nutrition-rail-add {
+  align-items: center;
+  padding: 0 24px;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 14.5px/1 var(--family-mono);
+  cursor: pointer;
 }
 
 /* the fields */
@@ -175,7 +267,14 @@
 .nutrition-edit {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 32px;
+}
+
+/* one food of the meal — the same fields it was logged with */
+.nutrition-edit-item {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .nutrition-edit-name {
@@ -208,9 +307,31 @@
     padding-right: 34px;
   }
 
+  .nutrition-meal-food {
+    padding-left: 34px;
+  }
+
+  .nutrition-rail-add {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
   .nutrition-rail-progress {
     margin-top: auto;
     padding-bottom: 32px;
+  }
+
+  /* the landing list is the page, not a sidebar */
+  .nutrition-rail-page {
+    width: auto;
+    flex: 1;
+    max-width: 640px;
+  }
+
+  .nutrition-new {
+    margin: 8px 34px 24px;
+    align-self: flex-start;
+    min-width: 240px;
   }
 
   .nutrition-fields {

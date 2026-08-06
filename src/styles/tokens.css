@@ -65,6 +65,9 @@ body {
   font-family: var(--family-sans);
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
+  /* the page never scrolls sideways — a row that cannot shrink is a bug to
+     fix inside that row, not something the phone should pan to */
+  overflow-x: clip;
 }
 
 .serif {

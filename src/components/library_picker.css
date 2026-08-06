@@ -36,20 +36,49 @@
   max-height: 46vh;
 }
 
+.picker-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+.picker-row:hover {
+  background: var(--paper-hover);
+}
+
 .picker-item {
+  flex: 1;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 0 16px;
   border: none;
-  border-bottom: 1px solid var(--rule-light);
   background: none;
   text-align: left;
   cursor: pointer;
 }
 
-.picker-item:hover {
-  background: var(--paper-hover);
+/* quiet until hovered, and never the row's own action — a mis-tap here must
+   read as a near miss, not as picking the item. Ink, not danger: `delete this
+   entry` stays the one control in the app that wears danger */
+.picker-delete {
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--mono-faint);
+  font: 400 14px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.picker-delete:hover,
+.picker-delete.armed {
+  color: var(--ink);
+}
+
+.picker-delete.armed {
+  font-size: 11px;
 }
 
 .picker-name {
