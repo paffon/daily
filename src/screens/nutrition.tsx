@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
-import { putEntry, readEntries, readJson, writeJson } from '../data/store'
+import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
 import type { Food, FoodLibrary } from '../data/food'
 import {
   loadFoods,
@@ -12,7 +12,7 @@ import {
   nutritionLine,
   unitOf,
 } from '../data/food'
-import { Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
+import { Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
@@ -21,11 +21,10 @@ import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './nutrition.css'
 
-/** Frame 4c, reshaped 2026-08-06: what was eaten and when, grouped into meals.
- *  A meal is started and ended the way a workout is — foods added one at a
- *  time, one entry holding the lot. The container is untyped: no breakfast, no
- *  lunch, no dinner, no name at all, so a single bite is a meal of one and six
- *  foods across an evening are a meal of six. */
+/** Reshaped 2026-08-06: the module opens on the list of past meals, with
+ *  `+ new meal` above them. A meal is started and ended the way a workout is —
+ *  foods added one at a time, one entry holding the lot — and it is untyped:
+ *  no breakfast, no lunch, no dinner. A snack is a meal of one. */
 
 type Logged = { food_id: string; amount: number; level: string }
 
@@ -53,7 +52,7 @@ const lineOf = ({ food_id, amount, level }: Logged, library: FoodLibrary): strin
   return `${measure.filter((part) => part !== '').join(' ')} · ${level}`
 }
 
-/** What a meal's row in the rail says. A meal of one keeps the full sentence;
+/** What a meal's row in the list says. A meal of one keeps the full sentence;
  *  a longer one gives its names, and the amounts are the one tap the row
  *  already is. */
 const mealLine = (foods: Logged[], library: FoodLibrary): string => {
@@ -66,8 +65,9 @@ const mealLine = (foods: Logged[], library: FoodLibrary): string => {
 
 const scaleOf = (): string[] => loadLevels()['nutrition']?.scale ?? []
 
-/** Nutrition's half of frame 4h: every food the meal holds, with the fields it
- *  was logged with, so a past meal is corrected the way it was entered. */
+/** Frame 4h's half, kept for the generic edit screen home links to: every food
+ *  the meal holds, with the fields it was logged with. The module's own list
+ *  opens the full builder instead. */
 registerEditor('nutrition', (payload, onChange) => {
   const library = loadFoods()
   const foods = foodsOf(payload)
@@ -116,23 +116,31 @@ registerEditor('nutrition', (payload, onChange) => {
   )
 })
 
-export function Nutrition(): VNode {
-  const { locale } = readJson('config/app.json', appSeed)
+/** One meal being built or corrected. `entry` is null for a new one; both wear
+ *  the same screen, which is what makes editing look like adding. A corrected
+ *  meal is written back in the meal shape — adding a food to an entry from
+ *  before meals has nowhere else to put it. */
+function Builder({ entry, locale, onClose }: {
+  entry: Entry | null
+  locale: string
+  onClose: () => void
+}): VNode {
   const config = nutritionConfig()
   const library = loadFoods()
   const scale = scaleOf()
 
-  const [ts, setTs] = useState(() => toIso(new Date()))
-  const [meal, setMeal] = useState<Logged[]>([])
+  const [ts, setTs] = useState(() => entry?.ts ?? toIso(new Date()))
+  const [meal, setMeal] = useState<Logged[]>(() => (entry === null ? [] : foodsIn(entry)))
   const [at, setAt] = useState(0)
-  const [picking, setPicking] = useState(true)
-  const [past, setPast] = useState(() => readEntries('nutrition'))
+  const [picking, setPicking] = useState(() => entry === null || foodsIn(entry).length === 0)
+  /** The last time each food was eaten, with the meal being corrected left
+   *  out — it cannot be its own previous. */
+  const [past] = useState(() =>
+    readEntries('nutrition').filter((line) => line.id !== entry?.id),
+  )
   /** Bumped when the library is written, since `library` above is read on
    *  render and nothing else here would ask for a fresher one. */
   const [, changed] = useState(0)
-
-  const today = new Date().toDateString()
-  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
 
   const write = (next: Logged) => setMeal(meal.map((food, i) => (i === at ? next : food)))
 
@@ -173,19 +181,16 @@ export function Nutrition(): VNode {
   }
 
   /** One entry holds the whole meal, the way one entry holds a workout. */
-  const end = () => {
-    putEntry(newEntry('nutrition', { foods: meal }, ts))
-    setPast(readEntries('nutrition'))
-    setMeal([])
-    setAt(0)
-    setPicking(true)
-    setTs(toIso(new Date()))
+  const save = () => {
+    if (entry === null) putEntry(newEntry('nutrition', { foods: meal }, ts))
+    else updateEntry({ ...entry, ts, payload: { foods: meal } })
+    onClose()
   }
 
   /** Scoped to the food, not to the meal or the day: the last time *this* was
    *  eaten, however long ago. */
   const previousOf = (food_id: string): Entry | null =>
-    past.find((entry) => foodsIn(entry).some((food) => food.food_id === food_id)) ?? null
+    past.find((line) => foodsIn(line).some((food) => food.food_id === food_id)) ?? null
 
   /* the two move together — `asFood` always answers, so `food` is null exactly
      when nothing is being edited, and the second test below is the type
@@ -195,26 +200,12 @@ export function Nutrition(): VNode {
   const nutrition =
     current === undefined || food === null ? null : nutritionFor(food, current.amount, current.level)
 
-  /** One row per meal. Today's carries the clock and an older one its date,
-   *  because "which day" is the whole question about an entry that is not
-   *  today's. */
-  const railRow = (entry: Entry) => (
-    <a class="nutrition-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-      <span class="nutrition-rail-when">
-        {isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}
-      </span>
-      <span class="nutrition-rail-what">{mealLine(foodsIn(entry), library)}</span>
-    </a>
-  )
-
-  const earlier = past.filter((entry) => !isToday(entry))
-
   return (
     <main class="nutrition">
       <header class="nutrition-strip">
-        <a class="nutrition-back hit" href="#/">
+        <button type="button" class="nutrition-back hit" onClick={onClose}>
           ← &nbsp;nutrition
-        </a>
+        </button>
         <Timestamp value={ts} onChange={setTs} locale={locale} />
       </header>
 
@@ -251,28 +242,6 @@ export function Nutrition(): VNode {
           <button type="button" class="nutrition-rail-add hit" onClick={() => setPicking(true)}>
             + food
           </button>
-
-          {past.some(isToday) && (
-            <>
-              <h2 class="nutrition-rail-label">today</h2>
-              {past.filter(isToday).map(railRow)}
-            </>
-          )}
-
-          {/* the editable timestamp makes logging yesterday's dinner today one
-              press, so a meal filed on another day has to land somewhere it
-              can be seen — or the screen that just saved it reads as if it had
-              not, and the obvious next press logs it twice. */}
-          {earlier.length > 0 && (
-            <>
-              <h2 class="nutrition-rail-label">earlier</h2>
-              {earlier.map(railRow)}
-            </>
-          )}
-
-          <p class="nutrition-rail-progress">
-            {`progress · ${past.length} ${past.length === 1 ? 'meal' : 'meals'}, not enough to draw`}
-          </p>
         </section>
 
         <section class="nutrition-fields">
@@ -300,10 +269,11 @@ export function Nutrition(): VNode {
               <Previous
                 entry={previousOf(current.food_id)}
                 locale={locale}
-                render={(entry) => {
+                render={(line) => {
                   /* the last of it in that meal, not the first — a second
                      helping is the newer answer */
-                  const last = [...foodsIn(entry)]
+                  const last = [...foodsIn(line)]
+                    .reverse()
                     .find((food) => food.food_id === current.food_id)
                   return last === undefined ? null : lineOf(last, library)
                 }}
@@ -316,7 +286,7 @@ export function Nutrition(): VNode {
                       what was typed, and the same food twice in one meal is
                       two different numbers */}
                   <AmountStepper
-                    key={current.food_id}
+                    key={`${at}:${current.food_id}`}
                     value={current.amount}
                     unit={unitOf(library, food, current.amount)}
                     step={config.amount_step}
@@ -352,13 +322,96 @@ export function Nutrition(): VNode {
               type="button"
               class="nutrition-log hit"
               disabled={meal.length === 0}
-              onClick={end}
+              onClick={save}
             >
-              end meal
+              {entry === null ? 'end meal' : 'save meal'}
             </button>
+            {entry !== null && (
+              <Danger
+                onClick={() => {
+                  deleteEntry(entry.id)
+                  onClose()
+                }}
+              />
+            )}
           </div>
         </section>
       </div>
+    </main>
+  )
+}
+
+export function Nutrition(): VNode {
+  const { locale } = readJson('config/app.json', appSeed)
+  const library = loadFoods()
+
+  /** `null` is the list; `'new'` and an entry are the same builder. */
+  const [open, setOpen] = useState<Entry | 'new' | null>(null)
+  const [past, setPast] = useState(() => readEntries('nutrition'))
+
+  const today = new Date().toDateString()
+  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
+
+  if (open !== null) {
+    return (
+      <Builder
+        key={open === 'new' ? 'new' : open.id}
+        entry={open === 'new' ? null : open}
+        locale={locale}
+        onClose={() => {
+          setPast(readEntries('nutrition'))
+          setOpen(null)
+        }}
+      />
+    )
+  }
+
+  /** One row per meal. Today's carries the clock and an older one its date,
+   *  because "which day" is the whole question about an entry that is not
+   *  today's. */
+  const rows = (entries: Entry[]) =>
+    entries.map((entry) => (
+      <button type="button" class="nutrition-rail-row hit" key={entry.id} onClick={() => setOpen(entry)}>
+        <span class="nutrition-rail-when">
+          {isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}
+        </span>
+        <span class="nutrition-rail-what">{mealLine(foodsIn(entry), library)}</span>
+      </button>
+    ))
+
+  const earlier = past.filter((entry) => !isToday(entry))
+
+  return (
+    <main class="nutrition">
+      <header class="nutrition-strip">
+        <a class="nutrition-back hit" href="#/">
+          ← &nbsp;nutrition
+        </a>
+      </header>
+
+      <section class="nutrition-rail nutrition-rail-page">
+        <button type="button" class="nutrition-new hit" onClick={() => setOpen('new')}>
+          + new meal
+        </button>
+
+        {past.some(isToday) && (
+          <>
+            <h2 class="nutrition-rail-label">today</h2>
+            {rows(past.filter(isToday))}
+          </>
+        )}
+
+        {earlier.length > 0 && (
+          <>
+            <h2 class="nutrition-rail-label">earlier</h2>
+            {rows(earlier)}
+          </>
+        )}
+
+        <p class="nutrition-rail-progress">
+          {`progress · ${past.length} ${past.length === 1 ? 'meal' : 'meals'}, not enough to draw`}
+        </p>
+      </section>
     </main>
   )
 }

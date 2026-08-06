@@ -49,9 +49,13 @@ const pick = (container: Element, name: string) =>
     )!,
   )
 
+/** The module lands on the list; the builder is behind `+ new workout`. */
+const openNew = (container: Element) => press(container, '.workout-new')
+
 /** The demo, as a function: three sets at one weight, the third marked by
  *  typing the sign, and a form cue on the exercise. */
 const logChestPress = (container: Element) => {
+  openNew(container)
   pick(container, 'chest press')
   type(container, 'set 1 weight', '47.5')
   type(container, 'set 1 reps', '10')
@@ -257,6 +261,7 @@ describe('the workout screen', () => {
     first.unmount()
 
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'chest press')
     const previous = container.querySelector('.field-previous')?.textContent ?? ''
     expect(previous).toContain('47.5 kg × 10')
@@ -270,12 +275,14 @@ describe('the workout screen', () => {
     first.unmount()
 
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'incline press')
     expect(container.querySelector('.field-previous')?.textContent).toContain('nothing recorded yet')
   })
 
   it('keeps one exercise’s numbers out of the next one’s boxes', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'chest press')
     type(container, 'set 1 weight', '47.5')
 
@@ -292,6 +299,7 @@ describe('the workout screen', () => {
 
   it('makes a library item out of what was typed to find it', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
       target: { value: 'dips blue machine' },
     })
@@ -306,6 +314,7 @@ describe('the workout screen', () => {
     // the only thing tying the press to the box, and greying it out says less
     // than nothing about what to type where
     const { container } = render(<Workout />)
+    openNew(container)
     const button = container.querySelector<HTMLButtonElement>('.picker-new')!
 
     expect(button.disabled).toBe(false)
@@ -319,6 +328,7 @@ describe('the workout screen', () => {
 
   it('says in the box that typing there names a new one, not only that it filters', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     expect(container.querySelector('.picker-filter')?.getAttribute('placeholder')).toBe(
       'find one, or name a new one',
     )
@@ -341,6 +351,7 @@ describe('the workout screen', () => {
 describe('the kind and body part of an exercise made inline', () => {
   const make = (name: string) => {
     const screen = render(<Workout />)
+    openNew(screen.container)
     fireEvent.input(screen.container.querySelector<HTMLInputElement>('.picker-filter')!, {
       target: { value: name },
     })
@@ -422,6 +433,7 @@ describe('the kind and body part of an exercise made inline', () => {
 
   it('retags a seeded exercise too — a seeded item is no more protected', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'pull ups')
     set(container, 'body part', 'shoulders')
 
@@ -437,6 +449,7 @@ describe('removing an exercise from the library', () => {
 
   it('arms on the first press and deletes on the second', () => {
     const { container } = render(<Workout />)
+    openNew(container)
 
     fireEvent.click(del(container, 'pec deck'))
     expect(del(container, 'pec deck').textContent).toBe('press again')
@@ -457,6 +470,7 @@ describe('removing an exercise from the library', () => {
     first.unmount()
 
     const { container } = render(<Workout />)
+    openNew(container)
     fireEvent.click(del(container, 'chest press'))
     fireEvent.click(del(container, 'chest press'))
 
@@ -464,6 +478,32 @@ describe('removing an exercise from the library', () => {
     // only the library lost the name
     expect(readEntries('workout')).toHaveLength(1)
     expect(loggedExercises()[0]?.sets).toHaveLength(3)
+  })
+})
+
+describe('correcting a past workout from the module list', () => {
+  it('opens a listed workout in the builder adding uses, and writes the correction back', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.workout-rail-row')!)
+
+    // the same screen adding uses: the exercise rail, the set table, the
+    // picker one press away
+    expect(container.querySelector('.workout-rail-label')?.textContent).toBe('this workout')
+    expect(box(container, 'set 1 weight')?.value).toBe('47.5')
+
+    type(container, 'set 1 weight', '50')
+    press(container, '.workout-end')
+
+    const entry = readEntries('workout')[0]!
+    expect((entry.payload['exercises'] as Performed[])[0]?.sets[0]).toMatchObject({ weight: 50 })
+    expect(entry.rev).toBe(2)
+    // and saving lands back on the list, where the row still is
+    expect(container.querySelector('.workout-new')).not.toBeNull()
+    expect(container.querySelectorAll('.workout-rail-row')).toHaveLength(1)
   })
 })
 
@@ -513,6 +553,7 @@ describe('what a saved workout holds', () => {
 
   it('hands back the last block of an exercise done twice in one workout', () => {
     const first = render(<Workout />)
+    openNew(first.container)
     pick(first.container, 'chest press')
     type(first.container, 'set 1 weight', '47.5')
     press(first.container, '.workout-rail-add')
@@ -522,6 +563,7 @@ describe('what a saved workout holds', () => {
     first.unmount()
 
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'chest press')
     expect(container.querySelector('.field-previous')?.textContent).toContain('30 kg')
   })
@@ -543,6 +585,7 @@ describe('the body parts an objective counts', () => {
 
   it('keeps each part once, however many exercises reached it', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'chest press')
     press(container, '.workout-rail-add')
     pick(container, 'pec deck')
@@ -557,6 +600,7 @@ describe('the body parts an objective counts', () => {
     expect(factFor(backTarget, readEntries('workout'))).toBe('0 this week')
 
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'pull ups')
     press(container, '.workout-end')
 
@@ -565,6 +609,7 @@ describe('the body parts an objective counts', () => {
 
   it('does not answer for a part the workout never reached', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'pull ups')
     press(container, '.workout-end')
 
@@ -573,6 +618,7 @@ describe('the body parts an objective counts', () => {
 
   it('records the part an exercise carried even after the library is re-tagged', () => {
     const { container } = render(<Workout />)
+    openNew(container)
     pick(container, 'pull ups')
     press(container, '.workout-end')
 

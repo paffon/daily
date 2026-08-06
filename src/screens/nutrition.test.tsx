@@ -203,7 +203,12 @@ describe('the nutrition screen', () => {
     })
   }
 
+  /** The module lands on the list; the builder is behind `+ new meal`. */
+  const openNew = (container: Element) =>
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-new')!)
+
   const logPizza = (container: Element) => {
+    openNew(container)
     pick(container, 'pizza')
     typeAmount(container, '2')
     chooseLevel(container, 'loaded')
@@ -220,6 +225,7 @@ describe('the nutrition screen', () => {
 
   it('holds several foods in one entry, ended the way a workout is', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'coffee')
     addFood(container)
     pick(container, 'apple')
@@ -236,6 +242,7 @@ describe('the nutrition screen', () => {
 
   it('edits any food of the meal being built, picked back off the rail', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'pizza')
     typeAmount(container, '2')
     addFood(container)
@@ -253,6 +260,7 @@ describe('the nutrition screen', () => {
 
   it('drops a mis-picked food before the meal is written', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'pizza')
     addFood(container)
     pick(container, 'coffee')
@@ -267,6 +275,7 @@ describe('the nutrition screen', () => {
 
   it('shows the food’s own numbers with the level’s multiplier applied', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'pizza')
     expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('285 kcal · 12 g protein')
 
@@ -279,6 +288,7 @@ describe('the nutrition screen', () => {
 
   it('says nothing about numbers for a food that carries none', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'water')
     expect(container.querySelector('.nutrition-numbers')).toBeNull()
   })
@@ -286,8 +296,10 @@ describe('the nutrition screen', () => {
   it('carries the food’s own unit into a meal of one’s line, pluralised past one', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
+    openNew(container)
     pick(container, 'coffee')
     endMeal(container)
+    openNew(container)
     pick(container, 'apple')
     endMeal(container)
 
@@ -299,6 +311,7 @@ describe('the nutrition screen', () => {
 
   it('opens a food at its own default level', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'apple')
     expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('normal')
   })
@@ -309,6 +322,7 @@ describe('the nutrition screen', () => {
     first.unmount()
 
     const { container } = render(<Nutrition />)
+    openNew(container)
     pick(container, 'pizza')
     expect(container.querySelector('.field-previous')?.textContent).toContain('2 slices · loaded')
 
@@ -319,6 +333,7 @@ describe('the nutrition screen', () => {
 
   it('makes a library food out of what was typed to find it', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
       target: { value: 'malabi' },
     })
@@ -328,26 +343,33 @@ describe('the nutrition screen', () => {
     expect(loadFoods().foods.some((food) => food.name === 'malabi')).toBe(true)
   })
 
-  it('lands back at the picker once the meal is ended', () => {
+  it('lands back on the list once the meal is ended, with the meal in it', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
-    expect(container.querySelector('.picker')).not.toBeNull()
-    expect(container.querySelector<HTMLButtonElement>('.nutrition-log')?.disabled).toBe(true)
+    expect(container.querySelector('.picker')).toBeNull()
+    expect(container.querySelector('.nutrition-new')?.textContent).toBe('+ new meal')
+    expect(railLines(container)).toEqual(['pizza · 2 slices · loaded'])
   })
 
   it('keeps three meals in one day as a flat list with no totals', () => {
     const { container } = render(<Nutrition />)
 
+    openNew(container)
     setTime(container, '09:20')
     pick(container, 'coffee')
     endMeal(container)
 
+    openNew(container)
     setTime(container, '16:10')
     pick(container, 'apple')
     endMeal(container)
 
+    openNew(container)
     setTime(container, '13:30')
-    logPizza(container)
+    pick(container, 'pizza')
+    typeAmount(container, '2')
+    chooseLevel(container, 'loaded')
+    endMeal(container)
 
     // newest first, and nothing that adds the three together
     expect(railLines(container)).toEqual([
@@ -356,18 +378,19 @@ describe('the nutrition screen', () => {
       'coffee · 1 cup · normal',
     ])
     expect([...container.querySelectorAll('.nutrition-rail-label')].map((h) => h.textContent)).toEqual(
-      ['this meal', 'today'],
+      ['today'],
     )
     expect(container.textContent).not.toMatch(/total/i)
-    expect(container.querySelector('.nutrition-actions')?.textContent).toBe('end meal')
+    expect(container.querySelector('.nutrition-new')?.textContent).toBe('+ new meal')
   })
 
   it('shows a meal logged for another day rather than swallowing it', () => {
     const { container } = render(<Nutrition />)
 
-    // logging yesterday's dinner today is one press on the strip. If the rail
+    // logging yesterday's dinner today is one press on the strip. If the list
     // only ever shows the wall-clock day the meal is saved and shows nowhere,
     // which reads as a failed save, and the obvious next press logs it twice
+    openNew(container)
     const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
     if (collapsed !== null) fireEvent.click(collapsed)
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
@@ -375,12 +398,15 @@ describe('the nutrition screen', () => {
       target: { value: yesterday },
     })
 
-    logPizza(container)
+    pick(container, 'pizza')
+    typeAmount(container, '2')
+    chooseLevel(container, 'loaded')
+    endMeal(container)
 
     expect(readEntries('nutrition')).toHaveLength(1)
     expect(railLines(container)).toEqual(['pizza · 2 slices · loaded'])
     expect([...container.querySelectorAll('.nutrition-rail-label')].map((h) => h.textContent)).toEqual(
-      ['this meal', 'earlier'],
+      ['earlier'],
     )
     // and the row says which day, since that is the whole question about it
     expect(container.querySelector('.nutrition-rail-when')?.textContent).toMatch(/\d/)
@@ -403,6 +429,7 @@ describe('the nutrition screen', () => {
 
   it('arms a library delete on the first press and deletes on the second', () => {
     const { container } = render(<Nutrition />)
+    openNew(container)
     const del = () => container.querySelector<HTMLButtonElement>('[aria-label="delete pizza"]')!
 
     fireEvent.click(del())
@@ -422,6 +449,7 @@ describe('the nutrition screen', () => {
 describe('editing a past meal', () => {
   const logged = () => {
     const first = render(<Nutrition />)
+    fireEvent.click(first.container.querySelector<HTMLButtonElement>('.nutrition-new')!)
     fireEvent.click(
       [...first.container.querySelectorAll<HTMLButtonElement>('.picker-item')].find((item) =>
         item.textContent?.startsWith('pizza'),
@@ -483,6 +511,39 @@ describe('editing a past meal', () => {
     fireEvent.click(container.querySelector<HTMLButtonElement>('.edit-save')!)
 
     expect(getEntry(flat.id)?.payload).toEqual({ food_id: 'pizza', amount: 1.5, level: 'loaded' })
+  })
+})
+
+describe('correcting a past meal from the module list', () => {
+  it('opens a listed meal in the builder adding uses, and writes the correction back', () => {
+    const first = render(<Nutrition />)
+    fireEvent.click(first.container.querySelector<HTMLButtonElement>('.nutrition-new')!)
+    fireEvent.click(
+      [...first.container.querySelectorAll<HTMLButtonElement>('.picker-item')].find((item) =>
+        item.textContent?.startsWith('pizza'),
+      )!,
+    )
+    fireEvent.click(first.container.querySelector<HTMLButtonElement>('.nutrition-log')!)
+    first.unmount()
+
+    const { container } = render(<Nutrition />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-rail-row')!)
+
+    // the same screen adding uses: the meal rail, the amount, `+ food` a
+    // press away
+    expect(container.querySelector('.nutrition-rail-label')?.textContent).toBe('this meal')
+    expect(container.querySelector('.nutrition-meal-name')?.textContent).toBe('pizza')
+
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="amount"]')!, {
+      target: { value: '3' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-log')!)
+
+    const entry = readEntries('nutrition')[0]!
+    expect(entry.payload).toEqual({ foods: [{ food_id: 'pizza', amount: 3, level: 'normal' }] })
+    expect(entry.rev).toBe(2)
+    // and saving lands back on the list, where the meal still is
+    expect(container.querySelector('.nutrition-new')).not.toBeNull()
   })
 })
 

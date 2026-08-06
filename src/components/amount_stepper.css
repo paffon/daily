@@ -37,6 +37,9 @@
 .stepper-box input {
   flex: 1;
   min-width: 0;
+  /* a text input is born ~20ch wide, and that intrinsic width is what a phone
+     ends up panning to — zero it and let flex hand out the real space */
+  width: 0;
   border: none;
   background: none;
   color: var(--ink);

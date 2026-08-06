@@ -2,10 +2,10 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
-import { putEntry, readEntries, readJson, writeJson } from '../data/store'
+import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
 import { bodyPartsOf, fieldsFor, loadExercises, setLine } from '../data/exercise'
-import { Previous, Timestamp, dayTimeOf } from '../components/fields'
+import { Danger, Previous, Timestamp, dayTimeOf } from '../components/fields'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { SetTable } from '../components/set_table'
@@ -13,9 +13,10 @@ import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './workout.css'
 
-/** Frame 4b. One screen logs live and logs after the fact — the timestamp is
- *  editable and `Previous` is always there, which is the whole of what a
- *  session runner would have added. */
+/** Reshaped 2026-08-06: the module opens on the list of past workouts, with
+ *  `+ new workout` above them. New and old open the same builder — one screen
+ *  logs live, logs after the fact, and corrects last Tuesday, which is the
+ *  whole of what `DESIGN.md` §6.2 asks of an entry. */
 
 const performedIn = (entry: Entry): Performed[] => (entry.payload['exercises'] as Performed[]) ?? []
 
@@ -69,8 +70,9 @@ function Comment({ value, onChange }: { value: string; onChange: (v: string) => 
   )
 }
 
-/** Workout's half of frame 4h: every performed exercise with the fields it was
- *  logged with, so a past workout edits the way it was entered. */
+/** Frame 4h's half, kept for the generic edit screen home links to: every
+ *  performed exercise with the fields it was logged with. The module's own
+ *  list opens the full builder instead. */
 registerEditor('workout', (payload, onChange) => {
   const library = loadExercises().exercises
   const performed = (payload['exercises'] as Performed[]) ?? []
@@ -97,21 +99,29 @@ registerEditor('workout', (payload, onChange) => {
   )
 })
 
-export function Workout(): VNode {
-  const locale = readJson('config/app.json', appSeed).locale
+/** One workout being built or corrected. `entry` is null for a new one; both
+ *  wear the same screen, which is what makes editing look like adding. */
+function Builder({ entry, locale, onClose }: {
+  entry: Entry | null
+  locale: string
+  onClose: () => void
+}): VNode {
   const library = loadExercises()
 
-  const [ts, setTs] = useState(() => toIso(new Date()))
-  const [performed, setPerformed] = useState<Performed[]>([])
+  const [ts, setTs] = useState(() => entry?.ts ?? toIso(new Date()))
+  const [performed, setPerformed] = useState<Performed[]>(() =>
+    entry === null ? [] : performedIn(entry),
+  )
   const [at, setAt] = useState(0)
-  const [picking, setPicking] = useState(true)
-  const [past, setPast] = useState(() => readEntries('workout'))
+  const [picking, setPicking] = useState(() => entry === null || performedIn(entry).length === 0)
+  /** The last time each exercise was done, with the workout being corrected
+   *  left out — it cannot be its own previous. */
+  const [past] = useState(() =>
+    readEntries('workout').filter((line) => line.id !== entry?.id),
+  )
   /** Bumped when the library is written, since `library` above is read on
    *  render and nothing else here would ask for a fresher one. */
   const [, retagged] = useState(0)
-
-  const today = new Date().toDateString()
-  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
 
   const write = (next: Performed) =>
     setPerformed(performed.map((p, i) => (i === at ? next : p)))
@@ -172,21 +182,19 @@ export function Workout(): VNode {
   /** `ended` is optional and is left out rather than guessed: pressing this
    *  ends the *recording*, which is the workout's end only when the workout is
    *  now — and a log written for last Tuesday would otherwise store a session
-   *  that ran for four days. See this phase's doc. */
-  const end = () => {
+   *  that ran for four days. */
+  const save = () => {
     const body_parts = bodyPartsOf(performed, library.exercises)
-    putEntry(newEntry('workout', { started: ts, exercises: performed, body_parts }, ts))
-    setPast(readEntries('workout'))
-    setPerformed([])
-    setAt(0)
-    setPicking(true)
-    setTs(toIso(new Date()))
+    const payload = { started: ts, exercises: performed, body_parts }
+    if (entry === null) putEntry(newEntry('workout', payload, ts))
+    else updateEntry({ ...entry, ts, payload: { ...entry.payload, ...payload } })
+    onClose()
   }
 
   /** Scoped to the exercise, not to the workout: the last time *this* was
    *  done, however long ago. */
   const previousOf = (exercise_id: string): Entry | null =>
-    past.find((entry) => performedIn(entry).some((p) => p.exercise_id === exercise_id)) ?? null
+    past.find((line) => performedIn(line).some((p) => p.exercise_id === exercise_id)) ?? null
 
   const current = performed[at]
   const exercise = current === undefined ? undefined : asExercise(current, library.exercises)
@@ -196,27 +204,19 @@ export function Workout(): VNode {
     ...new Set(library.exercises.map((item) => item.body_part).filter((part) => part !== '')),
   ].sort()
 
-  const rail = (entries: Entry[]) =>
-    entries.map((entry) => (
-      <a class="workout-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-        <span class="workout-rail-when">{dayTimeOf(entry.ts, locale)}</span>
-        <span class="workout-rail-count">{performedIn(entry).length}</span>
-      </a>
-    ))
-
   return (
     <main class="workout">
       <header class="workout-strip">
-        <a class="workout-back hit" href="#/">
+        <button type="button" class="workout-back hit" onClick={onClose}>
           ← &nbsp;workout
-        </a>
+        </button>
         <Timestamp value={ts} onChange={setTs} locale={locale} />
       </header>
 
       <div class="workout-split">
         <section class="workout-rail">
           <h2 class="workout-rail-label">this workout</h2>
-          {performed.map((entry, index) => (
+          {performed.map((line, index) => (
             <button
               type="button"
               class={index === at && !picking ? 'workout-rail-row live hit' : 'workout-rail-row hit'}
@@ -226,30 +226,13 @@ export function Workout(): VNode {
                 setPicking(false)
               }}
             >
-              <span class="workout-rail-name">{asExercise(entry, library.exercises).name}</span>
-              <span class="workout-rail-count">{entry.sets.length}</span>
+              <span class="workout-rail-name">{asExercise(line, library.exercises).name}</span>
+              <span class="workout-rail-count">{line.sets.length}</span>
             </button>
           ))}
           <button type="button" class="workout-rail-add hit" onClick={() => setPicking(true)}>
             + exercise
           </button>
-
-          {past.some(isToday) && (
-            <>
-              <h2 class="workout-rail-label">today</h2>
-              {rail(past.filter(isToday))}
-            </>
-          )}
-          {past.some((entry) => !isToday(entry)) && (
-            <>
-              <h2 class="workout-rail-label">history</h2>
-              {rail(past.filter((entry) => !isToday(entry)))}
-            </>
-          )}
-
-          <p class="workout-rail-progress">
-            {`progress · ${past.length} ${past.length === 1 ? 'workout' : 'workouts'}, not enough to draw`}
-          </p>
         </section>
 
         <section class="workout-fields">
@@ -312,10 +295,10 @@ export function Workout(): VNode {
               <Previous
                 entry={previousOf(current.exercise_id)}
                 locale={locale}
-                render={(entry) => {
+                render={(line) => {
                   /* the last block of it in that workout, not the first — an
                      exercise done again as a burnout is the newer answer */
-                  const last = [...performedIn(entry)]
+                  const last = [...performedIn(line)]
                     .reverse()
                     .find((p) => p.exercise_id === current.exercise_id)
                   return last === undefined ? null : <Sets performed={last} exercise={exercise} />
@@ -345,13 +328,89 @@ export function Workout(): VNode {
               type="button"
               class="workout-end hit"
               disabled={performed.length === 0}
-              onClick={end}
+              onClick={save}
             >
-              end workout
+              {entry === null ? 'end workout' : 'save workout'}
             </button>
+            {entry !== null && (
+              <Danger
+                onClick={() => {
+                  deleteEntry(entry.id)
+                  onClose()
+                }}
+              />
+            )}
           </div>
         </section>
       </div>
+    </main>
+  )
+}
+
+export function Workout(): VNode {
+  const locale = readJson('config/app.json', appSeed).locale
+
+  /** `null` is the list; `'new'` and an entry are the same builder. */
+  const [open, setOpen] = useState<Entry | 'new' | null>(null)
+  const [past, setPast] = useState(() => readEntries('workout'))
+
+  const today = new Date().toDateString()
+  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
+
+  if (open !== null) {
+    return (
+      <Builder
+        key={open === 'new' ? 'new' : open.id}
+        entry={open === 'new' ? null : open}
+        locale={locale}
+        onClose={() => {
+          setPast(readEntries('workout'))
+          setOpen(null)
+        }}
+      />
+    )
+  }
+
+  const rows = (entries: Entry[]) =>
+    entries.map((entry) => (
+      <button type="button" class="workout-rail-row hit" key={entry.id} onClick={() => setOpen(entry)}>
+        <span class="workout-rail-when">{dayTimeOf(entry.ts, locale)}</span>
+        <span class="workout-rail-count">
+          {`${performedIn(entry).length} ${performedIn(entry).length === 1 ? 'exercise' : 'exercises'}`}
+        </span>
+      </button>
+    ))
+
+  return (
+    <main class="workout">
+      <header class="workout-strip">
+        <a class="workout-back hit" href="#/">
+          ← &nbsp;workout
+        </a>
+      </header>
+
+      <section class="workout-rail workout-rail-page">
+        <button type="button" class="workout-new hit" onClick={() => setOpen('new')}>
+          + new workout
+        </button>
+
+        {past.some(isToday) && (
+          <>
+            <h2 class="workout-rail-label">today</h2>
+            {rows(past.filter(isToday))}
+          </>
+        )}
+        {past.some((entry) => !isToday(entry)) && (
+          <>
+            <h2 class="workout-rail-label">history</h2>
+            {rows(past.filter((entry) => !isToday(entry)))}
+          </>
+        )}
+
+        <p class="workout-rail-progress">
+          {`progress · ${past.length} ${past.length === 1 ? 'workout' : 'workouts'}, not enough to draw`}
+        </p>
+      </section>
     </main>
   )
 }
