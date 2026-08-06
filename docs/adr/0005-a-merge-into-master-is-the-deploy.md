@@ -36,3 +36,19 @@ user's Drive and the app talks to Google from the browser.
 **A deploy can still be forced without a commit** — `workflow_dispatch`, the
 same job on a button — because "redeploy exactly what is on master" is
 otherwise a thing only a laptop with the right `.env.local` can do.
+
+**A pull request runs the same job with the release switched off.** This
+pipeline's first run failed, on the merge that installed it, at `npm ci` — and a
+merge is the worst moment to find a broken build, because by then the only way
+out of it is another commit. So every gate a deploy clears, a pull request
+clears first, and a green check means the merge will deploy.
+
+**The lockfile now has to satisfy Linux, not just the laptop.** Nothing ran
+`npm ci` on Ubuntu until this pipeline existed, and a lockfile written by npm on
+Windows can record a package built for another platform while pruning the
+packages *it* depends on, which are needed nowhere here. `npm ci` then refuses
+the entire install over the missing lines. Running `npm install
+--package-lock-only` on Windows will not put them back — it sees a lockfile with
+nothing wrong with it. The repair is to run that same command on Linux, where
+npm adds what it finds missing; WSL is enough, and what it writes is two
+entries and no version changes.
