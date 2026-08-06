@@ -139,7 +139,7 @@ One primitive:
 | module | library item | entry records |
 | :- | :- | :- |
 | Workout | exercise | sets, each with the fields its kind declares, plus a next-time mark and a comment |
-| Nutrition | food item | a meal — foods, each an amount in its item's unit × level (lean / normal / loaded) |
+| Nutrition | food item | a meal — foods, each an amount in its item's unit × level (lean / normal / loaded), plus a comment |
 | Movement | segment | duration × speed; or a sitting/standing block |
 | Dance | — | duration × intensity |
 | Body | — | weight, or a photo |
@@ -263,7 +263,14 @@ single bite is a meal of one, a long evening is a meal of six, and the two are
 the same shape.
 
 An entry is a timestamp and a list of foods, each with an amount in that food's
-own unit and a level.
+own unit, a level, and a comment.
+
+**Comments carry forward here too** (2026-08-06). Free text on a food in a meal
+— `the good bakery`, `left half of it`, `reheated` — and it comes back with
+`Previous` the next time that food is logged, the same way a form cue does on an
+exercise (§8.1). It is what a level cannot say: `loaded` records that the
+portion was large, and nothing but prose records that it was large *because it
+was shared off someone else's plate*. Optional, like every other field here.
 
 A **food item** carries:
 

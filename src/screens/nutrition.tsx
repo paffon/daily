@@ -12,7 +12,7 @@ import {
   nutritionLine,
   unitOf,
 } from '../data/food'
-import { Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
+import { Comment, Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
@@ -26,7 +26,11 @@ import './nutrition.css'
  *  foods added one at a time, one entry holding the lot — and it is untyped:
  *  no breakfast, no lunch, no dinner. A snack is a meal of one. */
 
-type Logged = { food_id: string; amount: number; level: string }
+/** `comment` is free text on this food in this meal — *the good bakery*, *left
+ *  half of it*, *reheated*. Optional and absent until something is typed: a
+ *  meal of six should not carry six empty strings, and every entry logged
+ *  before comments stays exactly as it was written. */
+type Logged = { food_id: string; amount: number; level: string; comment?: string }
 
 /** Both shapes a payload can hold: `{ foods: [...] }` since meals landed, and
  *  the flat single-food payload every entry before them was written with. The
@@ -37,6 +41,10 @@ const foodsOf = (payload: Entry['payload']): Logged[] => {
 }
 
 const foodsIn = (entry: Entry): Logged[] => foodsOf(entry.payload)
+
+/** A food logged before comments carries no key, and an emptied box leaves a
+ *  blank one behind. Both mean nothing was said. */
+const commentOf = (logged: Logged): string => logged.comment ?? ''
 
 /** A food the library no longer has — renamed on another device, or deleted,
  *  since nothing in a seed is protected. The entry keeps saying what it said;
@@ -113,6 +121,11 @@ registerEditor('nutrition', (payload, onChange) => {
                 label="level"
               />
             </div>
+
+            <Comment
+              value={commentOf(logged)}
+              onChange={(comment) => write(at, { ...logged, comment })}
+            />
           </div>
         )
       })}
@@ -279,7 +292,18 @@ function Builder({ entry, locale, onClose }: {
                   const last = [...foodsIn(line)]
                     .reverse()
                     .find((food) => food.food_id === current.food_id)
-                  return last === undefined ? null : lineOf(last, library)
+                  if (last === undefined) return null
+                  return (
+                    <>
+                      {lineOf(last, library)}
+                      {/* what was written about it last time, in the words it
+                          was written in — `RULES.md` asks `Previous` for the
+                          numbers *and* the comment */}
+                      {commentOf(last) !== '' && (
+                        <q class="field-previous-comment">{commentOf(last)}</q>
+                      )}
+                    </>
+                  )
                 }}
               />
 
@@ -318,6 +342,11 @@ function Builder({ entry, locale, onClose }: {
                   label="level"
                 />
               </div>
+
+              <Comment
+                value={commentOf(current)}
+                onChange={(comment) => write({ ...current, comment })}
+              />
             </>
           )}
         </section>

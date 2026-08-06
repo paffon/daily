@@ -122,6 +122,31 @@ export function Danger({ onClick }: { onClick: () => void }): VNode {
   )
 }
 
+/** A single-line comment on the thing being logged, and the reason the log
+ *  remembers *how* rather than only how much — a form cue on an exercise, what
+ *  was actually on the plate. It comes back with `Previous` next time, quoted
+ *  under the numbers. Shared, because a second module wanted it (2026-08-06)
+ *  and a third would otherwise have copied it a third time. */
+export function Comment({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (comment: string) => void
+}): VNode {
+  return (
+    <label class="field-comment">
+      <span class="field-comment-label">comment</span>
+      <input
+        type="text"
+        aria-label="comment"
+        value={value}
+        onInput={(e) => onChange(e.currentTarget.value)}
+      />
+    </label>
+  )
+}
+
 /** What happened last time, at the point of logging. Unconditional, in every
  *  module, and not the coach speaking. */
 export function Previous({

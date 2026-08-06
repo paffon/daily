@@ -183,6 +183,11 @@ describe('the nutrition screen', () => {
       target: { value },
     })
 
+  const typeComment = (container: Element, value: string) =>
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="comment"]')!, {
+      target: { value },
+    })
+
   const endMeal = (container: Element) =>
     fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-log')!)
 
@@ -331,6 +336,54 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.field-previous')?.textContent).toContain('nothing recorded yet')
   })
 
+  it('writes a comment on the food it was typed against', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+    typeComment(container, 'the good bakery, half of it left')
+    addFood(container)
+    pick(container, 'coffee')
+    endMeal(container)
+
+    expect(readEntries('nutrition')[0]?.payload['foods']).toEqual([
+      { food_id: 'pizza', amount: 1, level: 'normal', comment: 'the good bakery, half of it left' },
+      // nothing was said about the coffee, so it carries no key at all
+      { food_id: 'coffee', amount: 1, level: 'normal' },
+    ])
+  })
+
+  it('hands the comment back with Previous, beside the numbers', () => {
+    const first = render(<Nutrition />)
+    openNew(first.container)
+    pick(first.container, 'pizza')
+    typeComment(first.container, 'the good bakery')
+    endMeal(first.container)
+    first.unmount()
+
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+    expect(container.querySelector('.field-previous-comment')?.textContent).toBe('the good bakery')
+    // and the box for this meal opens empty rather than repeating last time's
+    expect(container.querySelector<HTMLInputElement>('[aria-label="comment"]')?.value).toBe('')
+  })
+
+  it('keeps each food’s comment to itself within one meal', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+    typeComment(container, 'the good bakery')
+    addFood(container)
+    pick(container, 'coffee')
+
+    expect(container.querySelector<HTMLInputElement>('[aria-label="comment"]')?.value).toBe('')
+
+    fireEvent.click(container.querySelectorAll<HTMLButtonElement>('.nutrition-meal-food')[0]!)
+    expect(container.querySelector<HTMLInputElement>('[aria-label="comment"]')?.value).toBe(
+      'the good bakery',
+    )
+  })
+
   it('makes a library food out of what was typed to find it', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
@@ -476,6 +529,20 @@ describe('editing a past meal', () => {
     expect(container.querySelector('.stepper-unit')?.textContent).toBe('slices')
     expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('loaded')
     expect(container.querySelectorAll('.level-example')).toHaveLength(3)
+  })
+
+  it('corrects a comment on a past meal, the way it corrects a number', () => {
+    const id = logged()
+    const { container } = render(<EditEntry id={id} />)
+
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="comment"]')!, {
+      target: { value: 'reheated' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.edit-save')!)
+
+    expect(getEntry(id)?.payload).toEqual({
+      foods: [{ food_id: 'pizza', amount: 2, level: 'loaded', comment: 'reheated' }],
+    })
   })
 
   it('writes a corrected amount and level back through the store', () => {
