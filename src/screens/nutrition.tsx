@@ -63,6 +63,10 @@ const mealLine = (foods: Logged[], library: FoodLibrary): string => {
   return foods.map((food) => asFood(food.food_id, library).name).join(', ')
 }
 
+/** What home's recent row says about a meal — the same sentence this module's
+ *  own list uses, so the two never drift apart. */
+export const nutritionLineFor = (entry: Entry): string => mealLine(foodsIn(entry), loadFoods())
+
 const scaleOf = (): string[] => loadLevels()['nutrition']?.scale ?? []
 
 /** Frame 4h's half, kept for the generic edit screen home links to: every food
@@ -316,26 +320,30 @@ function Builder({ entry, locale, onClose }: {
               </div>
             </>
           )}
-
-          <div class="nutrition-actions">
-            <button
-              type="button"
-              class="nutrition-log hit"
-              disabled={meal.length === 0}
-              onClick={save}
-            >
-              {entry === null ? 'end meal' : 'save meal'}
-            </button>
-            {entry !== null && (
-              <Danger
-                onClick={() => {
-                  deleteEntry(entry.id)
-                  onClose()
-                }}
-              />
-            )}
-          </div>
         </section>
+
+        {/* last in the column, under the meal it ends — reading the meal and
+            then ending it is the order the press happens in. It stays stuck to
+            the bottom edge while the list above it scrolls, so a long meal
+            never puts its own end out of reach. */}
+        <div class="nutrition-actions">
+          <button
+            type="button"
+            class="nutrition-log hit"
+            disabled={meal.length === 0}
+            onClick={save}
+          >
+            {entry === null ? 'end meal' : 'save meal'}
+          </button>
+          {entry !== null && (
+            <Danger
+              onClick={() => {
+                deleteEntry(entry.id)
+                onClose()
+              }}
+            />
+          )}
+        </div>
       </div>
     </main>
   )

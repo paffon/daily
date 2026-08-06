@@ -38,8 +38,7 @@
     "duration_start": 60,
     "duration_step": 15,
     "default_level": "social",
-    "common_durations": [60, 75, 90],
-    "recent_count": 4
+    "common_durations": [60, 75, 90]
   },
   "objectives": {
     "directions": ["up", "stable", "down"],

@@ -33,9 +33,20 @@ const chooseLevel = (container: Element, level: string) =>
 const box = (container: Element) =>
   container.querySelector<HTMLInputElement>('[aria-label="duration"]')!
 
+/** The module lands on the list of sessions; the builder is behind
+ *  `+ new session`, and a listed session opens the same one. */
+const openNew = (container: Element) => press(container, '.dance-new')
+
+/** Rendered straight into the builder, which is what most of these are about. */
+const building = () => {
+  const screen = render(<Dance />)
+  openNew(screen.container)
+  return screen
+}
+
 describe('the dance screen', () => {
   it('speaks dance’s own three words, read from the file', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
     const words = [...container.querySelectorAll('.segmented-word')].map((w) => w.textContent)
 
     expect(words).toEqual(['marking', 'social', 'full-out'])
@@ -46,7 +57,7 @@ describe('the dance screen', () => {
   })
 
   it('logs the duration and the intensity, and nothing else', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
     shortcut(container, '75')
     chooseLevel(container, 'social')
     press(container, '.dance-log')
@@ -55,7 +66,7 @@ describe('the dance screen', () => {
   })
 
   it('takes a common duration as one tap, box and payload together', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
     expect(box(container).value).toBe('60')
 
     shortcut(container, '90')
@@ -66,7 +77,7 @@ describe('the dance screen', () => {
   })
 
   it('does not replace the box while it is being typed into', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
     const before = box(container)
 
     // a duration typed a character at a time is `4`, then `45`. If the first
@@ -89,7 +100,7 @@ describe('the dance screen', () => {
       dance: { ...appSeed.dance, common_durations: [45, 120] },
     })
 
-    const { container } = render(<Dance />)
+    const { container } = building()
     expect([...container.querySelectorAll('.dance-shortcut')].map((b) => b.textContent)).toEqual([
       '45',
       '120',
@@ -103,7 +114,7 @@ describe('the dance screen', () => {
   })
 
   it('carries no next-time mark and no rating of any kind', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
 
     // intensity is a level — what the session was — and a mark would be an
     // instruction about the next one, which dance does not have
@@ -114,30 +125,51 @@ describe('the dance screen', () => {
   })
 
   it('shows the last session outright, because there is nothing to scope to', () => {
-    const first = render(<Dance />)
+    const first = building()
     shortcut(first.container, '75')
     chooseLevel(first.container, 'full-out')
     press(first.container, '.dance-log')
     first.unmount()
 
-    const { container } = render(<Dance />)
+    const { container } = building()
     expect(container.querySelector('.field-previous')?.textContent).toContain('75 min · full-out')
   })
 
-  it('shows the last four sessions and no more', () => {
+  it('lists every session danced, because the list is what the module opens on', () => {
     for (let i = 0; i < 6; i++) {
-      const { container, unmount } = render(<Dance />)
+      const { container, unmount } = building()
       shortcut(container, '60')
       press(container, '.dance-log')
       unmount()
     }
 
     expect(readEntries('dance')).toHaveLength(6)
-    expect(render(<Dance />).container.querySelectorAll('.dance-rail-row')).toHaveLength(4)
+    expect(render(<Dance />).container.querySelectorAll('.dance-rail-row')).toHaveLength(6)
+  })
+
+  it('opens a listed session in the builder logging uses, and saves the correction', () => {
+    const first = building()
+    shortcut(first.container, '75')
+    chooseLevel(first.container, 'social')
+    press(first.container, '.dance-log')
+    first.unmount()
+
+    const { container } = render(<Dance />)
+    press(container, '.dance-rail-row')
+
+    expect(box(container).value).toBe('75')
+    shortcut(container, '90')
+    press(container, '.dance-log')
+
+    const entry = readEntries('dance')[0]!
+    expect(entry.payload).toEqual({ duration_min: 90, level: 'social' })
+    expect(entry.rev).toBe(2)
+    // and saving lands back on the list, which still holds one session
+    expect(container.querySelectorAll('.dance-rail-row')).toHaveLength(1)
   })
 
   it('logs last night’s session at last night’s date, without a second pass', () => {
-    const { container } = render(<Dance />)
+    const { container } = building()
     press(container, '.field-stamp-box')
 
     // pressing the box focuses it, and the panel replaces it the same tick —
@@ -169,7 +201,7 @@ describe('the dance screen', () => {
 
   describe('editing a past entry', () => {
     const logged = () => {
-      const first = render(<Dance />)
+      const first = building()
       shortcut(first.container, '75')
       chooseLevel(first.container, 'social')
       press(first.container, '.dance-log')

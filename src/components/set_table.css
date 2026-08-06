@@ -15,9 +15,6 @@
 }
 
 .set-head {
-  /* the head carries no × of its own, and holds its column open so `next time`
-     stays over the marks — the button's hit floor plus the row's gap */
-  padding-right: 54px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--rule);
   font: 400 10px/1 var(--family-mono);
@@ -26,9 +23,20 @@
   color: var(--mono);
 }
 
+/* the marks need 132px of touch target and the × another 44, which on a phone
+   leaves a two-field row about 40px a box — a number typed into one of those
+   is a single visible character. They take a line of their own instead, and
+   the numbers get the width they need to be read back. */
 .set-row {
+  flex-wrap: wrap;
   min-height: 58px;
   border-bottom: 1px solid var(--rule-light);
+}
+
+/* the head keeps its columns over the row's, so it drops the label for the
+   control that is no longer beside them */
+.set-head .set-next {
+  display: none;
 }
 
 .set-index {
@@ -42,7 +50,8 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
-  flex: 1;
+  /* 80px is what lets three fields share one line before anything wraps */
+  flex: 1 1 80px;
   min-width: 0;
 }
 
@@ -125,6 +134,16 @@
   .set-head,
   .set-row {
     gap: 14px;
+  }
+
+  /* room enough for the whole row on one line, so the head carries its fourth
+     label again and holds the × column open under it */
+  .set-row {
+    flex-wrap: nowrap;
+  }
+
+  .set-head .set-next {
+    display: block;
   }
 
   .set-head {

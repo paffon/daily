@@ -4,14 +4,34 @@ import { MODULES } from '../data/entry'
 import { lastTouched, readJson, recentEntries } from '../data/store'
 import { whenOf } from '../components/fields'
 import { bodyLine } from './body'
+import { workoutLine } from './workout'
+import { nutritionLineFor } from './nutrition'
+import { movementLine } from './movement'
+import { danceLine } from './dance'
 import appSeed from '../seed/app.json'
 import './home.css'
 
-/** What a recent row says about an entry. Only body records anything yet;
- *  P5–P7 bring the other four, and P4's renderer registry is where this
- *  belongs once it exists. */
+/** What a recent row says about an entry. Every module owns the sentence about
+ *  its own payload and hands it over here, so home knows which module wrote a
+ *  row and nothing else about it — a walk, a block, a meal and a session all
+ *  read on home exactly as they read in the module that recorded them.
+ *
+ *  Imported rather than registered: a registry fills only for the modules that
+ *  happen to have been imported, which is an import-order accident waiting to
+ *  show a blank row. */
 function detail(entry: Entry, config: typeof appSeed): string {
-  return entry.module === 'body' ? bodyLine(entry, config.body) : ''
+  switch (entry.module) {
+    case 'body':
+      return bodyLine(entry, config.body)
+    case 'workout':
+      return workoutLine(entry)
+    case 'nutrition':
+      return nutritionLineFor(entry)
+    case 'movement':
+      return movementLine(entry)
+    case 'dance':
+      return danceLine(entry)
+  }
 }
 
 /** Home in its silent state: the modules, what was last recorded, and the way
