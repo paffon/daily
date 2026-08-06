@@ -70,14 +70,11 @@ export function EditEntry({ id }: { id: string }): VNode {
             <Timestamp value={ts} onChange={setTs} locale={locale} variant="expanded" />
           </div>
 
-          {editor === undefined ? (
-            <div class="edit-field">
-              <pre class="edit-payload">{JSON.stringify(payload, null, 2)}</pre>
-              <p class="edit-line">{`the ${stored.module} editor is not built yet.`}</p>
-            </div>
-          ) : (
-            <div class="edit-field">{editor(payload, setPayload)}</div>
-          )}
+          {/* every module registers one, and home imports all five, so there
+              is no module without an editor to fall back for. The read-only
+              JSON dump that used to sit here was unreachable from the app and
+              is gone. */}
+          <div class="edit-field">{editor?.(payload, setPayload)}</div>
 
           <div class="edit-actions">
             <button

@@ -106,7 +106,12 @@ describe('the movement screen', () => {
   const railLines = (container: Element) =>
     [...container.querySelectorAll('.movement-rail-what')].map((row) => row.textContent)
 
+  /** The module lands on the list of entries; the two doors above it open the
+   *  one builder, and a listed entry opens it on what it already is. */
+  const openSegment = (container: Element) => press(container, '.movement-new')
+
   const logToWork = (container: Element) => {
+    openSegment(container)
     pick(container, 'to work')
     type(container, 'duration', '18')
     chooseLevel(container, 'steady')
@@ -158,6 +163,7 @@ describe('the movement screen', () => {
 
   it('shows what the route is beside what it is called', () => {
     const { container } = render(<Movement />)
+    openSegment(container)
     pick(container, 'to work')
     expect(container.querySelector('.movement-hint')?.textContent).toBe('2.8 km · mixed')
   })
@@ -176,6 +182,7 @@ describe('the movement screen', () => {
 
   it('carries no next-time mark and no second scale', () => {
     const { container } = render(<Movement />)
+    openSegment(container)
     pick(container, 'to work')
 
     // speed is the only scale here: nothing is progressively loaded on a walk,
@@ -188,19 +195,25 @@ describe('the movement screen', () => {
 
   it('reads the speed scale from the file rather than from source', () => {
     const { container } = render(<Movement />)
+    openSegment(container)
     pick(container, 'to work')
 
     const words = [...container.querySelectorAll('.segmented-word')].map((w) => w.textContent)
     expect(words).toEqual(['stroll', 'steady', 'brisk'])
   })
 
-  it('rules the blocks off below the events in one list', () => {
+  it('lists both entry types together, each saying which it is', () => {
     const { container } = render(<Movement />)
     logToWork(container)
     logBlock(container)
 
-    expect(railLines(container)).toEqual(['to work · 18 min · steady', '8 h · 6 sitting'])
-    expect(container.querySelector('.movement-rail-blocks')?.textContent).toContain('6 sitting')
+    // one list, because a walk and a workday are the same day's movement —
+    // and a block names itself, so the two still read apart. The two share a
+    // timestamp to the second, so which comes first is not a fact to pin
+    expect(railLines(container)).toHaveLength(2)
+    expect(railLines(container)).toEqual(
+      expect.arrayContaining(['posture · 8 h · 6 sitting', 'to work · 18 min · steady']),
+    )
     expect(container.querySelectorAll('.movement-rail-label')).toHaveLength(1)
   })
 
@@ -228,6 +241,7 @@ describe('the movement screen', () => {
     // the box holds what was typed, so a second walk on the same route would
     // go on showing 18 while the payload had already been reset to 20 — the
     // number on screen and the number logged have to be the same number
+    openSegment(container)
     pick(container, 'to work')
     expect(container.querySelector<HTMLInputElement>('[aria-label="duration"]')?.value).toBe('20')
     press(container, '.movement-log')
@@ -267,6 +281,7 @@ describe('the movement screen', () => {
     first.unmount()
 
     const { container } = render(<Movement />)
+    openSegment(container)
     pick(container, 'to work')
     expect(container.querySelector('.field-previous')?.textContent).toContain('18 min · steady')
 
@@ -277,6 +292,7 @@ describe('the movement screen', () => {
 
   it('makes a library segment out of what was typed to find it', () => {
     const { container } = render(<Movement />)
+    openSegment(container)
     fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
       target: { value: 'around the block' },
     })
@@ -292,9 +308,10 @@ describe('the movement screen', () => {
     const { container } = render(<Movement />)
 
     // logging yesterday's walk today is the ordinary case here, and the strip
-    // makes it one press. If the rail only ever shows the wall-clock day the
+    // makes it one press. If the list only ever shows the wall-clock day the
     // entry is saved and shows nowhere, and the obvious next press logs it a
     // second time
+    openSegment(container)
     const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
     if (collapsed !== null) fireEvent.click(collapsed)
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
@@ -302,13 +319,18 @@ describe('the movement screen', () => {
       target: { value: yesterday },
     })
 
-    logToWork(container)
+    pick(container, 'to work')
+    type(container, 'duration', '18')
+    chooseLevel(container, 'steady')
+    press(container, '.movement-log')
 
     expect(readEntries('movement')).toHaveLength(1)
     expect(railLines(container)).toEqual(['to work · 18 min · steady'])
+    // only the group that holds something: nothing was logged today, so the
+    // heading for it would name an empty list
     expect(
       [...container.querySelectorAll('.movement-rail-label')].map((h) => h.textContent),
-    ).toEqual(['today', 'earlier'])
+    ).toEqual(['earlier'])
   })
 
   it('keeps the earlier group away until there is something in it', () => {
@@ -325,6 +347,40 @@ describe('the movement screen', () => {
     expect(container.querySelector('.movement-rail-progress')?.textContent).toBe(
       'progress · 0 entries, not enough to draw',
     )
+  })
+
+  it('opens a listed entry in the builder logging uses, and saves the correction', () => {
+    const first = render(<Movement />)
+    logToWork(first.container)
+    first.unmount()
+
+    const { container } = render(<Movement />)
+    press(container, '.movement-rail-row')
+
+    // the same screen logging uses, opened on what the entry already is
+    expect(container.querySelector('.movement-title')?.textContent).toBe('to work')
+    expect(box(container, 'duration').value).toBe('18')
+
+    type(container, 'duration', '25')
+    press(container, '.movement-log')
+
+    const entry = readEntries('movement')[0]!
+    expect(entry.payload).toMatchObject({ type: 'segment', duration_min: 25 })
+    expect(entry.rev).toBe(2)
+    expect(container.querySelectorAll('.movement-rail-row')).toHaveLength(1)
+  })
+
+  it('opens a listed posture block as a block rather than as a segment', () => {
+    const first = render(<Movement />)
+    logBlock(first.container)
+    first.unmount()
+
+    const { container } = render(<Movement />)
+    press(container, '.movement-rail-row')
+
+    expect(container.querySelector('.movement-title')?.textContent).toBe('posture')
+    expect(box(container, 'span').value).toBe('8')
+    expect(container.querySelector('[aria-label="duration"]')).toBeNull()
   })
 
   describe('editing a past entry', () => {

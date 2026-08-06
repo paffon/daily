@@ -99,12 +99,22 @@ describe('editing an entry', () => {
     expect(container.textContent).toMatch(/recorded \d{2}:\d{2}/)
   })
 
-  it('says plainly that a module editor is not built yet rather than throwing', () => {
-    const entry = stored(newEntry('workout', { sets: 3 }, '2026-08-01T19:40:00+03:00'))
+  it('opens another module’s entry with that module’s own editor', () => {
+    // home imports all five screens and each registers on import, so there is
+    // no module this screen can reach without an editor — the read-only JSON
+    // dump that used to stand here was unreachable and is gone
+    const entry = stored(
+      newEntry(
+        'workout',
+        { exercises: [{ exercise_id: 'chest-press', sets: [], comment: '' }] },
+        '2026-08-01T19:40:00+03:00',
+      ),
+    )
     const { container } = render(<EditEntry id={entry.id} />)
 
-    expect(container.textContent).toContain('the workout editor is not built yet')
-    expect(container.querySelector('.edit-payload')?.textContent).toContain('"sets": 3')
+    expect(container.querySelector('.workout-edit-name')).not.toBeNull()
+    expect(container.querySelector('.edit-payload')).toBeNull()
+    expect(container.textContent).not.toContain('not built yet')
     expect(container.querySelector('.field-stamp-edit')).not.toBeNull()
   })
 

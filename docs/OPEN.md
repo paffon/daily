@@ -46,21 +46,18 @@ orphaned. `Adapter` in `src/data/store.ts` has `get`, `set` and `list` only.
 
 ## Visibly wrong, or dead
 
-**Home's `recent` shows a blank detail for four of the five modules.**
-`detail()` in `src/screens/home.tsx:14` answers only for `body`, so a walk, a
-posture block, a dance session and a food each show their time, their module
-and nothing else. The answer is now cheap: every module already has a one-line
-renderer written for exactly this sentence — `segmentLine` and `postureLine`
-in `movement.tsx`, `sessionLine` in `dance.tsx`, `lineOf` in `nutrition.tsx`.
-This is the open question of whether the editor registry should also cover
-`recent` rows; if it should, home's switch goes and each module registers one
-more function.
+**Home's `recent` showed a blank detail for four of the five modules.**
+Closed on 2026-08-06. Each module now exports the sentence about its own
+payload — `workoutLine`, `nutritionLineFor`, `movementLine`, `danceLine`
+beside the existing `bodyLine` — and `detail()` in `src/screens/home.tsx`
+switches over the five. Imported rather than registered: a registry fills only
+for the modules that happen to have been imported, which is the import-order
+accident the next entry was about.
 
-**The edit screen's not-built-yet branch is unreachable.** All five modules
-have editors, so the read-only JSON dump and the line at
-`src/screens/edit_entry.tsx:73-77` are dead. `edit_entry.test.tsx:102` still
-covers them, but only because that file imports no module screen and so
-nothing registers — an import-order accident, not a state the app can reach.
+**The edit screen's not-built-yet branch is unreachable.** Closed on
+2026-08-06 by deleting it. All five modules register an editor and home now
+imports all five, so the branch could not be reached; the test that covered it
+asserts the registered editor renders instead.
 
 **The posture bar's third part is 0px wide for every possible input.** The
 plan ordered a three-part bar and specified a two-number payload

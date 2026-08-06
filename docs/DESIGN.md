@@ -104,6 +104,12 @@ mechanism in `COACH.md`.
 **Progress lives inside each module**, not on home. A graph of chest press over
 eight months is looked at deliberately; it is not pushed at you on open.
 
+**A module opens on what it has already recorded** (2026-08-06). The list of
+past workouts, meals, movement entries or dance sessions, with `+ new` above
+it. Pressing `+ new` and pressing a past entry open the *same* screen, so
+correcting last Tuesday and logging tonight are one thing to learn rather than
+two. The entry being corrected is left out of its own `Previous`.
+
 ### 6.1 Two doors
 
 Every data type has two paths in and neither is privileged:

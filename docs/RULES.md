@@ -25,7 +25,12 @@ specifies the utterance layer.
 - **Every entry is editable and deletable, in every module** — including its
   timestamp, at any time after the fact.
 - **`Previous` at every point of logging.** What happened last time, with its
-  numbers and its comment, wherever something is being entered.
+  numbers and its comment, wherever something is being entered. The entry
+  being corrected is never its own previous.
+- **A module opens on its list, and one screen adds and edits.** `+ new` and a
+  past entry open the same builder — see `DESIGN.md` §6.
+- **Nothing scrolls sideways.** A row that cannot shrink is a bug inside that
+  row, never something the phone should pan to.
 - **The coach observes, never explains.** State what happened; never claim why
   it happened or what it caused.
 - **Silence is unknown, not failure.** An unanswered question is never recorded

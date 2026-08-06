@@ -20,6 +20,16 @@ import './workout.css'
 
 const performedIn = (entry: Entry): Performed[] => (entry.payload['exercises'] as Performed[]) ?? []
 
+/** What home's recent row says about a workout: the exercises it touched, in
+ *  the order they were done. The count alone reads as a number with no
+ *  subject, and the names are what makes the row worth a glance. */
+export const workoutLine = (entry: Entry): string => {
+  const library = loadExercises().exercises
+  return performedIn(entry)
+    .map((done) => asExercise(done, library).name)
+    .join(', ')
+}
+
 /** An exercise the library no longer has — renamed away on another device, or
  *  deleted, since nothing in a seed is protected. Its own rows say what fields
  *  it was logged with, so the numbers stay visible rather than silently

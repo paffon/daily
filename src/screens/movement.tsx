@@ -2,11 +2,11 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
-import { putEntry, readEntries, readJson, writeJson } from '../data/store'
+import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
 import type { Segment } from '../data/segment'
 import { hintOf, loadSegments } from '../data/segment'
 import { loadLevels } from '../data/food'
-import { Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
+import { Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
@@ -15,11 +15,12 @@ import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './movement.css'
 
-/** Frame 4d. One module holding two genuinely different things: a segment is
- *  an event and a posture block is a proportion. They are told apart by
- *  `payload.type` and never by a sixth module — the walk and the workday are
- *  the same day's movement, and splitting them would put half of it behind a
- *  tile the user does not think of as a module. */
+/** Frame 4d, list-first since 2026-08-06 like every other module. One module
+ *  holding two genuinely different things: a segment is an event and a posture
+ *  block is a proportion. They are told apart by `payload.type` and never by a
+ *  sixth module — the walk and the workday are the same day's movement, and
+ *  splitting them would put half of it behind a tile the user does not think
+ *  of as a module. */
 
 /* not `Segmented` — that is the shared control's name, and a local type
    wearing it would silently shadow the import anyone reaches for next */
@@ -42,7 +43,7 @@ const isPosture = (entry: Entry): boolean => entry.payload['type'] === 'posture'
 const asSegment = (id: string, library: Segment[]): Segment =>
   library.find((item) => item.id === id) ?? { id, name: id }
 
-/** `18 min · steady`, which is the same sentence the rail and `Previous` say. */
+/** `18 min · steady`, which is the same sentence the list and `Previous` say. */
 const segmentLine = ({ duration_min, level }: Walk): string =>
   [`${duration_min} min`, level].filter((part) => part !== '').join(' · ')
 
@@ -51,6 +52,15 @@ const segmentLine = ({ duration_min, level }: Walk): string =>
  *  the module exists to avoid. */
 const postureLine = ({ span_hours, sitting_hours }: Posture): string =>
   `${span_hours} h · ${sitting_hours} sitting`
+
+/** What a row says about either entry type — home's recent row and this
+ *  module's own list, so the two never drift apart. */
+export const movementLine = (entry: Entry): string =>
+  isPosture(entry)
+    ? `posture · ${postureLine(entry.payload as Posture)}`
+    : `${asSegment((entry.payload as Walk).segment_id, loadSegments()).name} · ${segmentLine(
+        entry.payload as Walk,
+      )}`
 
 const scaleOf = (): string[] => loadLevels()['movement']?.scale ?? []
 
@@ -128,25 +138,40 @@ registerEditor('movement', (payload, onChange) => {
   )
 })
 
-export function Movement(): VNode {
-  const { locale } = readJson('config/app.json', appSeed)
+/** One movement entry being logged or corrected — a segment or a posture
+ *  block, decided by which `+ new` was pressed or by what the entry already
+ *  is. `entry` is null for a new one; both wear the same screen. */
+function Builder({ entry, kind, locale, onClose }: {
+  entry: Entry | null
+  kind: 'segment' | 'posture'
+  locale: string
+  onClose: () => void
+}): VNode {
   const config = movementConfig()
   const library = loadSegments()
   const scale = scaleOf()
 
-  const [ts, setTs] = useState(() => toIso(new Date()))
-  const [past, setPast] = useState(() => readEntries('movement'))
-  const [picked, setPicked] = useState<Walk | null>(null)
-  const [block, setBlock] = useState<Posture | null>(null)
+  const stored = entry === null ? null : (entry.payload as Walk | Posture)
+
+  const [ts, setTs] = useState(() => entry?.ts ?? toIso(new Date()))
+  const [picked, setPicked] = useState<Walk | null>(() =>
+    stored !== null && stored.type === 'segment' ? { ...stored } : null,
+  )
+  const [block, setBlock] = useState<Posture | null>(() =>
+    stored !== null && stored.type === 'posture'
+      ? { ...stored }
+      : entry === null && kind === 'posture'
+        ? { type: 'posture', span_hours: config.span_start, sitting_hours: config.sitting_start }
+        : null,
+  )
   /* every stepper holds what was typed into it, so a number replaced from
      outside the box — a fresh pick, an opened block, `same as yesterday` —
      has to remount it, or the box goes on showing the last entry's figure
      while the payload carries this one's */
   const [filled, setFilled] = useState(0)
   const fill = () => setFilled((n) => n + 1)
-
-  const today = new Date().toDateString()
-  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
+  /** The entry being corrected cannot be its own previous. */
+  const [past] = useState(() => readEntries('movement').filter((line) => line.id !== entry?.id))
 
   const lastPosture = past.find(isPosture) ?? null
 
@@ -169,11 +194,15 @@ export function Movement(): VNode {
     start(segment.id)
   }
 
-  /** The block starts at the ordinary workday, so the common entry is one
-   *  press. `same as yesterday` is for the days that repeat exactly. */
-  const openBlock = () => {
+  /** Nothing in a seed list is protected — `DESIGN.md` §7. The library loses
+   *  the name and the log keeps its numbers: an entry naming a removed segment
+   *  still renders through `asSegment`'s fallback. */
+  const remove = (id: string) => {
+    writeJson(
+      'library/segments.json',
+      library.filter((item) => item.id !== id),
+    )
     fill()
-    setBlock({ type: 'posture', span_hours: config.span_start, sitting_hours: config.sitting_start })
   }
 
   const repeatBlock = () => {
@@ -182,103 +211,52 @@ export function Movement(): VNode {
     setBlock({ ...lastPosture.payload } as Posture)
   }
 
-  const log = (payload: Walk | Posture) => {
-    putEntry(newEntry('movement', { ...payload }, ts))
-    setPast(readEntries('movement'))
-    setPicked(null)
-    setBlock(null)
-    setTs(toIso(new Date()))
+  const save = (payload: Walk | Posture) => {
+    if (entry === null) putEntry(newEntry('movement', { ...payload }, ts))
+    else updateEntry({ ...entry, ts, payload: { ...payload } })
+    onClose()
   }
 
   /** Scoped to the route, not to the day: the last time *this* walk was
    *  logged, however long ago. A posture block's previous is the last block
    *  outright — there is only one kind of workday. */
   const previousSegment = (segment_id: string): Entry | null =>
-    past.find((entry) => !isPosture(entry) && (entry.payload as Walk).segment_id === segment_id) ??
-    null
+    past.find((line) => !isPosture(line) && (line.payload as Walk).segment_id === segment_id) ?? null
 
   const segment = picked === null ? null : asSegment(picked.segment_id, library)
 
-  /** One row, either type. A block says so in its own when-line, so the two
-   *  read apart in a list that is not grouped — which is what the history
-   *  needs, since the rule only separates them for today. Today's rows carry
-   *  the clock and older ones the date, because "which day" is the whole
-   *  question about an entry that is not today's. */
-  const railRow = (entry: Entry) => (
-    <a class="movement-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
-      <span class="movement-rail-when">
-        {`${isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}${
-          isPosture(entry) ? ' · posture' : ''
-        }`}
-      </span>
-      <span class="movement-rail-what">
-        {isPosture(entry)
-          ? postureLine(entry.payload as Posture)
-          : `${asSegment((entry.payload as Walk).segment_id, library).name} · ${segmentLine(
-              entry.payload as Walk,
-            )}`}
-      </span>
-    </a>
+  const strip = (
+    <header class="movement-strip">
+      <button type="button" class="movement-back hit" onClick={onClose}>
+        ← &nbsp;movement
+      </button>
+      <Timestamp value={ts} onChange={setTs} locale={locale} />
+    </header>
   )
 
-  const earlier = past.filter((entry) => !isToday(entry))
+  const remove_ = entry === null ? null : (
+    <Danger
+      onClick={() => {
+        deleteEntry(entry.id)
+        onClose()
+      }}
+    />
+  )
 
-  return (
-    <main class="movement">
-      <header class="movement-strip">
-        <a class="movement-back hit" href="#/">
-          ← &nbsp;movement
-        </a>
-        <Timestamp value={ts} onChange={setTs} locale={locale} />
-      </header>
-
-      <div class="movement-split">
-        <section class="movement-rail">
-          <h2 class="movement-rail-label">today</h2>
-          {/* the events first and the blocks ruled off below them: one list,
-              because they are one day's movement, and a rule because they are
-              not the same kind of thing */}
-          {past.filter((entry) => isToday(entry) && !isPosture(entry)).map(railRow)}
-
-          <div class="movement-rail-blocks">
-            {past.filter((entry) => isToday(entry) && isPosture(entry)).map(railRow)}
-          </div>
-
-          {/* the editable timestamp makes logging yesterday's walk today one
-              press, and this module's own capsule calls that the ordinary
-              case — so an entry filed on another day has to land somewhere it
-              can be seen, or the screen that just saved it reads as if it had
-              not, and the next press logs it twice. Workout's rail answered
-              this first; this is the same two groups. */}
-          {earlier.length > 0 && (
-            <>
-              <h2 class="movement-rail-label">earlier</h2>
-              {earlier.map(railRow)}
-            </>
-          )}
-
-          <p class="movement-rail-progress">
-            {`progress · ${past.length} ${past.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
-          </p>
-
-          <button type="button" class="movement-add-block hit" onClick={openBlock}>
-            + posture block
-          </button>
-        </section>
-
-        {block !== null ? (
+  if (block !== null) {
+    return (
+      <main class="movement">
+        {strip}
+        <div class="movement-split">
           <section class="movement-fields">
             <div class="movement-head">
               <h1 class="movement-title">posture</h1>
-              <button type="button" class="movement-change hit" onClick={() => setBlock(null)}>
-                a segment instead
-              </button>
             </div>
 
             <Previous
               entry={lastPosture}
               locale={locale}
-              render={(entry) => postureLine(entry.payload as Posture)}
+              render={(line) => postureLine(line.payload as Posture)}
             />
 
             <div class="movement-row">
@@ -312,8 +290,8 @@ export function Movement(): VNode {
             <PostureBar span={block.span_hours} sitting={block.sitting_hours} />
 
             <div class="movement-actions">
-              <button type="button" class="movement-log hit" onClick={() => log(block)}>
-                log the block
+              <button type="button" class="movement-log hit" onClick={() => save(block)}>
+                {entry === null ? 'log the block' : 'save the block'}
               </button>
               <button
                 type="button"
@@ -323,85 +301,182 @@ export function Movement(): VNode {
               >
                 same as yesterday
               </button>
+              {remove_}
             </div>
           </section>
-        ) : (
-          <section class="movement-fields">
-            {picked === null || segment === null ? (
-              <>
-                <h1 class="movement-title">segment</h1>
-                <LibraryPicker
-                  items={library.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                    hint: hintOf(item),
-                  }))}
-                  onPick={start}
-                  onNew={create}
-                  newLabel="+ new segment"
-                />
-              </>
-            ) : (
-              <>
-                <div class="movement-head">
-                  <h1 class="movement-title">{segment.name}</h1>
-                  <span class="movement-hint">{hintOf(segment)}</span>
-                  <button
-                    type="button"
-                    class="movement-change hit"
-                    onClick={() => setPicked(null)}
-                  >
-                    change
-                  </button>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main class="movement">
+      {strip}
+      <div class="movement-split">
+        <section class="movement-fields">
+          {picked === null || segment === null ? (
+            <>
+              <h1 class="movement-title">segment</h1>
+              <LibraryPicker
+                items={library.map((item) => ({
+                  id: item.id,
+                  name: item.name,
+                  hint: hintOf(item),
+                }))}
+                onPick={start}
+                onNew={create}
+                onDelete={remove}
+                newLabel="+ new segment"
+              />
+            </>
+          ) : (
+            <>
+              <div class="movement-head">
+                <h1 class="movement-title">{segment.name}</h1>
+                <span class="movement-hint">{hintOf(segment)}</span>
+                <button type="button" class="movement-change hit" onClick={() => setPicked(null)}>
+                  change
+                </button>
+              </div>
+
+              <Previous
+                entry={previousSegment(picked.segment_id)}
+                locale={locale}
+                render={(line) => segmentLine(line.payload as Walk)}
+              />
+
+              <div class="movement-row">
+                <label class="movement-field">
+                  <span class="movement-label">duration</span>
+                  <AmountStepper
+                    key={`duration-${filled}`}
+                    value={picked.duration_min}
+                    unit="min"
+                    step={config.duration_step}
+                    onChange={(duration_min) => setPicked({ ...picked, duration_min })}
+                    label="duration"
+                  />
+                </label>
+
+                <div class="movement-field">
+                  {/* speed, and no second axis asking how hard it was —
+                      nothing is being progressively loaded on a walk */}
+                  <span class="movement-label">speed</span>
+                  <LevelControl
+                    scale={scale}
+                    value={picked.level}
+                    onChange={(level) => setPicked({ ...picked, level })}
+                    label="speed"
+                  />
                 </div>
+              </div>
+            </>
+          )}
 
-                <Previous
-                  entry={previousSegment(picked.segment_id)}
-                  locale={locale}
-                  render={(entry) => segmentLine(entry.payload as Walk)}
-                />
-
-                <div class="movement-row">
-                  <label class="movement-field">
-                    <span class="movement-label">duration</span>
-                    <AmountStepper
-                      key={`duration-${filled}`}
-                      value={picked.duration_min}
-                      unit="min"
-                      step={config.duration_step}
-                      onChange={(duration_min) => setPicked({ ...picked, duration_min })}
-                      label="duration"
-                    />
-                  </label>
-
-                  <div class="movement-field">
-                    {/* speed, and no second axis asking how hard it was —
-                        nothing is being progressively loaded on a walk */}
-                    <span class="movement-label">speed</span>
-                    <LevelControl
-                      scale={scale}
-                      value={picked.level}
-                      onChange={(level) => setPicked({ ...picked, level })}
-                      label="speed"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div class="movement-actions">
-              <button
-                type="button"
-                class="movement-log hit"
-                disabled={picked === null}
-                onClick={() => picked !== null && log(picked)}
-              >
-                log it
-              </button>
-            </div>
-          </section>
-        )}
+          <div class="movement-actions">
+            <button
+              type="button"
+              class="movement-log hit"
+              disabled={picked === null}
+              onClick={() => picked !== null && save(picked)}
+            >
+              {entry === null ? 'log it' : 'save it'}
+            </button>
+            {remove_}
+          </div>
+        </section>
       </div>
+    </main>
+  )
+}
+
+export function Movement(): VNode {
+  const { locale } = readJson('config/app.json', appSeed)
+
+  /** `null` is the list; a kind or an entry opens the same builder. */
+  const [open, setOpen] = useState<Entry | 'segment' | 'posture' | null>(null)
+  const [past, setPast] = useState(() => readEntries('movement'))
+
+  const today = new Date().toDateString()
+  const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
+
+  if (open !== null) {
+    const entry = typeof open === 'string' ? null : open
+    return (
+      <Builder
+        key={entry === null ? String(open) : entry.id}
+        entry={entry}
+        kind={
+          typeof open === 'string' ? open : isPosture(open) ? 'posture' : 'segment'
+        }
+        locale={locale}
+        onClose={() => {
+          setPast(readEntries('movement'))
+          setOpen(null)
+        }}
+      />
+    )
+  }
+
+  /** One row, either type. A block says so in its own line, so the two read
+   *  apart in a list that is not grouped. Today's rows carry the clock and
+   *  older ones the date, because "which day" is the whole question about an
+   *  entry that is not today's. */
+  const rows = (entries: Entry[]) =>
+    entries.map((entry) => (
+      <button
+        type="button"
+        class="movement-rail-row hit"
+        key={entry.id}
+        onClick={() => setOpen(entry)}
+      >
+        <span class="movement-rail-when">
+          {isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}
+        </span>
+        <span class="movement-rail-what">{movementLine(entry)}</span>
+      </button>
+    ))
+
+  const earlier = past.filter((entry) => !isToday(entry))
+
+  return (
+    <main class="movement">
+      <header class="movement-strip">
+        <a class="movement-back hit" href="#/">
+          ← &nbsp;movement
+        </a>
+      </header>
+
+      <section class="movement-rail movement-rail-page">
+        {/* two entry types, so two doors — a walk and a workday are not the
+            same kind of thing and neither is the other's default */}
+        <div class="movement-new-pair">
+          <button type="button" class="movement-new hit" onClick={() => setOpen('segment')}>
+            + new segment
+          </button>
+          <button type="button" class="movement-add-block hit" onClick={() => setOpen('posture')}>
+            + posture block
+          </button>
+        </div>
+
+        {past.some(isToday) && (
+          <>
+            <h2 class="movement-rail-label">today</h2>
+            {rows(past.filter(isToday))}
+          </>
+        )}
+
+        {earlier.length > 0 && (
+          <>
+            <h2 class="movement-rail-label">earlier</h2>
+            {rows(earlier)}
+          </>
+        )}
+
+        <p class="movement-rail-progress">
+          {`progress · ${past.length} ${past.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
+        </p>
+      </section>
     </main>
   )
 }
