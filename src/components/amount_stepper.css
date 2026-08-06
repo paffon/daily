@@ -26,6 +26,10 @@
   justify-content: center;
   gap: 8px;
   flex: 1;
+  /* the number has to be readable before anything else in this control is
+     worth having — the box never gives up more room than this, whatever the
+     unit beside it is called */
+  min-width: 132px;
   height: 70px;
   padding-top: 20px;
   border: 1.5px solid var(--steel);
@@ -38,8 +42,11 @@
   flex: 1;
   min-width: 0;
   /* a text input is born ~20ch wide, and that intrinsic width is what a phone
-     ends up panning to — zero it and let flex hand out the real space */
-  width: 0;
+     ends up panning to. A few characters is what an amount actually needs, and
+     flex hands it the rest of the box — `width: 0` here instead took the input
+     out of the box's own intrinsic width, and a box sized by its content then
+     collapsed onto the unit with the number clipped to nothing. */
+  width: 3ch;
   border: none;
   background: none;
   color: var(--ink);

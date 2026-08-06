@@ -320,26 +320,30 @@ function Builder({ entry, locale, onClose }: {
               </div>
             </>
           )}
-
-          <div class="nutrition-actions">
-            <button
-              type="button"
-              class="nutrition-log hit"
-              disabled={meal.length === 0}
-              onClick={save}
-            >
-              {entry === null ? 'end meal' : 'save meal'}
-            </button>
-            {entry !== null && (
-              <Danger
-                onClick={() => {
-                  deleteEntry(entry.id)
-                  onClose()
-                }}
-              />
-            )}
-          </div>
         </section>
+
+        {/* last in the column, under the meal it ends — reading the meal and
+            then ending it is the order the press happens in. It stays stuck to
+            the bottom edge while the list above it scrolls, so a long meal
+            never puts its own end out of reach. */}
+        <div class="nutrition-actions">
+          <button
+            type="button"
+            class="nutrition-log hit"
+            disabled={meal.length === 0}
+            onClick={save}
+          >
+            {entry === null ? 'end meal' : 'save meal'}
+          </button>
+          {entry !== null && (
+            <Danger
+              onClick={() => {
+                deleteEntry(entry.id)
+                onClose()
+              }}
+            />
+          )}
+        </div>
       </div>
     </main>
   )

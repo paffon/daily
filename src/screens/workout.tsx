@@ -332,26 +332,30 @@ function Builder({ entry, locale, onClose }: {
               />
             </>
           )}
-
-          <div class="workout-actions">
-            <button
-              type="button"
-              class="workout-end hit"
-              disabled={performed.length === 0}
-              onClick={save}
-            >
-              {entry === null ? 'end workout' : 'save workout'}
-            </button>
-            {entry !== null && (
-              <Danger
-                onClick={() => {
-                  deleteEntry(entry.id)
-                  onClose()
-                }}
-              />
-            )}
-          </div>
         </section>
+
+        {/* last in the column, under the workout it ends — reading the session
+            and then ending it is the order the press happens in. It stays stuck
+            to the bottom edge while the list above it scrolls, so a long
+            workout never puts its own end out of reach. */}
+        <div class="workout-actions">
+          <button
+            type="button"
+            class="workout-end hit"
+            disabled={performed.length === 0}
+            onClick={save}
+          >
+            {entry === null ? 'end workout' : 'save workout'}
+          </button>
+          {entry !== null && (
+            <Danger
+              onClick={() => {
+                deleteEntry(entry.id)
+                onClose()
+              }}
+            />
+          )}
+        </div>
       </div>
     </main>
   )

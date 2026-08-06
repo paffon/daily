@@ -254,12 +254,18 @@
   outline: none;
 }
 
+/* the last thing in the column and stuck to the bottom edge, so it is both
+   under the workout it ends and always within reach of a thumb */
 .workout-actions {
   position: sticky;
   bottom: 0;
+  order: 3;
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-top: auto;
-  padding: 12px 0;
+  padding: 12px 24px;
+  border-top: 1px solid var(--rule);
   background: var(--paper);
 }
 
@@ -301,15 +307,29 @@
     padding: 0 44px;
   }
 
+  /* the rail down the left, the fields beside it, and the action under the
+     fields rather than beside the rail — a grid, because that is a two-row
+     right-hand column and a flex row cannot say it */
   .workout-split {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-areas: 'rail fields' 'rail actions';
+    align-content: start;
   }
 
   .workout-rail {
+    grid-area: rail;
     order: 0;
-    flex: none;
-    width: 320px;
+    width: auto;
     padding-top: 40px;
+  }
+
+  .workout-fields {
+    grid-area: fields;
+  }
+
+  .workout-actions {
+    grid-area: actions;
   }
 
   .workout-rail-label,
@@ -350,7 +370,8 @@
 
   .workout-actions {
     position: static;
-    padding: 0 0 28px;
+    padding: 4px 52px 28px;
+    border-top: none;
     background: none;
   }
 
