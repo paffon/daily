@@ -27,4 +27,11 @@ describe('home, silent state', () => {
     const { container } = render(<Home />)
     expect(container.textContent ?? '').not.toMatch(/\d+\s*of\s*\d+/)
   })
+
+  it('names the profile it is showing and the two ways to another one', () => {
+    const { getByText } = render(<Home />)
+    expect(getByText('main')).toBeTruthy()
+    expect(getByText('switch profile').getAttribute('href')).toBe('#/profiles')
+    expect(getByText('new profile').getAttribute('href')).toBe('#/profiles/new')
+  })
 })

@@ -111,12 +111,36 @@
   color: var(--ink-quiet);
 }
 
-/* objectives, held at the foot of the screen */
+/* the foot of the screen: objectives on the left, the profile on the right */
 
-.home-objectives {
+.home-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 24px;
   margin-top: auto;
   padding-top: 40px;
+}
+
+.home-objectives {
   font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono);
+  text-decoration: none;
+}
+
+.home-profile {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  font: 400 11.5px/1 var(--family-mono);
+}
+
+.home-profile-name {
+  color: var(--mono-faint);
+}
+
+.home-profile-link {
   color: var(--mono);
   text-decoration: none;
 }
@@ -195,7 +219,8 @@
     content: none;
   }
 
-  .home-objectives {
+  .home-objectives,
+  .home-profile {
     font-size: 12px;
   }
 }

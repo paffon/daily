@@ -44,6 +44,12 @@ emptied by an entry moving out is left behind as a bare newline, and a deleted
 photo entry leaves its JPEG in Drive — the tombstone is right and the file is
 orphaned. `Adapter` in `src/data/store.ts` has `get`, `set` and `list` only.
 
+**A profile cannot be renamed or deleted.** Creating and switching
+(2026-08-06, ADR 0004) is the whole surface: a mistyped name is permanent, and
+an abandoned profile's files stay in Drive and in every mirror. Rename is a
+registry edit; delete is a third caller for the missing `Adapter` primitive
+above, this time over a whole `~`-prefixed family of files.
+
 ## Visibly wrong, or dead
 
 **Home's `recent` showed a blank detail for four of the five modules.**

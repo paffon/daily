@@ -2,6 +2,7 @@ import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { MODULES } from '../data/entry'
 import { lastTouched, readJson, recentEntries } from '../data/store'
+import { activeProfile } from '../data/profile'
 import { whenOf } from '../components/fields'
 import { bodyLine } from './body'
 import { workoutLine } from './workout'
@@ -75,9 +76,22 @@ export function Home(): VNode {
         )}
       </section>
 
-      <a class="home-objectives" href="#/objectives">
-        objectives &nbsp;→
-      </a>
+      <footer class="home-foot">
+        <a class="home-objectives" href="#/objectives">
+          objectives &nbsp;→
+        </a>
+        {/* whose log the screen is showing, and the two ways to make it
+            someone else's — see ADR 0004 */}
+        <span class="home-profile">
+          <span class="home-profile-name">{activeProfile().name}</span>
+          <a class="home-profile-link hit" href="#/profiles">
+            switch profile
+          </a>
+          <a class="home-profile-link hit" href="#/profiles/new">
+            new profile
+          </a>
+        </span>
+      </footer>
     </main>
   )
 }

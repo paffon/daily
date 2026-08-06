@@ -3,12 +3,14 @@
 
 import type { Entry, Module } from './entry'
 import { entryPath, revise } from './entry'
+import { scope } from './profile'
 import { driveAdapter } from './sync'
 import appSeed from '../seed/app.json'
 import exercisesSeed from '../seed/exercises.json'
 import foodsSeed from '../seed/foods.json'
 import levelsSeed from '../seed/levels.json'
 import objectivesSeed from '../seed/objectives.json'
+import profilesSeed from '../seed/profiles.json'
 import segmentsSeed from '../seed/segments.json'
 
 /** Three methods, and P3 supplies a Drive-backed second implementation. */
@@ -72,8 +74,17 @@ function writeLines(path: string, lines: Entry[]): void {
   writeText(path, lines.map((line) => JSON.stringify(line)).join('\n') + '\n')
 }
 
-/** Every line the app holds, tombstones included. */
-const allLines = (): Entry[] => adapter.list('entries/').flatMap(readLines)
+/** The active profile's copy of an entries path — `entries/<id>~…` for a
+ *  created profile, the bare legacy name for the original one. Entries are the
+ *  per-profile half of the data; the catalog paths pass through untouched. */
+const own = (path: string): string => `entries/${scope()}${path.slice('entries/'.length)}`
+
+/** The original profile's scope is the empty string, so its listings see every
+ *  profile's files — the `~` in a created profile's names is what it skips. */
+const mine = (path: string): boolean => scope() !== '' || !path.includes('~')
+
+/** Every line the active profile holds, tombstones included. */
+const allLines = (): Entry[] => adapter.list(`entries/${scope()}`).filter(mine).flatMap(readLines)
 
 /** Compared as instants, not as text — the offset in a timestamp shifts with
  *  daylight saving, so the strings do not sort in the order the clocks ran. */
@@ -84,8 +95,8 @@ const byNewest = (a: Entry, b: Entry) => Date.parse(b.ts) - Date.parse(a.ts)
 export function readEntries(module: Module, months?: string[]): Entry[] {
   const paths =
     months === undefined
-      ? adapter.list(`entries/${module}-`)
-      : months.map((month) => `entries/${module}-${month}.jsonl`)
+      ? adapter.list(`entries/${scope()}${module}-`)
+      : months.map((month) => `entries/${scope()}${module}-${month}.jsonl`)
   return paths
     .flatMap(readLines)
     .filter((entry) => !entry.deleted)
@@ -95,7 +106,7 @@ export function readEntries(module: Module, months?: string[]): Entry[] {
 /** Read-modify-write of the whole month file — one user, tiny files, and no
  *  append API to reach for. */
 export function putEntry(entry: Entry): void {
-  const path = entryPath(entry.module, entry.ts)
+  const path = own(entryPath(entry.module, entry.ts))
   const lines = readLines(path)
   const at = lines.findIndex((line) => line.id === entry.id)
   if (at === -1) lines.push(entry)
@@ -121,8 +132,8 @@ export function updateEntry(entry: Entry): void {
   putEntry(next)
 
   if (stored === null) return
-  const was = entryPath(stored.module, stored.ts)
-  if (was === entryPath(next.module, next.ts)) return
+  const was = own(entryPath(stored.module, stored.ts))
+  if (was === own(entryPath(next.module, next.ts))) return
   /* A tombstone is the one line that never leaves a file — taking it out would
      let a device still holding the live line resurrect the entry. It costs a
      second tombstone in the old month, which every read already drops. */
@@ -164,6 +175,9 @@ const SEEDS: [string, unknown][] = [
   /* Empty on purpose: a shipped objective would be exactly the hard-coded
      target `RULES.md` forbids. The user writes their own or has none. */
   ['config/objectives.json', objectivesSeed],
+  /* The original profile, under the registry's own name for it. A created
+     profile's files need no seeding — every read falls back in memory. */
+  ['config/profiles.json', profilesSeed],
 ]
 
 export function ensureSeeded(): void {
