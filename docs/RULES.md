@@ -20,8 +20,8 @@ specifies the utterance layer.
 - **No hard-coded targets.** Every number, threshold, default, multiplier, scale
   and list is editable data — never a constant in source.
 - **No streaks, points, badges, or motivational copy.**
-- **No meal taxonomy.** Nothing in the app knows what breakfast is. There is
-  only what was eaten and when.
+- **No meal taxonomy.** A meal is only an untyped container — started and
+  ended the way a workout is — and nothing in the app knows what breakfast is.
 - **Every entry is editable and deletable, in every module** — including its
   timestamp, at any time after the fact.
 - **`Previous` at every point of logging.** What happened last time, with its
@@ -34,9 +34,8 @@ specifies the utterance layer.
 
 ## Reversals
 
-These four were rules in the previous design and are now the opposite. They are
-listed so a change back looks like the decision it would be, rather than a
-correction.
+Each of these was once a rule and is now the opposite. They are listed so a
+change back looks like the decision it would be, rather than a correction.
 
 | was | is |
 | :- | :- |
@@ -44,6 +43,7 @@ correction.
 | Libraries never pre-seeded — they grow only by use | Libraries ship with defaults, and grow by use on top of them |
 | No grams, ever — portion is expressed only as a level | Amount is in the food's own unit; grams where grams are natural |
 | Escalation by stored rungs and qualifying actions | Escalation is the specificity cascade. No stored state |
+| Nothing groups food entries — only what was eaten and when | A meal groups them (2026-08-06): an untyped container, started like a workout. Breakfast, lunch and dinner stay gone |
 
 ## The coach's voice
 

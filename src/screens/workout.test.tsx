@@ -431,6 +431,42 @@ describe('the kind and body part of an exercise made inline', () => {
   })
 })
 
+describe('removing an exercise from the library', () => {
+  const del = (container: Element, name: string) =>
+    container.querySelector<HTMLButtonElement>(`[aria-label="delete ${name}"]`)!
+
+  it('arms on the first press and deletes on the second', () => {
+    const { container } = render(<Workout />)
+
+    fireEvent.click(del(container, 'pec deck'))
+    expect(del(container, 'pec deck').textContent).toBe('sure?')
+    expect(loadExercises().exercises.some((item) => item.name === 'pec deck')).toBe(true)
+
+    fireEvent.click(del(container, 'pec deck'))
+    expect(loadExercises().exercises.some((item) => item.name === 'pec deck')).toBe(false)
+    expect(
+      [...container.querySelectorAll('.picker-item')].some((item) =>
+        item.textContent?.startsWith('pec deck'),
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps a logged workout readable after its exercise is gone', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    fireEvent.click(del(container, 'chest press'))
+    fireEvent.click(del(container, 'chest press'))
+
+    // the rail still counts the workout, and the stored sets are untouched —
+    // only the library lost the name
+    expect(readEntries('workout')).toHaveLength(1)
+    expect(loggedExercises()[0]?.sets).toHaveLength(3)
+  })
+})
+
 describe('editing a past workout', () => {
   const logged = () => {
     const first = render(<Workout />)

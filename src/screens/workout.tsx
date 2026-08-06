@@ -6,6 +6,7 @@ import { putEntry, readEntries, readJson, writeJson } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
 import { bodyPartsOf, fieldsFor, loadExercises, setLine } from '../data/exercise'
 import { Previous, Timestamp, dayTimeOf } from '../components/fields'
+import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { SetTable } from '../components/set_table'
 import { registerEditor } from './edit_entry'
@@ -138,6 +139,17 @@ export function Workout(): VNode {
     start(exercise.id)
   }
 
+  /** Nothing in a seed list is protected — `DESIGN.md` §7. The library loses
+   *  the name and the log keeps the numbers: an entry naming a removed
+   *  exercise still renders through `asExercise`'s fallback. */
+  const remove = (id: string) => {
+    writeJson('library/exercises.json', {
+      ...library,
+      exercises: library.exercises.filter((item) => item.id !== id),
+    })
+    retagged((n) => n + 1)
+  }
+
   /** The library edited from the screen that logs it, which is the only place
    *  either field is reachable: an exercise made inline otherwise kept a kind
    *  nobody chose forever, so `run · park loop` drew a weight box against
@@ -252,6 +264,7 @@ export function Workout(): VNode {
                 }))}
                 onPick={start}
                 onNew={create}
+                onDelete={remove}
                 newLabel="+ new exercise"
               />
             </>
@@ -293,6 +306,8 @@ export function Workout(): VNode {
                 <span class="workout-scheme">{exercise.rep_scheme}</span>
               </div>
               {exercise.notes !== undefined && <p class="workout-notes">{exercise.notes}</p>}
+
+              <ItemPhoto kind="exercise" id={exercise.id} name={exercise.name} />
 
               <Previous
                 entry={previousOf(current.exercise_id)}

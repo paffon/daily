@@ -38,6 +38,13 @@ ship seeded with useful defaults and grow by use; nothing in a seed list is
 protected.
 _Avoid_: catalogue entry, template, preset
 
+**Meal**:
+One nutrition entry: an untyped container of the foods eaten together, started
+and ended the way a workout is. Reintroduced 2026-08-06 — only the word came
+back, not the breakfast / lunch / dinner taxonomy it left with; the app still
+does not know what breakfast is.
+_Avoid_: breakfast, lunch, dinner, eating session
+
 **Next-time mark**:
 What to do about a workout set next time — `more` / `same` / `less`. An
 instruction to a future reader, not a rating of how hard it felt, and the thing
@@ -173,7 +180,7 @@ than reintroduced by habit.
 
 | term | status |
 | :- | :- |
-| Meal, breakfast, lunch, dinner | never existed in the data; now not in the app either |
+| Breakfast, lunch, dinner | never existed in the data and still not in the app. *Meal* left this row on 2026-08-06, returning as an untyped container — see The data |
 | Rung, ceiling, standing line, qualifying action | escalation is the specificity cascade; no stored state |
 | Effort, difficulty | replaced by the *next-time mark* — an instruction, not a rating, and workout-only |
 | Descriptor | renamed *level* |

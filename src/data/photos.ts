@@ -68,6 +68,12 @@ export async function putPhoto(file: Blob, ts: string): Promise<string> {
   return path
 }
 
+/** `photos/exercise-<id>.jpg` — a library item's picture, resolved by naming
+ *  convention the way `DESIGN.md` §10.2 asks. It sits beside the body photos,
+ *  which are dated, so an id and a date cannot collide. */
+export const itemPhotoPath = (kind: 'exercise' | 'food', id: string): string =>
+  `photos/${kind}-${id}.jpg`
+
 /** The path a payload names, or `null` when it is a weight. The one thing that
  *  tells the module's two entry types apart — a payload rather than an entry,
  *  because the edit screen hands its renderer only the payload. */

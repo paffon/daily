@@ -13,6 +13,7 @@ import {
   unitOf,
 } from '../data/food'
 import { Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
+import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
@@ -20,13 +21,23 @@ import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
 import './nutrition.css'
 
-/** Frame 4c. What was eaten and when, and nothing else: six entries across a
- *  day and one entry across a day are the same shape, so there is no container
- *  around them, no `done`, and no total anywhere on the screen. */
+/** Frame 4c, reshaped 2026-08-06: what was eaten and when, grouped into meals.
+ *  A meal is started and ended the way a workout is — foods added one at a
+ *  time, one entry holding the lot. The container is untyped: no breakfast, no
+ *  lunch, no dinner, no name at all, so a single bite is a meal of one and six
+ *  foods across an evening are a meal of six. */
 
 type Logged = { food_id: string; amount: number; level: string }
 
-const loggedIn = (entry: Entry): Logged => entry.payload as Logged
+/** Both shapes a payload can hold: `{ foods: [...] }` since meals landed, and
+ *  the flat single-food payload every entry before them was written with. The
+ *  log is never migrated — an old entry keeps saying what it said. */
+const foodsOf = (payload: Entry['payload']): Logged[] => {
+  const foods = payload['foods']
+  return Array.isArray(foods) ? (foods as Logged[]) : [payload as Logged]
+}
+
+const foodsIn = (entry: Entry): Logged[] => foodsOf(entry.payload)
 
 /** A food the library no longer has — renamed on another device, or deleted,
  *  since nothing in a seed is protected. The entry keeps saying what it said;
@@ -42,41 +53,65 @@ const lineOf = ({ food_id, amount, level }: Logged, library: FoodLibrary): strin
   return `${measure.filter((part) => part !== '').join(' ')} · ${level}`
 }
 
+/** What a meal's row in the rail says. A meal of one keeps the full sentence;
+ *  a longer one gives its names, and the amounts are the one tap the row
+ *  already is. */
+const mealLine = (foods: Logged[], library: FoodLibrary): string => {
+  const first = foods[0]
+  if (foods.length === 1 && first !== undefined) {
+    return `${asFood(first.food_id, library).name} · ${lineOf(first, library)}`
+  }
+  return foods.map((food) => asFood(food.food_id, library).name).join(', ')
+}
+
 const scaleOf = (): string[] => loadLevels()['nutrition']?.scale ?? []
 
-/** Nutrition's half of frame 4h: the fields it was logged with, so a past entry
- *  is corrected the way it was entered. */
+/** Nutrition's half of frame 4h: every food the meal holds, with the fields it
+ *  was logged with, so a past meal is corrected the way it was entered. */
 registerEditor('nutrition', (payload, onChange) => {
   const library = loadFoods()
-  const logged = payload as Logged
-  const food = asFood(logged.food_id, library)
+  const foods = foodsOf(payload)
   const { amount_step } = nutritionConfig()
+
+  /** Written back in the shape it arrived: a meal stays a meal, and an entry
+   *  from before meals stays flat rather than being migrated under an edit. */
+  const write = (at: number, next: Logged) => {
+    const changed = foods.map((food, i) => (i === at ? next : food))
+    onChange(Array.isArray(payload['foods']) ? { ...payload, foods: changed } : { ...changed[0] })
+  }
 
   return (
     <div class="nutrition-edit">
-      <h2 class="nutrition-edit-name">{food.name}</h2>
+      {foods.map((logged, at) => {
+        const food = asFood(logged.food_id, library)
+        return (
+          <div class="nutrition-edit-item" key={at}>
+            <h2 class="nutrition-edit-name">{food.name}</h2>
 
-      <label class="nutrition-field">
-        <span class="nutrition-label">amount</span>
-        <AmountStepper
-          value={logged.amount}
-          unit={unitOf(library, food, logged.amount)}
-          step={amount_step}
-          onChange={(amount) => onChange({ ...payload, amount })}
-          label="amount"
-        />
-      </label>
+            <label class="nutrition-field">
+              <span class="nutrition-label">amount</span>
+              <AmountStepper
+                value={logged.amount}
+                unit={unitOf(library, food, logged.amount)}
+                step={amount_step}
+                onChange={(amount) => write(at, { ...logged, amount })}
+                label="amount"
+              />
+            </label>
 
-      <div class="nutrition-field">
-        <span class="nutrition-label">level</span>
-        <LevelControl
-          scale={scaleOf()}
-          value={logged.level}
-          onChange={(level) => onChange({ ...payload, level })}
-          examples={food.examples}
-          label="level"
-        />
-      </div>
+            <div class="nutrition-field">
+              <span class="nutrition-label">level</span>
+              <LevelControl
+                scale={scaleOf()}
+                value={logged.level}
+                onChange={(level) => write(at, { ...logged, level })}
+                examples={food.examples}
+                label="level"
+              />
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 })
@@ -88,57 +123,87 @@ export function Nutrition(): VNode {
   const scale = scaleOf()
 
   const [ts, setTs] = useState(() => toIso(new Date()))
-  const [picked, setPicked] = useState<Logged | null>(null)
+  const [meal, setMeal] = useState<Logged[]>([])
+  const [at, setAt] = useState(0)
+  const [picking, setPicking] = useState(true)
   const [past, setPast] = useState(() => readEntries('nutrition'))
+  /** Bumped when the library is written, since `library` above is read on
+   *  render and nothing else here would ask for a fresher one. */
+  const [, changed] = useState(0)
 
   const today = new Date().toDateString()
   const isToday = (entry: Entry) => new Date(entry.ts).toDateString() === today
 
+  const write = (next: Logged) => setMeal(meal.map((food, i) => (i === at ? next : food)))
+
   const start = (food_id: string) => {
     const food = asFood(food_id, library)
-    setPicked({ food_id, amount: config.amount_start, level: food.default_level })
+    setMeal([...meal, { food_id, amount: config.amount_start, level: food.default_level }])
+    setAt(meal.length)
+    setPicking(false)
   }
 
   /** What was typed to filter is the new food's name. Its unit and its opening
    *  level come from config rather than from a choice made here — a food added
-   *  mid-log is one press, and both are editable afterwards. */
+   *  mid-meal is one press, and both are editable afterwards. */
   const create = (name: string) => {
     const food: Food = { id: crypto.randomUUID(), name, ...config.new_food }
     writeJson('library/foods.json', { ...library, foods: [...library.foods, food] })
     start(food.id)
   }
 
-  /** One action, because nothing contains an entry: logging always lands back
-   *  at the picker, which is what frame 4c's second press would have done. */
-  const log = () => {
-    if (picked === null) return
-    putEntry(newEntry('nutrition', { ...picked }, ts))
+  /** Nothing in a seed list is protected — `DESIGN.md` §7. The library loses
+   *  the name and the log keeps its numbers: an entry naming a removed food
+   *  still renders through `asFood`'s fallback. */
+  const remove = (id: string) => {
+    writeJson('library/foods.json', {
+      ...library,
+      foods: library.foods.filter((item) => item.id !== id),
+    })
+    changed((n) => n + 1)
+  }
+
+  /** A food picked into the meal by mistake. Session state only — nothing has
+   *  been written yet, so this is not a delete and never arms. */
+  const drop = (index: number) => {
+    const left = meal.filter((_, i) => i !== index)
+    setMeal(left)
+    setAt(Math.max(0, index < at ? at - 1 : Math.min(at, left.length - 1)))
+    if (left.length === 0) setPicking(true)
+  }
+
+  /** One entry holds the whole meal, the way one entry holds a workout. */
+  const end = () => {
+    putEntry(newEntry('nutrition', { foods: meal }, ts))
     setPast(readEntries('nutrition'))
-    setPicked(null)
+    setMeal([])
+    setAt(0)
+    setPicking(true)
     setTs(toIso(new Date()))
   }
 
-  /** Scoped to the food, not to the day: the last time *this* was logged,
-   *  however long ago. */
+  /** Scoped to the food, not to the meal or the day: the last time *this* was
+   *  eaten, however long ago. */
   const previousOf = (food_id: string): Entry | null =>
-    past.find((entry) => loggedIn(entry).food_id === food_id) ?? null
+    past.find((entry) => foodsIn(entry).some((food) => food.food_id === food_id)) ?? null
 
   /* the two move together — `asFood` always answers, so `food` is null exactly
-     when nothing has been picked, and the second test below is the type
+     when nothing is being edited, and the second test below is the type
      checker's rather than a state the screen can be in */
-  const food = picked === null ? null : asFood(picked.food_id, library)
-  const nutrition = picked === null || food === null ? null : nutritionFor(food, picked.amount, picked.level)
+  const current = meal[at]
+  const food = current === undefined ? null : asFood(current.food_id, library)
+  const nutrition =
+    current === undefined || food === null ? null : nutritionFor(food, current.amount, current.level)
 
-  /** One row. Today's carries the clock and an older one its date, because
-   *  "which day" is the whole question about an entry that is not today's. */
+  /** One row per meal. Today's carries the clock and an older one its date,
+   *  because "which day" is the whole question about an entry that is not
+   *  today's. */
   const railRow = (entry: Entry) => (
     <a class="nutrition-rail-row hit" key={entry.id} href={`#/entry/${entry.id}`}>
       <span class="nutrition-rail-when">
         {isToday(entry) ? clockOf(entry.ts, locale) : dayTimeOf(entry.ts, locale)}
       </span>
-      <span class="nutrition-rail-what">
-        {`${asFood(loggedIn(entry).food_id, library).name} · ${lineOf(loggedIn(entry), library)}`}
-      </span>
+      <span class="nutrition-rail-what">{mealLine(foodsIn(entry), library)}</span>
     </a>
   )
 
@@ -155,18 +220,49 @@ export function Nutrition(): VNode {
 
       <div class="nutrition-split">
         <section class="nutrition-rail">
-          <h2 class="nutrition-rail-label">today</h2>
-          {/* a flat timeline, newest first — no grouping, no header per part of
-              the day, and it simply gets longer */}
-          {/* `readEntries` already hands these back newest first */}
-          {past.filter(isToday).map(railRow)}
+          <h2 class="nutrition-rail-label">this meal</h2>
+          {meal.map((logged, index) => (
+            <div class="nutrition-meal-row" key={index}>
+              <button
+                type="button"
+                class={
+                  index === at && !picking
+                    ? 'nutrition-meal-food live hit'
+                    : 'nutrition-meal-food hit'
+                }
+                onClick={() => {
+                  setAt(index)
+                  setPicking(false)
+                }}
+              >
+                <span class="nutrition-meal-name">{asFood(logged.food_id, library).name}</span>
+                <span class="nutrition-meal-line">{lineOf(logged, library)}</span>
+              </button>
+              <button
+                type="button"
+                class="nutrition-meal-drop hit"
+                aria-label={`remove ${asFood(logged.food_id, library).name}`}
+                onClick={() => drop(index)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          <button type="button" class="nutrition-rail-add hit" onClick={() => setPicking(true)}>
+            + food
+          </button>
 
-          {/* the editable timestamp makes logging yesterday's lunch today one
-              press, so an entry filed on another day has to land somewhere it
+          {past.some(isToday) && (
+            <>
+              <h2 class="nutrition-rail-label">today</h2>
+              {past.filter(isToday).map(railRow)}
+            </>
+          )}
+
+          {/* the editable timestamp makes logging yesterday's dinner today one
+              press, so a meal filed on another day has to land somewhere it
               can be seen — or the screen that just saved it reads as if it had
-              not, and the obvious next press logs it twice. Workout's rail
-              answered this first and movement's copied it; these are the same
-              two groups, the second shown only when it holds something. */}
+              not, and the obvious next press logs it twice. */}
           {earlier.length > 0 && (
             <>
               <h2 class="nutrition-rail-label">earlier</h2>
@@ -175,12 +271,12 @@ export function Nutrition(): VNode {
           )}
 
           <p class="nutrition-rail-progress">
-            {`progress · ${past.length} ${past.length === 1 ? 'entry' : 'entries'}, not enough to draw`}
+            {`progress · ${past.length} ${past.length === 1 ? 'meal' : 'meals'}, not enough to draw`}
           </p>
         </section>
 
         <section class="nutrition-fields">
-          {picked === null || food === null ? (
+          {picking || current === undefined || food === null ? (
             <>
               <h1 class="nutrition-title">food</h1>
               {/* drinks are foods: coffee and beer are in the same library, and
@@ -189,6 +285,7 @@ export function Nutrition(): VNode {
                 items={library.foods.map((item) => ({ id: item.id, name: item.name, hint: item.unit }))}
                 onPick={start}
                 onNew={create}
+                onDelete={remove}
                 newLabel="+ new food"
               />
             </>
@@ -196,38 +293,43 @@ export function Nutrition(): VNode {
             <>
               <div class="nutrition-head">
                 <h1 class="nutrition-title">{food.name}</h1>
-                {/* the wrong food is picked by the same one press that picks
-                    the right one, so getting back is one too */}
-                <button type="button" class="nutrition-change hit" onClick={() => setPicked(null)}>
-                  change
-                </button>
               </div>
 
+              <ItemPhoto kind="food" id={food.id} name={food.name} />
+
               <Previous
-                entry={previousOf(picked.food_id)}
+                entry={previousOf(current.food_id)}
                 locale={locale}
-                render={(entry) => lineOf(loggedIn(entry), library)}
+                render={(entry) => {
+                  /* the last of it in that meal, not the first — a second
+                     helping is the newer answer */
+                  const last = [...foodsIn(entry)]
+                    .reverse()
+                    .find((food) => food.food_id === current.food_id)
+                  return last === undefined ? null : lineOf(last, library)
+                }}
               />
 
               <div class="nutrition-row">
                 <label class="nutrition-field">
                   <span class="nutrition-label">amount</span>
-                  {/* keyed on the food: the box holds what was typed, and
-                      picking a different food is a different number */}
+                  {/* keyed on the position as well as the food: the box holds
+                      what was typed, and the same food twice in one meal is
+                      two different numbers */}
                   <AmountStepper
-                    key={picked.food_id}
-                    value={picked.amount}
-                    unit={unitOf(library, food, picked.amount)}
+                    key={`${at}:${current.food_id}`}
+                    value={current.amount}
+                    unit={unitOf(library, food, current.amount)}
                     step={config.amount_step}
-                    onChange={(amount) => setPicked({ ...picked, amount })}
+                    onChange={(amount) => write({ ...current, amount })}
                     label="amount"
                   />
                 </label>
 
                 {nutrition !== null && nutritionLine(nutrition) !== '' && (
                   <div class="nutrition-field">
-                    <span class="nutrition-label">this entry</span>
-                    {/* per entry, and never summed across a day or a week */}
+                    <span class="nutrition-label">this food</span>
+                    {/* per food, and never summed across the meal or the day */}
                     <span class="nutrition-numbers">{nutritionLine(nutrition)}</span>
                   </div>
                 )}
@@ -237,8 +339,8 @@ export function Nutrition(): VNode {
                 <span class="nutrition-label">level</span>
                 <LevelControl
                   scale={scale}
-                  value={picked.level}
-                  onChange={(level) => setPicked({ ...picked, level })}
+                  value={current.level}
+                  onChange={(level) => write({ ...current, level })}
                   examples={food.examples}
                   label="level"
                 />
@@ -247,8 +349,13 @@ export function Nutrition(): VNode {
           )}
 
           <div class="nutrition-actions">
-            <button type="button" class="nutrition-log hit" disabled={picked === null} onClick={log}>
-              log it
+            <button
+              type="button"
+              class="nutrition-log hit"
+              disabled={meal.length === 0}
+              onClick={end}
+            >
+              end meal
             </button>
           </div>
         </section>

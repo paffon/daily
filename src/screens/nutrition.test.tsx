@@ -5,7 +5,8 @@ import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
 import { loadFoods, loadLevels, nutritionFor } from '../data/food'
 import type { Food } from '../data/food'
-import { ensureSeeded, getEntry, readEntries, writeJson } from '../data/store'
+import { newEntry } from '../data/entry'
+import { ensureSeeded, getEntry, putEntry, readEntries, writeJson } from '../data/store'
 import { EditEntry } from './edit_entry'
 import { Nutrition } from './nutrition'
 
@@ -182,8 +183,11 @@ describe('the nutrition screen', () => {
       target: { value },
     })
 
-  const logIt = (container: Element) =>
+  const endMeal = (container: Element) =>
     fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-log')!)
+
+  const addFood = (container: Element) =>
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-rail-add')!)
 
   const railLines = (container: Element) =>
     [...container.querySelectorAll('.nutrition-rail-what')].map((row) => row.textContent)
@@ -203,18 +207,65 @@ describe('the nutrition screen', () => {
     pick(container, 'pizza')
     typeAmount(container, '2')
     chooseLevel(container, 'loaded')
-    logIt(container)
+    endMeal(container)
   }
 
-  it('logs the food, the amount and the level, and nothing else', () => {
+  it('writes a meal of one holding the food, the amount and the level', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
 
     const [entry] = readEntries('nutrition')
-    expect(entry?.payload).toEqual({ food_id: 'pizza', amount: 2, level: 'loaded' })
+    expect(entry?.payload).toEqual({ foods: [{ food_id: 'pizza', amount: 2, level: 'loaded' }] })
   })
 
-  it('shows the entry’s own numbers with the level’s multiplier applied', () => {
+  it('holds several foods in one entry, ended the way a workout is', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'coffee')
+    addFood(container)
+    pick(container, 'apple')
+    endMeal(container)
+
+    expect(readEntries('nutrition')).toHaveLength(1)
+    expect(readEntries('nutrition')[0]?.payload['foods']).toEqual([
+      { food_id: 'coffee', amount: 1, level: 'normal' },
+      { food_id: 'apple', amount: 1, level: 'normal' },
+    ])
+    // the rail names the foods; the amounts are the one tap the row already is
+    expect(railLines(container)).toEqual(['coffee, apple'])
+  })
+
+  it('edits any food of the meal being built, picked back off the rail', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'pizza')
+    typeAmount(container, '2')
+    addFood(container)
+    pick(container, 'coffee')
+
+    fireEvent.click(container.querySelectorAll<HTMLButtonElement>('.nutrition-meal-food')[0]!)
+    typeAmount(container, '3')
+    endMeal(container)
+
+    expect(readEntries('nutrition')[0]?.payload['foods']).toEqual([
+      { food_id: 'pizza', amount: 3, level: 'normal' },
+      { food_id: 'coffee', amount: 1, level: 'normal' },
+    ])
+  })
+
+  it('drops a mis-picked food before the meal is written', () => {
+    const { container } = render(<Nutrition />)
+    pick(container, 'pizza')
+    addFood(container)
+    pick(container, 'coffee')
+
+    fireEvent.click(container.querySelector<HTMLButtonElement>('[aria-label="remove pizza"]')!)
+    endMeal(container)
+
+    expect(readEntries('nutrition')[0]?.payload['foods']).toEqual([
+      { food_id: 'coffee', amount: 1, level: 'normal' },
+    ])
+  })
+
+  it('shows the food’s own numbers with the level’s multiplier applied', () => {
     const { container } = render(<Nutrition />)
     pick(container, 'pizza')
     expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('285 kcal · 12 g protein')
@@ -232,13 +283,13 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.nutrition-numbers')).toBeNull()
   })
 
-  it('carries the food’s own unit into the entry’s line, pluralised past one', () => {
+  it('carries the food’s own unit into a meal of one’s line, pluralised past one', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
     pick(container, 'coffee')
-    logIt(container)
+    endMeal(container)
     pick(container, 'apple')
-    logIt(container)
+    endMeal(container)
 
     // an apple counts as itself, so its line carries no unit at all
     expect(railLines(container)).toEqual(
@@ -252,7 +303,7 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('normal')
   })
 
-  it('scopes Previous to the food rather than to the day', () => {
+  it('scopes Previous to the food rather than to the meal or the day', () => {
     const first = render(<Nutrition />)
     logPizza(first.container)
     first.unmount()
@@ -261,7 +312,7 @@ describe('the nutrition screen', () => {
     pick(container, 'pizza')
     expect(container.querySelector('.field-previous')?.textContent).toContain('2 slices · loaded')
 
-    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-change')!)
+    addFood(container)
     pick(container, 'coffee')
     expect(container.querySelector('.field-previous')?.textContent).toContain('nothing recorded yet')
   })
@@ -277,44 +328,45 @@ describe('the nutrition screen', () => {
     expect(loadFoods().foods.some((food) => food.name === 'malabi')).toBe(true)
   })
 
-  it('lands back at the picker, because nothing contains an entry', () => {
+  it('lands back at the picker once the meal is ended', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
     expect(container.querySelector('.picker')).not.toBeNull()
     expect(container.querySelector<HTMLButtonElement>('.nutrition-log')?.disabled).toBe(true)
   })
 
-  it('keeps three entries in one day as a flat list with no grouping or total', () => {
+  it('keeps three meals in one day as a flat list with no totals', () => {
     const { container } = render(<Nutrition />)
 
     setTime(container, '09:20')
     pick(container, 'coffee')
-    logIt(container)
+    endMeal(container)
 
     setTime(container, '16:10')
     pick(container, 'apple')
-    logIt(container)
+    endMeal(container)
 
     setTime(container, '13:30')
     logPizza(container)
 
-    // newest first, one label over the whole list rather than one per group,
-    // and nothing that adds the three together
+    // newest first, and nothing that adds the three together
     expect(railLines(container)).toEqual([
       'apple · 1 · normal',
       'pizza · 2 slices · loaded',
       'coffee · 1 cup · normal',
     ])
-    expect(container.querySelectorAll('.nutrition-rail-label')).toHaveLength(1)
+    expect([...container.querySelectorAll('.nutrition-rail-label')].map((h) => h.textContent)).toEqual(
+      ['this meal', 'today'],
+    )
     expect(container.textContent).not.toMatch(/total/i)
-    expect(container.querySelector('.nutrition-actions')?.textContent).toBe('log it')
+    expect(container.querySelector('.nutrition-actions')?.textContent).toBe('end meal')
   })
 
-  it('shows an entry logged for another day rather than swallowing it', () => {
+  it('shows a meal logged for another day rather than swallowing it', () => {
     const { container } = render(<Nutrition />)
 
-    // logging yesterday's lunch today is one press on the strip. If the rail
-    // only ever shows the wall-clock day the entry is saved and shows nowhere,
+    // logging yesterday's dinner today is one press on the strip. If the rail
+    // only ever shows the wall-clock day the meal is saved and shows nowhere,
     // which reads as a failed save, and the obvious next press logs it twice
     const collapsed = container.querySelector<HTMLButtonElement>('.field-stamp-box')
     if (collapsed !== null) fireEvent.click(collapsed)
@@ -328,28 +380,46 @@ describe('the nutrition screen', () => {
     expect(readEntries('nutrition')).toHaveLength(1)
     expect(railLines(container)).toEqual(['pizza · 2 slices · loaded'])
     expect([...container.querySelectorAll('.nutrition-rail-label')].map((h) => h.textContent)).toEqual(
-      ['today', 'earlier'],
+      ['this meal', 'earlier'],
     )
     // and the row says which day, since that is the whole question about it
     expect(container.querySelector('.nutrition-rail-when')?.textContent).toMatch(/\d/)
   })
 
-  it('knows nothing about what a container of food would be called', () => {
+  it('keeps the meal untyped — nothing here knows what breakfast is', () => {
     const { container } = render(<Nutrition />)
     logPizza(container)
-    expect(container.textContent).not.toMatch(/breakfast|lunch|dinner|meal/i)
+    expect(container.textContent).toMatch(/meal/)
+    expect(container.textContent).not.toMatch(/breakfast|lunch|dinner/i)
   })
 
   it('draws no graph, and says plainly what there is instead', () => {
     const { container } = render(<Nutrition />)
     expect(container.querySelector('svg, canvas')).toBeNull()
     expect(container.querySelector('.nutrition-rail-progress')?.textContent).toBe(
-      'progress · 0 entries, not enough to draw',
+      'progress · 0 meals, not enough to draw',
     )
+  })
+
+  it('arms a library delete on the first press and deletes on the second', () => {
+    const { container } = render(<Nutrition />)
+    const del = () => container.querySelector<HTMLButtonElement>('[aria-label="delete pizza"]')!
+
+    fireEvent.click(del())
+    expect(del().textContent).toBe('sure?')
+    expect(loadFoods().foods.some((food) => food.id === 'pizza')).toBe(true)
+
+    fireEvent.click(del())
+    expect(loadFoods().foods.some((food) => food.id === 'pizza')).toBe(false)
+    expect(
+      [...container.querySelectorAll('.picker-item')].some((item) =>
+        item.textContent?.startsWith('pizza'),
+      ),
+    ).toBe(false)
   })
 })
 
-describe('editing a past entry', () => {
+describe('editing a past meal', () => {
   const logged = () => {
     const first = render(<Nutrition />)
     fireEvent.click(
@@ -394,8 +464,25 @@ describe('editing a past entry', () => {
     )
     fireEvent.click(container.querySelector<HTMLButtonElement>('.edit-save')!)
 
-    expect(getEntry(id)?.payload).toEqual({ food_id: 'pizza', amount: 1.5, level: 'lean' })
+    expect(getEntry(id)?.payload).toEqual({ foods: [{ food_id: 'pizza', amount: 1.5, level: 'lean' }] })
     expect(getEntry(id)?.rev).toBe(2)
+  })
+
+  it('keeps an entry from before meals flat rather than migrating it', () => {
+    // every entry written before 2026-08-06 holds the single-food shape, and
+    // the log is never migrated — it has to open and correct the way it was
+    // written
+    const flat = newEntry('nutrition', { food_id: 'pizza', amount: 2, level: 'loaded' })
+    putEntry(flat)
+    const { container } = render(<EditEntry id={flat.id} />)
+
+    expect(container.querySelector('.nutrition-edit-name')?.textContent).toBe('pizza')
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="amount"]')!, {
+      target: { value: '1.5' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.edit-save')!)
+
+    expect(getEntry(flat.id)?.payload).toEqual({ food_id: 'pizza', amount: 1.5, level: 'loaded' })
   })
 })
 

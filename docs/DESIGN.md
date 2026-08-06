@@ -53,7 +53,7 @@ beyond the owner's own Google sign-in.
 | Month plan, week plan, weekly planning conversation | Objectives — a short editable list of targets (§9) |
 | Fitness battery as its own domain | A workout whose exercises do not change. Not built now |
 | Staleness rotation composes each session | Something the coach may remark on. Nothing composes sessions |
-| Meals as a unit — breakfast, lunch, dinner | Gone. Only what was eaten and when |
+| Meals as a unit — breakfast, lunch, dinner | Gone 2026-08-01; the *meal* returned 2026-08-06 as an untyped container (§8.2). Breakfast, lunch and dinner stay gone |
 
 The reason for all of it: the previous design spent its complexity budget on the
 coach and left the recording surface — the thing used every day — underspecified.
@@ -131,7 +131,7 @@ One primitive:
 | module | library item | entry records |
 | :- | :- | :- |
 | Workout | exercise | sets, each with the fields its kind declares, plus a next-time mark and a comment |
-| Nutrition | food item | amount in the item's unit × level (lean / normal / loaded) |
+| Nutrition | food item | a meal — foods, each an amount in its item's unit × level (lean / normal / loaded) |
 | Movement | segment | duration × speed; or a sitting/standing block |
 | Dance | — | duration × intensity |
 | Body | — | weight, or a photo |
@@ -247,11 +247,15 @@ has been done for the back in three weeks. It is the only reason the field exist
 
 ### 8.2 Nutrition
 
-**What was eaten, and when. Nothing else.** No meals, no breakfast, no dinner, no
-grouping. Six entries across a day and one entry across a day are the same shape.
+**What was eaten, and when, grouped into meals.** A meal is started and ended
+the way a workout is — foods added one at a time, one entry holding the lot
+(added 2026-08-06, reversing this section's own 2026-08-01 removal). The
+container is untyped: no breakfast, no lunch, no dinner, no name at all. A
+single bite is a meal of one, a long evening is a meal of six, and the two are
+the same shape.
 
-An entry is a timestamp, a food item, an amount in that item's own unit, and a
-level.
+An entry is a timestamp and a list of foods, each with an amount in that food's
+own unit and a level.
 
 A **food item** carries:
 
@@ -386,6 +390,11 @@ understood.** Design against that.
 Exercise images are optional, resolved **by naming convention** from an ordinary
 Drive folder, with a placeholder whenever a file is absent. Adding an image is a
 file drop, not a feature. Resize on import, lazy load, cache for offline.
+
+Since 2026-08-06 the logging screens also take one directly — *+ add a photo
+for this exercise / food* — resized on import and filed under the same naming
+convention (`photos/exercise-<id>.jpg`, `photos/food-<id>.jpg`). Food items get
+the same treatment as exercises.
 
 Photographs will eventually beat any stock set here, because the exercise names
 are specific to one gym: an illustration of a generic cable machine says nothing

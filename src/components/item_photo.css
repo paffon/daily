@@ -1,0 +1,30 @@
+/* An item's picture on a logging screen. Small on purpose — the photo is a
+   reminder of which machine or plate this is, and it must never push the
+   fields being logged below the fold. */
+
+.item-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-photo-shot {
+  max-width: 240px;
+  max-height: 140px;
+  object-fit: cover;
+  border: 1px solid var(--rule);
+}
+
+.item-photo-add {
+  align-items: center;
+  align-self: flex-start;
+  color: var(--steel-text);
+  font: 400 12.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.item-photo-trouble {
+  margin: 0;
+  font: 400 11.5px/1.5 var(--family-mono);
+  color: var(--danger);
+}

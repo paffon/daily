@@ -15,13 +15,22 @@ export function LibraryPicker({
   onPick,
   onNew,
   newLabel,
+  onDelete,
 }: {
   items: { id: string; name: string; hint?: string }[]
   onPick: (id: string) => void
   onNew: (name: string) => void
   newLabel: string
+  /** Removes the item from its library for good — nothing in a seed list is
+   *  protected. Absent, the rows carry no delete at all. */
+  onDelete?: (id: string) => void
 }): VNode {
   const [typed, setTyped] = useState('')
+  /** The one row whose delete has been pressed once. Two presses instead of a
+   *  modal, the same shape as `Danger` in `fields.css` — the library loses the
+   *  item for good, but a dialog is ceremony for one user editing their own
+   *  list. Pressing anything else disarms it. */
+  const [armed, setArmed] = useState('')
   const filter = useRef<HTMLInputElement>(null)
   const needle = typed.trim().toLowerCase()
   const shown = items.filter((item) =>
@@ -39,20 +48,44 @@ export function LibraryPicker({
         placeholder="find one, or name a new one"
         ref={filter}
         value={typed}
-        onInput={(e) => setTyped(e.currentTarget.value)}
+        onInput={(e) => {
+          setTyped(e.currentTarget.value)
+          setArmed('')
+        }}
       />
 
       <div class="picker-list">
         {shown.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            class="picker-item hit"
-            onClick={() => onPick(item.id)}
-          >
-            <span class="picker-name">{item.name}</span>
-            <span class="picker-hint">{item.hint}</span>
-          </button>
+          <div class="picker-row" key={item.id}>
+            <button
+              type="button"
+              class="picker-item hit"
+              onClick={() => {
+                setArmed('')
+                onPick(item.id)
+              }}
+            >
+              <span class="picker-name">{item.name}</span>
+              <span class="picker-hint">{item.hint}</span>
+            </button>
+            {onDelete !== undefined && (
+              <button
+                type="button"
+                class={armed === item.id ? 'picker-delete armed hit' : 'picker-delete hit'}
+                aria-label={`delete ${item.name}`}
+                onClick={() => {
+                  if (armed !== item.id) {
+                    setArmed(item.id)
+                    return
+                  }
+                  setArmed('')
+                  onDelete(item.id)
+                }}
+              >
+                {armed === item.id ? 'sure?' : '×'}
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
