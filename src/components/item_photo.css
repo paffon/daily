@@ -8,9 +8,21 @@
   gap: 4px;
 }
 
+/* 1:1 whatever shape it was shot in, cropped to fill rather than letterboxed:
+   a row of items reads as a row when every picture is the same shape, and a
+   portrait phone shot beside a landscape one reads as neither. `object-fit`
+   was already `cover` here and did nothing — with only a max width and a max
+   height there is no definite box for it to crop against.
+
+   The crop is display only. What is stored keeps the aspect it was taken at
+   (§10.2), because a square is a decision about a frame rather than about the
+   photograph. `max-width` keeps it square while shrinking in a narrow column,
+   since the height follows the used width. */
 .item-photo-shot {
-  max-width: 240px;
-  max-height: 140px;
+  display: block;
+  width: 240px;
+  max-width: 100%;
+  aspect-ratio: 1;
   object-fit: cover;
   border: 1px solid var(--rule);
 }

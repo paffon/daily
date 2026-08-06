@@ -36,13 +36,20 @@
   max-height: 46vh;
 }
 
+/* a column, because a refused delete opens under the row it is about rather
+   than beside it — the refusal names workouts, and a name needs the width */
 .picker-row {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
   border-bottom: 1px solid var(--rule-light);
 }
 
-.picker-row:hover {
+.picker-line {
+  display: flex;
+  align-items: stretch;
+}
+
+.picker-line:hover {
   background: var(--paper-hover);
 }
 

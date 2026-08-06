@@ -50,6 +50,8 @@ change back looks like the decision it would be, rather than a correction.
 | Escalation by stored rungs and qualifying actions | Escalation is the specificity cascade. No stored state |
 | Nothing groups food entries — only what was eaten and when | A meal groups them (2026-08-06): an untyped container, started like a workout. Breakfast, lunch and dinner stay gone |
 | No second user — one person, one log | The one account holds profiles (2026-08-06): the catalog is shared, the records are each profile's own. See ADR 0004 |
+| Objectives — a short editable list of targets the coach reasons against | Gone (2026-08-06): nothing is compared against a number, and gap arithmetic is the whole of what the coach has. See ADR 0006 |
+| Resize every photo on import | Item pictures are capped; a body photograph is kept at the size it was shot (2026-08-06), because it is the thing being measured. Both are still re-encoded to JPEG |
 
 ## The coach's voice
 

@@ -12,9 +12,12 @@
   },
   "body": {
     "weight_unit": "kg",
-    "weight_decimals": 1,
-    "photo_max_edge": 1600,
-    "photo_quality": 0.8
+    "weight_decimals": 1
+  },
+  "images": {
+    "item_max_edge": 480,
+    "item_quality": 0.75,
+    "body_quality": 0.92
   },
   "home": {
     "recent_count": 6,
@@ -39,12 +42,5 @@
     "duration_step": 15,
     "default_level": "social",
     "common_durations": [60, 75, 90]
-  },
-  "objectives": {
-    "directions": ["up", "stable", "down"],
-    "new_target": [
-      { "kind": "count", "label": "", "module": "workout", "per": "week", "target": 3 },
-      { "kind": "direction", "label": "", "direction": "stable" }
-    ]
   }
 }

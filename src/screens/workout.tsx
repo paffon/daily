@@ -2,10 +2,21 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
-import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
+import { deleteEntry, putEntry, readEntries, readJson, updateEntry } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
-import { bodyPartsOf, fieldsFor, loadExercises, setLine } from '../data/exercise'
+import {
+  bodyPartsOf,
+  byStaleness,
+  fieldsFor,
+  lastUsedAt,
+  loadExercises,
+  performedIn,
+  setLine,
+  usedBy,
+  writeExercises,
+} from '../data/exercise'
 import { Comment, Danger, Previous, Timestamp, dayTimeOf } from '../components/fields'
+import { DeleteRefused } from '../components/delete_refused'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { SetTable } from '../components/set_table'
@@ -18,16 +29,17 @@ import './workout.css'
  *  logs live, logs after the fact, and corrects last Tuesday, which is the
  *  whole of what `DESIGN.md` §6.2 asks of an entry. */
 
-const performedIn = (entry: Entry): Performed[] => (entry.payload['exercises'] as Performed[]) ?? []
-
 /** What home's recent row says about a workout: the exercises it touched, in
  *  the order they were done. The count alone reads as a number with no
- *  subject, and the names are what makes the row worth a glance. */
+ *  subject, and the names are what makes the row worth a glance.
+ *
+ *  A workout with nothing in it is a workout (§8.1) and says so, rather than
+ *  leaving home a blank row. Descriptive, never a verdict — `RULES.md` bans
+ *  motivational copy, and it bans it in both directions. */
 export const workoutLine = (entry: Entry): string => {
   const library = loadExercises().exercises
-  return performedIn(entry)
-    .map((done) => asExercise(done, library).name)
-    .join(', ')
+  const names = performedIn(entry).map((done) => asExercise(done, library).name)
+  return names.length === 0 ? 'nothing done' : names.join(', ')
 }
 
 /** An exercise the library no longer has — renamed away on another device, or
@@ -108,11 +120,16 @@ function Builder({ entry, locale, onClose }: {
   )
   const [at, setAt] = useState(0)
   const [picking, setPicking] = useState(() => entry === null || performedIn(entry).length === 0)
-  /** The last time each exercise was done, with the workout being corrected
-   *  left out — it cannot be its own previous. */
-  const [past] = useState(() =>
-    readEntries('workout').filter((line) => line.id !== entry?.id),
-  )
+  /** Every stored workout, frozen at mount. The picker's order is built from
+   *  it, and an order that reshuffles between two presses is hostile —
+   *  mid-workout is exactly when the picker is opened twice. */
+  const [history] = useState(() => readEntries('workout'))
+  /** The workout being corrected cannot be its own previous. It is still in
+   *  `history`, because an exercise done in the workout you are fixing is not
+   *  neglected, and because its reference to that exercise is as real as any
+   *  other workout's. */
+  const past = history.filter((line) => line.id !== entry?.id)
+  const [lastUsed] = useState(() => lastUsedAt(history))
   /** Bumped when the library is written, since `library` above is read on
    *  render and nothing else here would ask for a fresher one. */
   const [, retagged] = useState(0)
@@ -136,41 +153,75 @@ function Builder({ entry, locale, onClose }: {
       body_part: '',
       kind: Object.keys(library.kinds)[0] ?? '',
     }
-    writeJson('library/exercises.json', {
-      ...library,
-      exercises: [...library.exercises, exercise],
-    })
+    writeExercises((held) => [...held.exercises, exercise])
+    retagged((n) => n + 1)
     start(exercise.id)
   }
 
-  /** Nothing in a seed list is protected — `DESIGN.md` §7. The library loses
-   *  the name and the log keeps the numbers: an entry naming a removed
+  /** Nothing in a seed list is protected while nothing references it —
+   *  `DESIGN.md` §7. The picker asks `blocked` before it ever gets here, so
+   *  what reaches this is an exercise no stored workout names. The library
+   *  loses the name and the log keeps the numbers: an entry naming a removed
    *  exercise still renders through `asExercise`'s fallback. */
   const remove = (id: string) => {
-    writeJson('library/exercises.json', {
-      ...library,
-      exercises: library.exercises.filter((item) => item.id !== id),
-    })
+    writeExercises((held) => held.exercises.filter((item) => item.id !== id))
     retagged((n) => n + 1)
   }
 
-  /** The library edited from the screen that logs it, which is the only place
-   *  either field is reachable: an exercise made inline otherwise kept a kind
-   *  nobody chose forever, so `run · park loop` drew a weight box against
-   *  `RULES.md`, and the blank body part is the one `DESIGN.md` §8.1 calls the
-   *  reason the field exists — objectives count against it.
+  /** What stands in the way of removing this exercise, or nothing. Fed from
+   *  `history` rather than `past`: the workout being corrected holds a
+   *  reference as real as any other's, and letting it through would delete an
+   *  exercise the screen is showing the sets of. */
+  const blocked = (id: string) => {
+    const used = usedBy(id, history)
+    if (used.length === 0) return null
+    return (
+      <DeleteRefused
+        used={used}
+        name={library.exercises.find((item) => item.id === id)?.name ?? id}
+        locale={locale}
+        onRename={(name) => retag(id, { name })}
+      />
+    )
+  }
+
+  /** The library edited from the screen that logs it: an exercise made inline
+   *  otherwise kept a kind nobody chose forever, so `run · park loop` drew a
+   *  weight box against `RULES.md`, and the blank body part is the one
+   *  `DESIGN.md` §8.1 calls the reason the field exists — the coach counts
+   *  against it, and since 2026-08-06 it also orders the list.
+   *
+   *  The name goes through here too. It reaches every workout that ever used
+   *  the exercise for free, because an entry stores the id and `asExercise`
+   *  resolves the name at read time — there is no way to fork an exercise, so a
+   *  movement that has genuinely become a different one is a new exercise
+   *  rather than a renamed old one (§8.1).
    *
    *  A kind decides which fields a set row records, so changing it makes the
    *  rows already typed rows of something else. They are cleared rather than
    *  carried over half-filled; in the case this exists for — a kind chosen
-   *  right after making the exercise — there is nothing there to lose. */
+   *  right after making the exercise — there is nothing there to lose. A rename
+   *  is not that case, which is why the branch is keyed on `patch.kind`. */
   const retag = (id: string, patch: Partial<Exercise>) => {
-    writeJson('library/exercises.json', {
-      ...library,
-      exercises: library.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    })
+    writeExercises((held) =>
+      held.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    )
     retagged((n) => n + 1)
     if (patch.kind !== undefined && current !== undefined) write({ ...current, sets: [] })
+  }
+
+  /** An exercise picked into the workout by mistake, or one that was not
+   *  actually done. Session state only — nothing has been written yet, so this
+   *  is not a delete: it never arms, and leaving the screen undoes it (§8.1).
+   *
+   *  Dropping something above the cursor shifts the cursor down one, so the
+   *  same exercise stays live; dropping the live one or anything below leaves
+   *  it put and clamps, so the next exercise becomes live. */
+  const drop = (index: number) => {
+    const left = performed.filter((_, i) => i !== index)
+    setPerformed(left)
+    setAt(Math.max(0, index < at ? at - 1 : Math.min(at, left.length - 1)))
+    if (left.length === 0) setPicking(true)
   }
 
   /** `ended` is optional and is left out rather than guessed: pressing this
@@ -211,18 +262,29 @@ function Builder({ entry, locale, onClose }: {
         <section class="workout-rail">
           <h2 class="workout-rail-label">this workout</h2>
           {performed.map((line, index) => (
-            <button
-              type="button"
-              class={index === at && !picking ? 'workout-rail-row live hit' : 'workout-rail-row hit'}
-              key={index}
-              onClick={() => {
-                setAt(index)
-                setPicking(false)
-              }}
-            >
-              <span class="workout-rail-name">{asExercise(line, library.exercises).name}</span>
-              <span class="workout-rail-count">{line.sets.length}</span>
-            </button>
+            <div class="workout-rail-item" key={index}>
+              <button
+                type="button"
+                class={
+                  index === at && !picking ? 'workout-rail-row live hit' : 'workout-rail-row hit'
+                }
+                onClick={() => {
+                  setAt(index)
+                  setPicking(false)
+                }}
+              >
+                <span class="workout-rail-name">{asExercise(line, library.exercises).name}</span>
+                <span class="workout-rail-count">{line.sets.length}</span>
+              </button>
+              <button
+                type="button"
+                class="workout-rail-drop hit"
+                aria-label={`remove ${asExercise(line, library.exercises).name}`}
+                onClick={() => drop(index)}
+              >
+                ×
+              </button>
+            </div>
           ))}
           <button type="button" class="workout-rail-add hit" onClick={() => setPicking(true)}>
             + exercise
@@ -233,8 +295,11 @@ function Builder({ entry, locale, onClose }: {
           {picking || current === undefined || exercise === undefined ? (
             <>
               <h1 class="workout-title">exercise</h1>
+              {/* longest-ago first, one exercise per body part promoted above
+                  that gradient — §8.1. Built from a `lastUsed` frozen at mount,
+                  so the rows do not move under a thumb that is mid-press */}
               <LibraryPicker
-                items={library.exercises.map((item) => ({
+                items={byStaleness(library.exercises, lastUsed).map((item) => ({
                   id: item.id,
                   name: item.name,
                   hint: item.body_part,
@@ -242,39 +307,65 @@ function Builder({ entry, locale, onClose }: {
                 onPick={start}
                 onNew={create}
                 onDelete={remove}
+                blocked={blocked}
                 newLabel="+ new exercise"
               />
             </>
           ) : (
             <>
               <div class="workout-head">
-                <h1 class="workout-title">{exercise.name}</h1>
-                {/* the kinds map, never a list written here — a kind added to
-                    the library shows up in this control without a build */}
-                <select
-                  class="workout-kind hit"
-                  aria-label="kind"
-                  value={exercise.kind}
-                  onChange={(e) => retag(exercise.id, { kind: e.currentTarget.value })}
-                >
-                  {Object.keys(library.kinds).map((kind) => (
-                    <option value={kind} key={kind}>
-                      {kind}
-                    </option>
-                  ))}
-                </select>
-                {/* the parts already in the library are offered, and a new one
-                    is still typeable: the taxonomy is the user's, not a fixed
-                    set this file knows */}
+                {/* the heading is the name box: what is shown and what is
+                    edited are one thing, so the screen cannot hold two names
+                    that disagree between a keystroke and a blur. Committed on
+                    change rather than on input, so no render happens while it
+                    is being typed into.
+
+                    A blank puts the old name back by hand rather than leaving
+                    it to the controlled value: refusing writes nothing, so
+                    nothing re-renders, and the box would otherwise sit there
+                    empty while the library still holds the name. */}
                 <input
-                  class="workout-part"
+                  class="workout-title workout-name"
                   type="text"
-                  aria-label="body part"
-                  placeholder="body part"
-                  list="workout-body-parts"
-                  value={exercise.body_part}
-                  onChange={(e) => retag(exercise.id, { body_part: e.currentTarget.value.trim() })}
+                  aria-label="name"
+                  value={exercise.name}
+                  onChange={(e) => {
+                    const next = e.currentTarget.value.trim()
+                    if (next === '') e.currentTarget.value = exercise.name
+                    else retag(exercise.id, { name: next })
+                  }}
                 />
+                {/* a pair, and one grid of two equal columns is what makes them
+                    one size — a kind is the user's own word, so no width
+                    written here can be the right one (§8.1) */}
+                <div class="workout-pair">
+                  {/* the kinds map, never a list written here — a kind added to
+                      the library shows up in this control without a build */}
+                  <select
+                    class="workout-kind hit"
+                    aria-label="kind"
+                    value={exercise.kind}
+                    onChange={(e) => retag(exercise.id, { kind: e.currentTarget.value })}
+                  >
+                    {Object.keys(library.kinds).map((kind) => (
+                      <option value={kind} key={kind}>
+                        {kind}
+                      </option>
+                    ))}
+                  </select>
+                  {/* the parts already in the library are offered, and a new
+                      one is still typeable: the taxonomy is the user's, not a
+                      fixed set this file knows */}
+                  <input
+                    class="workout-part hit"
+                    type="text"
+                    aria-label="body part"
+                    placeholder="body part"
+                    list="workout-body-parts"
+                    value={exercise.body_part}
+                    onChange={(e) => retag(exercise.id, { body_part: e.currentTarget.value.trim() })}
+                  />
+                </div>
                 <datalist id="workout-body-parts">
                   {bodyParts.map((part) => (
                     <option value={part} key={part} />
@@ -321,14 +412,13 @@ function Builder({ entry, locale, onClose }: {
         {/* last in the column, under the workout it ends — reading the session
             and then ending it is the order the press happens in. It stays stuck
             to the bottom edge while the list above it scrolls, so a long
-            workout never puts its own end out of reach. */}
+            workout never puts its own end out of reach.
+
+            Live at zero exercises: a workout left with none is still a workout
+            (§8.1). It saves, it sits in the list saying nothing was done, and
+            it is deleted like any other entry if that is what was meant. */}
         <div class="workout-actions">
-          <button
-            type="button"
-            class="workout-end hit"
-            disabled={performed.length === 0}
-            onClick={save}
-          >
+          <button type="button" class="workout-end hit" onClick={save}>
             {entry === null ? 'end workout' : 'save workout'}
           </button>
           {entry !== null && (
@@ -408,6 +498,14 @@ export function Workout(): VNode {
         <p class="workout-rail-progress">
           {`progress · ${past.length} ${past.length === 1 ? 'workout' : 'workouts'}, not enough to draw`}
         </p>
+
+        {/* the library's own door, opened from here rather than from home:
+            correcting a name used to mean starting a workout you did not
+            intend to log (§7). Home lost its one link out on 2026-08-06 and
+            this is not a second one. */}
+        <a class="workout-library" href="#/exercises">
+          exercises &nbsp;→
+        </a>
       </section>
     </main>
   )

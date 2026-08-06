@@ -1,7 +1,7 @@
 import { newEntry } from './entry'
 import type { Entry } from './entry'
 import { activeId, activeProfile, createProfile, readProfiles, scope, switchTo } from './profile'
-import { readObjectives, writeObjectives } from './objectives'
+import { bodyPhotoPath, itemPhotoPath } from './photos'
 import {
   getEntry,
   lastTouched,
@@ -75,17 +75,18 @@ describe('what profiles separate', () => {
     expect(getEntry(hers.id)).toBeNull()
   })
 
-  it('keeps objectives per profile', () => {
-    writeObjectives({ statement: 'rebuild', targets: [] })
+  /* a body photo is the body's, so its path carries the scope the way an
+     entries file does — ADR 0004's other chokepoint, now that objectives are
+     gone (ADR 0006) and `path()` in `objectives.ts` went with them */
+  it('keeps body photos per profile', () => {
+    expect(bodyPhotoPath('2026-08-01T07:35:00+03:00')).toBe('photos/2026-08-01.jpg')
 
     const made = createProfile('maya')
     switchTo(made.id)
-    expect(readObjectives().statement).toBe('')
-    writeObjectives({ statement: 'hers', targets: [] })
+    expect(bodyPhotoPath('2026-08-01T07:35:00+03:00')).toBe(`photos/${made.id}~2026-08-01.jpg`)
 
     switchTo('main')
-    expect(readObjectives().statement).toBe('rebuild')
-    expect(localStorage.getItem(`daily:config/${made.id}~objectives.json`)).toContain('hers')
+    expect(bodyPhotoPath('2026-08-01T07:35:00+03:00')).toBe('photos/2026-08-01.jpg')
   })
 })
 
@@ -96,5 +97,14 @@ describe('what profiles share', () => {
     switchTo(createProfile('maya').id)
     const held = readJson<{ exercises: unknown[] }>('library/exercises.json', { exercises: [] })
     expect(held.exercises).toHaveLength(1)
+  })
+
+  /* the contrast ADR 0004 draws: the catalog is shared, so an item's picture
+     is one file however many profiles the Drive holds */
+  it('resolves a library item’s picture to one path from every profile', () => {
+    const mine = itemPhotoPath('exercise', 'chest-press')
+    switchTo(createProfile('maya').id)
+    expect(itemPhotoPath('exercise', 'chest-press')).toBe(mine)
+    expect(mine).not.toContain('~')
   })
 })

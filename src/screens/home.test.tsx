@@ -28,10 +28,19 @@ describe('home, silent state', () => {
     expect(container.textContent ?? '').not.toMatch(/\d+\s*of\s*\d+/)
   })
 
-  it('names the profile it is showing and the two ways to another one', () => {
+  it('names the profile it is showing and the way to another one', () => {
     const { getByText } = render(<Home />)
     expect(getByText('main')).toBeTruthy()
     expect(getByText('switch profile').getAttribute('href')).toBe('#/profiles')
-    expect(getByText('new profile').getAttribute('href')).toBe('#/profiles/new')
+  })
+
+  /* §2: making a second person is not something the front page of a logging
+     app should suggest, so creating lives on the profiles screen and nowhere
+     else. The library screen is the workout module's door, not home's. */
+  it('offers no way to make a profile, and no door to a library', () => {
+    const { container } = render(<Home />)
+    expect(container.querySelector('a[href="#/profiles/new"]')).toBeNull()
+    expect(container.textContent ?? '').not.toContain('new profile')
+    expect(container.querySelector('a[href="#/exercises"]')).toBeNull()
   })
 })

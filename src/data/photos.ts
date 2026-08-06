@@ -16,9 +16,9 @@ import appSeed from '../seed/app.json'
 /** Spread over the seed rather than read straight off the file: `ensureSeeded`
  *  writes a config only when the whole file is absent and never backfills a
  *  key, so a browser holding a `config/app.json` from before this phase has
- *  neither of these numbers. A missing edge length is `NaN`, and a canvas
- *  sized `NaN` uploads a photo nothing can open. */
-const settings = () => ({ ...appSeed.body, ...readJson('config/app.json', appSeed).body })
+ *  none of these numbers. A missing edge length is `NaN`, and a canvas sized
+ *  `NaN` uploads a photo nothing can open. */
+const settings = () => ({ ...appSeed.images, ...readJson('config/app.json', appSeed).images })
 
 /** The size to draw at. Never larger than the source — a phone photo is shrunk
  *  and a small one is left alone rather than blown up to the cap. */
@@ -27,17 +27,34 @@ export function fit(width: number, height: number, max: number): { width: number
   return { width: Math.round(width * scale), height: Math.round(height * scale) }
 }
 
-/** Resize on import, which is the mitigation §12 R4 asks for: a phone camera
- *  writes several megabytes and what is kept is a couple of hundred kilobytes.
+/** What to draw at, under either policy: an item picture is capped, a body
+ *  photograph is drawn at the size it was shot (§10.2). This one branch is the
+ *  whole of that split, and it sits out here rather than inside the canvas call
+ *  because jsdom has no canvas — the same reason `fit` is its own function. */
+export function drawAt(
+  source: { width: number; height: number },
+  max_edge?: number,
+): { width: number; height: number } {
+  return max_edge === undefined
+    ? { width: source.width, height: source.height }
+    : fit(source.width, source.height, max_edge)
+}
+
+/** One draw and one encode, which is everything the two photo paths share.
+ *  Both come out JPEG and both are stored under a `.jpg` name: a phone
+ *  shooting HEIC would otherwise put a file in Drive the app cannot display.
+ *
+ *  Never crops. The square frame an item's picture is shown in is a display
+ *  decision (§10.2), and import is the one moment the discarded pixels cannot
+ *  be got back.
  *
  *  Rejects rather than resolving something empty — an entry naming a photo
  *  that was never written is worse than the press doing nothing. */
-export async function resize(file: Blob): Promise<Blob> {
-  const { photo_max_edge, photo_quality } = settings()
+async function encode(file: Blob, quality: number, max_edge?: number): Promise<Blob> {
   const source = await createImageBitmap(file)
   const canvas = document.createElement('canvas')
   try {
-    const { width, height } = fit(source.width, source.height, photo_max_edge)
+    const { width, height } = drawAt(source, max_edge)
     canvas.width = width
     canvas.height = height
     canvas.getContext('2d')!.drawImage(source, 0, 0, width, height)
@@ -50,10 +67,21 @@ export async function resize(file: Blob): Promise<Blob> {
     canvas.toBlob(
       (blob) => (blob === null ? reject(new Error('the photo could not be read')) : resolve(blob)),
       'image/jpeg',
-      photo_quality,
+      quality,
     )
   })
 }
+
+/** An item's picture is a reminder of which machine or which plate and is
+ *  never studied, so it is capped at a small edge and a modest quality — the
+ *  mitigation §12 R4 asks for, now spent here rather than on the body. */
+export const shrinkItemPhoto = (file: Blob): Promise<Blob> =>
+  encode(file, settings().item_quality, settings().item_max_edge)
+
+/** A body photograph is the thing being measured, so it is kept at the
+ *  resolution it was shot at (§10.2, reversing §12 R4 for the body alone) and
+ *  re-encoded to JPEG all the same. */
+export const recodeBodyPhoto = (file: Blob): Promise<Blob> => encode(file, settings().body_quality)
 
 /** Straight to Drive, never through the store. The one write in the app that
  *  does not touch the mirror. */
@@ -65,10 +93,15 @@ export const putBinary = (path: string, blob: Blob): Promise<string> => putFile(
  *  body's, so it carries the profile scope the way an entries file does; the
  *  entry stores the full path, which is what keeps old lines pointing at the
  *  bare legacy names. `ts` carries its own offset, so its date part is
- *  already the local date. */
+ *  already the local date.
+ *
+ *  Split out of `putPhoto` because the upload needs a canvas and the path does
+ *  not, and the scoping is the part worth a test. */
+export const bodyPhotoPath = (ts: string): string => `photos/${scope()}${ts.slice(0, 10)}.jpg`
+
 export async function putPhoto(file: Blob, ts: string): Promise<string> {
-  const path = `photos/${scope()}${ts.slice(0, 10)}.jpg`
-  await putBinary(path, await resize(file))
+  const path = bodyPhotoPath(ts)
+  await putBinary(path, await recodeBodyPhoto(file))
   return path
 }
 

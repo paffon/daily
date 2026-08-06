@@ -1,0 +1,184 @@
+/* The exercise library. The module screens' 52/56px strip and 760px
+   breakpoint, and the profiles screen's row list — a catalog is a list of
+   things, not a list of things that happened. A row opens in place rather than
+   onto a screen of its own: what is being corrected is usually one word, and a
+   second navigation to fix one word is the ceremony §7 exists to remove. */
+
+.exercises {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.exercises-strip {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.exercises-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.exercises-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px 24px 0;
+  min-height: 0;
+}
+
+.exercises-filter {
+  flex: none;
+  height: 52px;
+  margin-bottom: 20px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  background: var(--paper-input);
+  font: 400 16px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.exercises-filter:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.exercises-filter::placeholder {
+  color: var(--mono-faint);
+  font-size: 14px;
+}
+
+.exercises-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+.exercises-item {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+.exercises-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exercises-row:hover {
+  background: var(--paper-hover);
+}
+
+/* sans, because `tokens.css` gives library item names in lists to sans */
+.exercises-name {
+  flex: 1;
+  min-width: 0;
+  font: 400 16px/1.2 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.exercises-part {
+  flex: none;
+  font: 400 11px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+.exercises-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 24px;
+}
+
+.exercises-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 34ch;
+}
+
+.exercises-field-label {
+  font: 400 10.5px/1 var(--family-mono);
+  letter-spacing: 0.1em;
+  color: var(--mono);
+}
+
+.exercises-field input,
+.exercises-field select {
+  width: 100%;
+  min-width: 0;
+  height: var(--hit-min);
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--paper-control);
+  font: 400 15px/1 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.exercises-field select {
+  font-family: var(--family-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.exercises-field input:focus,
+.exercises-field select:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+/* quiet, and never danger: `delete this entry` stays the one control in the
+   app that wears it, and this refuses itself whenever history is watching */
+.exercises-remove {
+  align-items: center;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.exercises-remove:hover,
+.exercises-remove.armed {
+  color: var(--ink);
+}
+
+.exercises-note {
+  margin: auto 0 0;
+  padding: 36px 0;
+  max-width: 660px;
+  font: 300 19px/1.55 var(--family-serif);
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+
+@media (min-width: 760px) {
+  .exercises-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .exercises-body {
+    padding: 40px 120px 0;
+  }
+}

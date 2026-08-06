@@ -3,12 +3,10 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import { bodyPartsOf, fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
 import type { Exercise, Performed, SetRow } from '../data/exercise'
-import { factFor } from '../data/objectives'
-import type { CountTarget } from '../data/objectives'
 import { SetTable } from '../components/set_table'
 import { ensureSeeded, getEntry, readEntries, writeJson } from '../data/store'
 import { EditEntry } from './edit_entry'
-import { Workout } from './workout'
+import { Workout, workoutLine } from './workout'
 
 const named = (name: string): Exercise => {
   const exercise = loadExercises().exercises.find((item) => item.name === name)
@@ -305,7 +303,8 @@ describe('the workout screen', () => {
     })
     press(container, '.picker-new')
 
-    expect(container.querySelector('.workout-title')?.textContent).toBe('dips blue machine')
+    // the title is the name box now, so what it holds is a value not text
+    expect(box(container, 'name')?.value).toBe('dips blue machine')
     expect(loadExercises().exercises.some((item) => item.name === 'dips blue machine')).toBe(true)
   })
 
@@ -346,8 +345,8 @@ describe('the workout screen', () => {
 /** An exercise made inline used to keep a blank body part and the library's
  *  first kind permanently — nothing in `src/` could change either. So a route
  *  added as `run · park loop` drew a weight box, against `RULES.md`'s "never
- *  show a field the thing does not have", and the body part objectives count
- *  against was empty for every exercise the user ever added. */
+ *  show a field the thing does not have", and the body part the list is
+ *  ordered by was empty for every exercise the user ever added. */
 describe('the kind and body part of an exercise made inline', () => {
   const make = (name: string) => {
     const screen = render(<Workout />)
@@ -407,7 +406,7 @@ describe('the kind and body part of an exercise made inline', () => {
     ])
   })
 
-  it('writes the body part onto the library, where an objective can count it', () => {
+  it('writes the body part onto the library, and stamps it onto the workout', () => {
     const { container } = make('run · park loop')
     expect(made('run · park loop')?.body_part).toBe('')
 
@@ -443,20 +442,26 @@ describe('the kind and body part of an exercise made inline', () => {
   })
 })
 
+/** A delete is unconditional only while nothing references the item — §7. Once
+ *  an exercise appears in a logged workout the delete names the workouts that
+ *  use it and offers to rename it instead, because that is the case that
+ *  usually wanted deleting. The way out is through the entries. */
 describe('removing an exercise from the library', () => {
   const del = (container: Element, name: string) =>
     container.querySelector<HTMLButtonElement>(`[aria-label="delete ${name}"]`)!
 
-  it('arms on the first press and deletes on the second', () => {
+  const has = (name: string) => loadExercises().exercises.some((item) => item.name === name)
+
+  it('arms on the first press and deletes on the second, while nothing uses it', () => {
     const { container } = render(<Workout />)
     openNew(container)
 
     fireEvent.click(del(container, 'pec deck'))
     expect(del(container, 'pec deck').textContent).toBe('press again')
-    expect(loadExercises().exercises.some((item) => item.name === 'pec deck')).toBe(true)
+    expect(has('pec deck')).toBe(true)
 
     fireEvent.click(del(container, 'pec deck'))
-    expect(loadExercises().exercises.some((item) => item.name === 'pec deck')).toBe(false)
+    expect(has('pec deck')).toBe(false)
     expect(
       [...container.querySelectorAll('.picker-item')].some((item) =>
         item.textContent?.startsWith('pec deck'),
@@ -464,7 +469,7 @@ describe('removing an exercise from the library', () => {
     ).toBe(false)
   })
 
-  it('keeps a logged workout readable after its exercise is gone', () => {
+  it('refuses without arming once a logged workout names it', () => {
     const first = render(<Workout />)
     logChestPress(first.container)
     first.unmount()
@@ -472,12 +477,98 @@ describe('removing an exercise from the library', () => {
     const { container } = render(<Workout />)
     openNew(container)
     fireEvent.click(del(container, 'chest press'))
+
+    // it did not arm, so a second press cannot get through by accident
+    expect(del(container, 'chest press').textContent).toBe('×')
+    expect(container.querySelector('.refused')).not.toBeNull()
+
+    fireEvent.click(del(container, 'chest press'))
+    expect(has('chest press')).toBe(true)
+  })
+
+  it('names the workouts that use it, as links to them', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+    const id = readEntries('workout')[0]!.id
+
+    const { container } = render(<Workout />)
+    openNew(container)
     fireEvent.click(del(container, 'chest press'))
 
-    // the rail still counts the workout, and the stored sets are untouched —
-    // only the library lost the name
+    expect(container.querySelector('.refused-line')?.textContent).toBe('in a workout, still')
+    const links = [...container.querySelectorAll<HTMLAnchorElement>('.refused-link')]
+    expect(links).toHaveLength(1)
+    expect(links[0]!.getAttribute('href')).toBe(`#/entry/${id}`)
+  })
+
+  it('renames from the refusal, and the past workout reads back under the new name', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    openNew(container)
+    fireEvent.click(del(container, 'chest press'))
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="rename chest press"]')!, {
+      target: { value: 'chest press · blue' },
+    })
+
+    expect(has('chest press · blue')).toBe(true)
+    expect(has('chest press')).toBe(false)
+    // the entry stores the id, so the rename reached it without touching a set
+    expect(workoutLine(readEntries('workout')[0]!)).toBe('chest press · blue')
+    expect(loggedExercises()[0]?.sets).toHaveLength(3)
+  })
+
+  it('is blocked by the workout being corrected, which references it like any other', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.workout-rail-row')!)
+    press(container, '.workout-rail-add')
+    fireEvent.click(del(container, 'chest press'))
+
+    expect(container.querySelector('.refused')).not.toBeNull()
+    expect(has('chest press')).toBe(true)
+  })
+
+  it('lets it go once the workout holding it is deleted', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    // the builder's own `delete this entry`, which tombstones the workout
+    fireEvent.click(first.container.querySelector<HTMLButtonElement>('.workout-rail-row')!)
+    press(first.container, '.field-danger')
+    press(first.container, '.field-danger')
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    openNew(container)
+    fireEvent.click(del(container, 'chest press'))
+    fireEvent.click(del(container, 'chest press'))
+
+    expect(has('chest press')).toBe(false)
+  })
+
+  it('keeps a logged workout readable after its exercise is gone', () => {
+    // reachable the other way round: the exercise is deleted while unused, and
+    // a workout naming it is logged from a browser that still had it
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const library = loadExercises()
+    writeJson('library/exercises.json', {
+      ...library,
+      exercises: library.exercises.filter((item) => item.name !== 'chest press'),
+    })
+
     expect(readEntries('workout')).toHaveLength(1)
     expect(loggedExercises()[0]?.sets).toHaveLength(3)
+    const { container } = render(<EditEntry id={readEntries('workout')[0]!.id} />)
+    expect(container.querySelectorAll('.set-row')).toHaveLength(3)
   })
 })
 
@@ -569,20 +660,11 @@ describe('what a saved workout holds', () => {
   })
 })
 
-/** The one contract between this module and the objectives surface. Objectives
- *  reads `payload.body_parts` and nothing else of a workout, so a target like
- *  *something for the back weekly* is answered by what the entry recorded at
- *  log time — never by a library lookup that a later rename would change. */
-describe('the body parts an objective counts', () => {
-  const backTarget: CountTarget = {
-    kind: 'count',
-    label: 'something for the back weekly',
-    module: 'workout',
-    per: 'week',
-    target: 1,
-    body_part: 'back',
-  }
-
+/** Nothing reads `payload.body_parts` — ADR 0006 is the file that says why it
+ *  is stamped anyway. The short of it is that it cannot be reconstructed: it is
+ *  written at save time precisely because a later re-tag must not rewrite what
+ *  June trained, so it is recorded going forward or it is lost. */
+describe('the body parts a workout stamps', () => {
   it('keeps each part once, however many exercises reached it', () => {
     const { container } = render(<Workout />)
     openNew(container)
@@ -594,26 +676,6 @@ describe('the body parts an objective counts', () => {
     press(container, '.workout-end')
 
     expect(readEntries('workout')[0]!.payload['body_parts']).toEqual(['chest', 'back'])
-  })
-
-  it('answers a body-part target with the workout just logged', () => {
-    expect(factFor(backTarget, readEntries('workout'))).toBe('0 this week')
-
-    const { container } = render(<Workout />)
-    openNew(container)
-    pick(container, 'pull ups')
-    press(container, '.workout-end')
-
-    expect(factFor(backTarget, readEntries('workout'))).toBe('1 this week')
-  })
-
-  it('does not answer for a part the workout never reached', () => {
-    const { container } = render(<Workout />)
-    openNew(container)
-    pick(container, 'pull ups')
-    press(container, '.workout-end')
-
-    expect(factFor({ ...backTarget, body_part: 'legs' }, readEntries('workout'))).toBe('0 this week')
   })
 
   it('records the part an exercise carried even after the library is re-tagged', () => {
@@ -630,10 +692,219 @@ describe('the body parts an objective counts', () => {
       ),
     })
 
-    expect(factFor(backTarget, readEntries('workout'))).toBe('1 this week')
+    // the snapshot is what the entry said at the time, not what the library
+    // says now — this is the whole of ADR 0006's argument for keeping it
+    expect(readEntries('workout')[0]!.payload['body_parts']).toEqual(['back'])
   })
 
   it('contributes nothing for an exercise carrying no body part', () => {
     expect(bodyPartsOf([{ exercise_id: 'nothing-known', sets: [], comment: '' }], [])).toEqual([])
+  })
+})
+
+/** §8.1: an exercise can be taken out, and a workout left with none is still a
+ *  workout. Nothing in the builder is committed until it is saved, so this is
+ *  session state — it never arms, and leaving the screen undoes it. */
+describe('taking an exercise out of a workout', () => {
+  const railNames = (container: Element) =>
+    [...container.querySelectorAll('.workout-rail-name')].map((span) => span.textContent)
+
+  const three = () => {
+    const screen = render(<Workout />)
+    openNew(screen.container)
+    pick(screen.container, 'chest press')
+    press(screen.container, '.workout-rail-add')
+    pick(screen.container, 'pec deck')
+    press(screen.container, '.workout-rail-add')
+    pick(screen.container, 'pull ups')
+    return screen
+  }
+
+  const remove = (container: Element, name: string) =>
+    fireEvent.click(container.querySelector<HTMLButtonElement>(`[aria-label="remove ${name}"]`)!)
+
+  it('takes out the one asked for and leaves the others', () => {
+    const { container } = three()
+    remove(container, 'pec deck')
+    expect(railNames(container)).toEqual(['chest press', 'pull ups'])
+  })
+
+  it('keeps the live exercise live when something above it goes', () => {
+    const { container } = three()
+    // `pull ups` is live, being the last picked
+    remove(container, 'chest press')
+    expect(box(container, 'name')?.value).toBe('pull ups')
+  })
+
+  it('makes the next one live when the live one goes', () => {
+    const { container } = three()
+    fireEvent.click(container.querySelectorAll<HTMLButtonElement>('.workout-rail-row')[1]!)
+    remove(container, 'pec deck')
+    expect(box(container, 'name')?.value).toBe('pull ups')
+  })
+
+  it('opens the picker when the last one goes', () => {
+    const { container } = three()
+    remove(container, 'chest press')
+    remove(container, 'pec deck')
+    remove(container, 'pull ups')
+
+    expect(railNames(container)).toEqual([])
+    expect(container.querySelector('.picker-filter')).not.toBeNull()
+  })
+
+  it('saves a workout with none, and home says nothing was done', () => {
+    const { container } = three()
+    remove(container, 'chest press')
+    remove(container, 'pec deck')
+    remove(container, 'pull ups')
+
+    const end = container.querySelector<HTMLButtonElement>('.workout-end')!
+    expect(end.disabled).toBe(false)
+    fireEvent.click(end)
+
+    const entry = readEntries('workout')[0]!
+    expect(entry.payload['exercises']).toEqual([])
+    expect(entry.payload['body_parts']).toEqual([])
+    expect(workoutLine(entry)).toBe('nothing done')
+  })
+
+  it('is undone by leaving the screen, because nothing was committed', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.workout-rail-row')!)
+    remove(container, 'chest press')
+    press(container, '.workout-back')
+
+    expect(loggedExercises()).toHaveLength(1)
+  })
+})
+
+/** §8.1: the name is editable where the exercise is being logged. A rename
+ *  reaches every workout that ever used it, because an entry stores the id and
+ *  the name is resolved at read time. */
+describe('renaming an exercise where it is logged', () => {
+  const rename = (container: Element, value: string) =>
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="name"]')!, {
+      target: { value },
+    })
+
+  it('writes the new name to the library', () => {
+    const { container } = render(<Workout />)
+    openNew(container)
+    pick(container, 'chest press')
+    rename(container, 'chest press · blue')
+
+    expect(loadExercises().exercises.some((item) => item.name === 'chest press · blue')).toBe(true)
+  })
+
+  it('reaches a workout logged before it', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+    const before = readEntries('workout')[0]!
+
+    const { container } = render(<Workout />)
+    openNew(container)
+    pick(container, 'chest press')
+    rename(container, 'chest press · blue')
+
+    const after = readEntries('workout')[0]!
+    expect(workoutLine(after)).toBe('chest press · blue')
+    // the entry itself did not move: same id stored, same rev, same sets
+    expect((after.payload['exercises'] as Performed[])[0]?.exercise_id).toBe(
+      (before.payload['exercises'] as Performed[])[0]?.exercise_id,
+    )
+    expect(after.rev).toBe(before.rev)
+  })
+
+  it('refuses a blank quietly, and the old name stands', () => {
+    const { container } = render(<Workout />)
+    openNew(container)
+    pick(container, 'chest press')
+    rename(container, '   ')
+
+    expect(box(container, 'name')?.value).toBe('chest press')
+    expect(loadExercises().exercises.some((item) => item.name === 'chest press')).toBe(true)
+  })
+
+  it('leaves the rows already typed alone — only a kind clears them', () => {
+    const { container } = render(<Workout />)
+    openNew(container)
+    pick(container, 'chest press')
+    type(container, 'set 1 weight', '47.5')
+
+    rename(container, 'chest press · blue')
+
+    expect(box(container, 'set 1 weight')?.value).toBe('47.5')
+  })
+
+  it('holds the kind and the body part in one pair, both the same tap target', () => {
+    // jsdom computes no layout, so what is asserted is the structure that
+    // produces one size — the widths themselves are checked in the browser
+    const { container } = render(<Workout />)
+    openNew(container)
+    pick(container, 'chest press')
+
+    const pair = container.querySelector('.workout-pair')!
+    expect(pair.querySelector('.workout-kind')).not.toBeNull()
+    expect(pair.querySelector('.workout-part')).not.toBeNull()
+    expect(container.querySelector('.workout-kind')?.classList.contains('hit')).toBe(true)
+    expect(container.querySelector('.workout-part')?.classList.contains('hit')).toBe(true)
+  })
+})
+
+/** §8.1: longest-ago first, one exercise per body part promoted above that
+ *  gradient. The ordering itself is unit-tested in `exercise.test.ts`; what is
+ *  checked here is that the picker is actually wired to it. */
+describe('the order the picker offers', () => {
+  const offered = (container: Element) =>
+    [...container.querySelectorAll('.picker-name')].map((span) => span.textContent)
+
+  it('sinks what was just done and heads the list with different body parts', () => {
+    const first = render(<Workout />)
+    logChestPress(first.container)
+    first.unmount()
+
+    const { container } = render(<Workout />)
+    openNew(container)
+    const names = offered(container)
+
+    expect(names[0]).not.toBe('chest press')
+    expect(names.at(-1)).toBe('chest press')
+
+    // the promoted head names each part once
+    const library = loadExercises().exercises
+    const partOf = (name: string) => library.find((item) => item.name === name)?.body_part
+    const head = names.slice(0, 3).map((name) => partOf(name!))
+    expect(new Set(head).size).toBe(head.length)
+  })
+
+  it('narrows on the filter without reordering what is left', () => {
+    const { container } = render(<Workout />)
+    openNew(container)
+    const before = offered(container)
+
+    fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: 'press' },
+    })
+    const after = offered(container)
+
+    expect(after.length).toBeGreaterThan(0)
+    expect(after.length).toBeLessThan(before.length)
+    expect(after).toEqual(before.filter((name) => after.includes(name)))
+  })
+})
+
+describe('the way to the exercise library', () => {
+  it('opens from the module list and not from the builder', () => {
+    const { container } = render(<Workout />)
+    expect(container.querySelector('a[href="#/exercises"]')).not.toBeNull()
+
+    openNew(container)
+    expect(container.querySelector('a[href="#/exercises"]')).toBeNull()
   })
 })

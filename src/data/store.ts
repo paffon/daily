@@ -9,7 +9,6 @@ import appSeed from '../seed/app.json'
 import exercisesSeed from '../seed/exercises.json'
 import foodsSeed from '../seed/foods.json'
 import levelsSeed from '../seed/levels.json'
-import objectivesSeed from '../seed/objectives.json'
 import profilesSeed from '../seed/profiles.json'
 import segmentsSeed from '../seed/segments.json'
 
@@ -172,9 +171,6 @@ const SEEDS: [string, unknown][] = [
   ['library/foods.json', foodsSeed],
   ['library/segments.json', segmentsSeed],
   ['config/levels.json', levelsSeed],
-  /* Empty on purpose: a shipped objective would be exactly the hard-coded
-     target `RULES.md` forbids. The user writes their own or has none. */
-  ['config/objectives.json', objectivesSeed],
   /* The original profile, under the registry's own name for it. A created
      profile's files need no seeding — every read falls back in memory. */
   ['config/profiles.json', profilesSeed],

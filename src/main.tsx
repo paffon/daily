@@ -10,7 +10,7 @@ import { Workout } from './screens/workout'
 import { Nutrition } from './screens/nutrition'
 import { Movement } from './screens/movement'
 import { Dance } from './screens/dance'
-import { Objectives } from './screens/objectives'
+import { Exercises } from './screens/exercises'
 import { Profiles } from './screens/profiles'
 import { EditEntry } from './screens/edit_entry'
 import { AccountBand, SignIn } from './screens/signin'
@@ -20,13 +20,12 @@ import { AccountBand, SignIn } from './screens/signin'
  *  placeholder per module and then overwrite all five of them. */
 const ROUTES: Record<string, () => VNode> = {
   '#/': () => <Home />,
-  '#/objectives': () => <Objectives />,
   '#/profiles': () => <Profiles />,
-  /* the same screen with the name box focused — home's `new profile` lands
-     here, so the press that asked to type is already typing */
-  '#/profiles/new': () => <Profiles startNew />,
   '#/body': () => <Body />,
   '#/workout': () => <Workout />,
+  /* the exercise library's own door — opened from the workout module's list
+     rather than from home, because it is that module's catalog (§7) */
+  '#/exercises': () => <Exercises />,
   '#/nutrition': () => <Nutrition />,
   '#/movement': () => <Movement />,
   '#/dance': () => <Dance />,

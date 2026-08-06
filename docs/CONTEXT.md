@@ -55,12 +55,6 @@ field in its original form and is the fast input for it. Workout sets only; no
 other module has one.
 _Avoid_: difficulty, effort, RPE, exertion, rating
 
-**Objective**:
-An editable target the coach reasons against — a count per period or a
-direction. The only reference point the coach has beyond gap arithmetic. Not a
-plan; a missed objective is a fact, never a debt.
-_Avoid_: goal, plan, target
-
 **Performed exercise**:
 One exercise inside a workout: the library exercise, an ordered list of sets, and
 a comment. **The number of sets is not a field** — it is how many rows were
@@ -80,8 +74,8 @@ feature that made the sheet worth opening.
 **Profile**:
 One log among several in the same Drive (added 2026-08-06 — ADR 0004).
 Profiles share the catalog — the libraries, their pictures, the app's
-configuration — and own their entries, objectives and body photos. Which one a
-device is on is the device's own state and never syncs.
+configuration — and own their entries and body photos. Which one a device is on
+is the device's own state and never syncs.
 _Avoid_: user, account (the account is Google's, and every profile lives in one)
 
 **Segment**:
@@ -93,15 +87,17 @@ One row inside a performed exercise, carrying the fields its exercise's *kind*
 declares plus a *next-time mark*.
 
 **Staleness**:
-Time since a library item was last used. Something the coach may remark on.
-Nothing composes sessions from it.
+Time since a library item was last used. Since 2026-08-06 it is what orders the
+exercise list — longest-ago first, one exercise per *body part* promoted above
+that gradient (`DESIGN.md` §8.1) — and something the coach may remark on.
+Nothing composes sessions from it: it decides what is offered first, never what
+is done.
 
 ## The coach
 
 **Away**:
 A period declared as a legitimate absence, before or after the fact. Marked
-permanently in the record; gap conditions and objective counts skip it,
-*staleness* does not.
+permanently in the record; gap conditions skip it, *staleness* does not.
 _Avoid_: pause, vacation mode, hold
 
 **Condition**:
@@ -194,5 +190,6 @@ than reintroduced by habit.
 | Effort, difficulty | replaced by the *next-time mark* — an instruction, not a rating, and workout-only |
 | Descriptor | renamed *level* |
 | Battery, bar, protocol, test week | a workout whose exercises do not change; not built now |
-| Month plan, week plan, planning conversation | replaced by *objectives* |
+| Month plan, week plan, planning conversation | replaced by *objectives*, which were themselves cut on 2026-08-06 — see the row below |
+| Objective, target, done, gap | cut on 2026-08-06 (ADR 0006). Nothing is compared against a number. *Gap* survives only as arithmetic — how long since a thing last happened |
 | Session runner | logging live and logging afterwards are the same screen |

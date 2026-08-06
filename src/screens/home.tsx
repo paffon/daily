@@ -35,8 +35,8 @@ function detail(entry: Entry, config: typeof appSeed): string {
   }
 }
 
-/** Home in its silent state: the modules, what was last recorded, and the way
- *  to objectives. Not a dashboard — no counts, no progress, no totals. */
+/** Home in its silent state: the modules, what was last recorded, and whose
+ *  log it is. Not a dashboard — no counts, no progress, no totals. */
 export function Home(): VNode {
   const config = readJson('config/app.json', appSeed)
   const { locale } = config
@@ -77,18 +77,14 @@ export function Home(): VNode {
       </section>
 
       <footer class="home-foot">
-        <a class="home-objectives" href="#/objectives">
-          objectives &nbsp;→
-        </a>
-        {/* whose log the screen is showing, and the two ways to make it
-            someone else's — see ADR 0004 */}
+        {/* whose log the screen is showing, and the way to make it someone
+            else's — see ADR 0004. Making a second person is not a thing the
+            front page of a logging app should suggest, so the profiles screen
+            is where that lives and this is only the door to it (§2). */}
         <span class="home-profile">
           <span class="home-profile-name">{activeProfile().name}</span>
           <a class="home-profile-link hit" href="#/profiles">
             switch profile
-          </a>
-          <a class="home-profile-link hit" href="#/profiles/new">
-            new profile
           </a>
         </span>
       </footer>
