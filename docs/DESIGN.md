@@ -20,9 +20,9 @@ Two halves, in this order of importance:
 
 1. **Recording.** Four modules — workout, nutrition, movement, dance — plus the
    body. Fast, forgiving, timestamped, editable after the fact.
-2. **The coach.** On open, the app looks at the data, the clock and the
-   objectives. If it has something specific worth saying, asking, or reminding,
-   it says it. Otherwise it says nothing.
+2. **The coach.** On open, the app looks at the data and the clock. If it has
+   something specific worth saying, asking, or reminding, it says it. Otherwise
+   it says nothing.
 
 The app is opened because there is something to record. That is the load-bearing
 assumption and it is the user's own: *trust me to open the app regularly and feed
@@ -42,7 +42,10 @@ bulk.
 Not a product. No onboarding for strangers, no account system beyond the
 owner's own Google sign-in. Since 2026-08-06 that one account can hold more
 than one **profile** — the same libraries and configuration, separate records
-(ADR 0004) — and that is as far toward a second user as this goes.
+(ADR 0004) — and that is as far toward a second user as this goes. Switching and
+creating both live on the profiles screen and nowhere else. Home names whose log
+it is showing and offers the single link there; making a second person is not a
+thing the front page of a logging app should suggest.
 
 ## 3. What changed, and why
 
@@ -52,7 +55,7 @@ than one **profile** — the same libraries and configuration, separate records
 | Libraries grow by use, never pre-seeded | Libraries ship with defaults you add to |
 | No grams, ever — portion expressed only as a level | Amount is in the food's own unit; grams where grams are natural |
 | Escalation: stored rungs, qualifying actions, standing lines | A longer gap is a narrower condition, so it gets a sharper line. No rung state machine |
-| Month plan, week plan, weekly planning conversation | Objectives — a short editable list of targets (§9) |
+| Month plan, week plan, weekly planning conversation | Objectives replaced them on 2026-08-01 and were themselves cut on 2026-08-06 (§9, ADR 0006). Nothing is compared against a number |
 | Fitness battery as its own domain | A workout whose exercises do not change. Not built now |
 | Staleness rotation composes each session | Something the coach may remark on. Nothing composes sessions |
 | Meals as a unit — breakfast, lunch, dinner | Gone 2026-08-01; the *meal* returned 2026-08-06 as an untyped container (§8.2). Breakfast, lunch and dinner stay gone |
@@ -148,9 +151,30 @@ Three rules fall out:
 
 - **Libraries ship seeded and grow by use.** A useful default list on day one,
   "add new" always available inline at the point of logging, and anything added
-  is remembered. Nothing in a seed list is protected — rename it, delete it.
+  is remembered. Nothing in a seed list is protected — rename it, and delete it
+  while nothing references it.
 - **Amounts are fractional.** `3.5 slices` is a valid entry.
 - **Blanks are allowed everywhere.** An item may exist with only a name.
+
+**A library also has a door of its own** (2026-08-06). Inline at the point of
+logging stays — it is the fast path and the rule above still holds — but it was
+the *only* way to reach an item, so correcting a name meant starting a workout
+you did not intend to log. Exercises get a screen, opened from the workout
+module's list rather than from home, where an item's name, kind, body part and
+picture are edited directly. Foods and segments have the same problem and will
+take the same shape when they are asked for.
+
+**Delete is refused while history depends on it.** Deleting a library item is
+unconditional only while nothing references it. Once an exercise appears in a
+logged workout, the delete names the workouts that use it — as links — and
+offers to rename it instead. Renaming reaches every one of them, because an
+entry stores the item's id and resolves its name at read time, so the case that
+usually wants deleting is answered without touching a single set. There is no
+bulk edit of past workouts behind this dialog and no hidden state: to actually
+remove the item, remove it from those workouts first, one at a time, with the
+numbers in front of you. The consequence is deliberate — **an item that has been
+used once stays in its picker**, and the way out is through the entries, not
+around them.
 
 ### 7.1 Level, and the next-time mark
 
@@ -219,6 +243,12 @@ plus a comment. **The number of sets is not a field** — it is how many rows we
 filled. Adding a set copies the row above it, so three sets at the same weight
 cost three taps rather than nine numbers.
 
+**A performed exercise can be taken out of a workout**, and a workout left with
+none is still a workout: it saves, it sits in the list saying nothing was done,
+and it is deleted like any other entry if that is what was meant. Nothing in the
+builder is committed until the workout is saved, so removing one is undone by
+leaving the screen.
+
 **Each exercise declares its kind**, and the kind decides which fields a set row
 shows. A weight box never appears for running.
 
@@ -246,12 +276,42 @@ An **exercise** in the library carries:
 | `image` | optional, resolved by naming convention with a placeholder fallback (§10.2) |
 | `notes` | fixed setup detail — seat height, pin position |
 
+**Name, kind and body part are editable where the exercise is being logged**, as
+well as on the library screen (§7). The kind control and the body-part control
+are the same size: they are a pair, and one of them looking larger reads as a
+hierarchy that is not there. A rename from either place reaches every workout
+that ever used the exercise, because an entry stores its id and resolves the
+name at read time — there is no way to fork an exercise, so a movement that has
+genuinely become a different one is a new exercise rather than a renamed old one.
+
 **Comments carry forward.** A comment written on an exercise (`30°`,
 `strait poll, hands at shoulders width`) appears with `Previous` next time. The
-log remembers *how* to do a movement, not only how much.
+log remembers *how* to do a movement, not only how much. It is also where a
+one-off parameter belongs — how high the feet were on a push-up, which pin is
+really the counterweight — rather than a new field on the exercise. A field
+earns its place by being compared over time; everything else is remembered, and
+remembering is what a comment is for.
 
 **Body part is not decoration.** It is what lets the coach notice that nothing
-has been done for the back in three weeks. It is the only reason the field exists.
+has been done for the back in three weeks, and since 2026-08-06 it is also what
+orders the exercise list below. The coach is the eventual reason for the field;
+the list is the present one.
+
+**The exercise list is ordered by neglect.** The picker sorts longest-ago
+first — the top of the list is what has not been done in the longest time, the
+foot of it is what was done yesterday. Above that gradient one exercise per body
+part is promoted: the least recent chest, the least recent legs, the least
+recent back, so that the opening rows cannot all be legs and no part is offered
+twice before every part has been offered once. Never performed is the longest
+gap there is and sorts as one; ties fall back to the library's own order.
+Filtering narrows the list without reordering it.
+
+This has a known edge, accepted rather than overlooked: an exercise performed
+once and then abandoned has the longest gap of anything in the library, and §7
+refuses to delete it while that one workout references it. So it climbs to the
+top and stays there. The way down is to clear it out of that workout, which is
+the same deliberate path §7 describes. Nothing hides it in the meantime, because
+hiding it would be the retire flag that was considered and turned down.
 
 ### 8.2 Nutrition
 
@@ -349,8 +409,7 @@ Dance occupies the day and counts as load; that is all it is for.
 
 The smallest module, and non-optional. This is a body-recomposition app, so a
 data set with no measurement of the body cannot answer whether any of the rest
-worked — and it is the only thing that gives the objectives (§9) something to
-compare against.
+worked.
 
 - **Weight.** A number and a timestamp. Context, not a verdict; if recomposition
   works the number barely moves.
@@ -360,27 +419,21 @@ That is the whole module. Tape measurements were considered and declined.
 Strength progression is the third signal and it is already free — it is the
 workout log.
 
-## 9. Objectives
+## 9. Objectives — removed
 
-The coach reasons from data, the clock, **and objectives**. Objectives therefore
-have to be data. Without them the app can only ever comment on gaps.
+Objectives were a short editable list of targets, and the coach's only reference
+point that was not arithmetic on its own log. They were **cut whole on
+2026-08-06** — the user does not write them and does not want anything compared
+against a number, which left a module whose entire purpose was the comparison.
+[ADR 0006](adr/0006-objectives-are-cut-and-body-parts-survive.md) records what
+went, what was kept anyway, and what the cut costs.
 
-A short editable list of targets, seeded from a first conversation and changed
-whenever they are wrong:
+What remains is gap arithmetic — how long since a thing last happened — which is
+enough for a coach that is absent on most opens.
 
-| example | shape |
-| :- | :- |
-| 3 workouts a week | count per period |
-| 2 dance sessions a week | count per period |
-| protein up | direction |
-| weight stable | direction |
-| something for the back weekly | count per period, scoped to a body part |
-
-Plus a free-text statement of intent that the app never parses and shows at the
-top of the objectives screen, so the reason is visible next to the numbers.
-
-Nothing here is a plan. There is no week plan, no month plan and no planning
-conversation. A missed target is a fact the coach may mention; it is not a debt.
+The section keeps its number rather than being deleted: §10.2, §12 R4 and the
+sections after them are cited by number from the ADRs, from `OPEN.md` and from
+several source comments, and renumbering would quietly break all of them.
 
 ## 10. Platform
 
@@ -413,22 +466,70 @@ the same treatment as exercises. Like the body module's photos these are never
 mirrored: the bytes are fetched from Drive when the item is on screen, so a
 photo is absent offline, and the caching this section asks for is still open.
 
+**Item pictures are compressed; body photographs are not** (2026-08-06,
+reversing this section's own *resize on import* for the body alone). An exercise
+or food picture is a reminder of which machine or which plate — it is never
+studied — so it is capped at a small edge and a modest quality. A body
+photograph is the thing being measured, so it is kept at the resolution it was
+shot at. Both are still re-encoded to JPEG on the way in rather than stored as
+the camera wrote them: the stored name ends `.jpg`, and a phone shooting HEIC
+would otherwise put a file in Drive that the app cannot display.
+
+**An item's picture is shown square.** Exercise and food pictures display 1:1
+whatever shape they were shot in, cropped to fill the frame rather than
+letterboxed into it — a row of items reads as a row when every picture is the
+same shape, and a portrait phone shot next to a landscape one reads as neither.
+The crop is display only. **What is stored keeps the aspect it was taken at**,
+because import is the one moment the discarded pixels cannot be got back, and
+a square is a decision about a frame rather than about the photograph. The body
+module's photos are not square: a body shot is the whole body.
+
 Photographs will eventually beat any stock set here, because the exercise names
 are specific to one gym: an illustration of a generic cable machine says nothing
 about *the yellow one*. That is a later call, not a build dependency.
 
 ### 10.3 Export
 
-The app can produce a clean, readable report — prose and tables, not a database
-dump — for pasting into an LLM when a second opinion is wanted. This keeps the
-qualitative layer available on demand without letting a model inside the walls.
+One report, one file: a **self-contained HTML document**, downloaded from home's
+footer, holding everything the active profile has recorded. Two readers share
+it, which is why it has the shape it has. A trainer is sent the file and opens
+it. An LLM is handed the text copied out of it when a second opinion is wanted,
+which keeps the qualitative layer available on demand without letting a model
+inside the walls. Prose and tables, never a database dump — the copied-out text
+has to read as a document, so the document is what gets built.
+
+**What is in it.** Every entry of every module, set by set and food by food,
+with the comments and the next-time marks kept: those are the half worth
+having, and a report that dropped them would be numbers with the reasoning
+taken out. Pictures of exercises and of foods are embedded, each one once
+however often its item recurs. Body photographs go in too, at the resolution
+they were shot at (§10.2), with the weights beside them. One profile per report
+— entries belong to whoever recorded them (ADR 0004).
+
+**It states, it does not judge.** No scores, no totals dressed as a verdict, no
+commentary of any kind. *No LLM in the app* and the coach's rule that it
+observes rather than explains land in the same place here: the report says what
+happened and stops, because interpreting it is the reader's job and the reader
+is the point.
+
+**It needs a signal.** Photos are never mirrored (§10.2), so the pictures are
+fetched from Drive as the report is built. Offline it still builds, and it names
+the pictures it could not reach rather than refusing to produce anything.
+
+**Its size has a horizon**, accepted rather than missed. Full-resolution body
+photographs plus the third that base64 adds mean the file grows by a few
+megabytes per photograph and outgrows what most mail carries within roughly half
+a year of monthly shots. It remains a good download; it stops being an
+attachment. No switch turns them off — `RULES.md` prefers deleting a feature to
+adding a setting that disables it — so when the file outgrows mail the answer is
+a link to it in Drive, not a toggle.
 
 ## 11. The configurability contract
 
 Every default is a guess and every guess is the user's to overwrite. Nothing in
 this list may exist as a constant in source:
 
-- Objectives, and every threshold the coach reads
+- Every threshold the coach reads
 - Day-zone boundaries and per-line windows
 - Line weights, cooldowns and expiries; lines may be added, edited or disabled
 - Level multipliers and portion conventions
@@ -448,12 +549,21 @@ tuning decay as the project's primary risk.
 **R2 — Opening the app. CLOSED.** Settled by the user: he will open it, and not
 only for the gym. Not to be re-argued.
 
-**R3 — Coach thinness.** With planning gone, the coach has less to reason from.
-Objectives (§9) are the mitigation, and if they stay empty the coach stays quiet.
-That is the correct failure mode, but it is a failure mode.
+**R3 — Coach thinness. Worse, not gone.** With planning gone, the coach had less
+to reason from, and objectives (§9) were the mitigation. They were cut on
+2026-08-06 (ADR 0006), so the mitigation went with them: the coach now reasons
+from the log and the clock alone, and gap arithmetic is the whole of what it can
+say. That is a thinner corpus than `COACH.md` was written against, and it is the
+accepted cost of the cut rather than an oversight. The failure mode is unchanged
+— an app with nothing specific to say says nothing — but it is now the ordinary
+case rather than the empty-objectives one.
 
 **R4 — Asset weight.** Images are the only part of this app with real size.
-Needs resize-on-import and lazy loading from the start.
+Needs resize-on-import and lazy loading from the start. Since 2026-08-06 the
+resize covers item pictures only: body photographs are kept at full size
+(§10.2), which spends this mitigation on the one thing in the app whose detail
+is the whole point. It is also what gives the export (§10.3) its size horizon,
+so the risk did not go away — it moved.
 
 ## 13. Build sequence
 
@@ -464,10 +574,9 @@ Needs resize-on-import and lazy loading from the start.
 3. **Nutrition module** — food library with seeds, units, levels, multipliers.
 4. **Movement and dance** — segments, posture blocks, sessions.
 5. **Body** — weight and photos.
-6. **Objectives.**
-7. **The coach** — facts, lines as data, the cascade, the floor (`COACH.md`).
-8. **Progress views** inside each module.
-9. **Export.**
+6. **The coach** — facts, lines as data, the cascade, the floor (`COACH.md`).
+7. **Progress views** inside each module.
+8. **Export.**
 
 Steps 1–5 are a complete and useful app on their own. That is intentional: the
 coach is the last thing built, because it is the only thing that cannot be built
@@ -481,7 +590,6 @@ before there is data to read.
 | Polarity of the `+` / `-` marker (§7.1) | user — one question |
 | Seed contents of the exercise, food and segment libraries | implementation drafts, user corrects |
 | Level multiplier seed values | implementation, editable |
-| The initial objectives | user |
 | Host choice and the one-time OAuth setup | implementation |
 | The provocation pool's contents | user |
 | Whether sleep becomes a sixth thing | user — deliberately left out for now |

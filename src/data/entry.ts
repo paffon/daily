@@ -62,3 +62,34 @@ export function monthKey(ts: string): string {
 export function entryPath(module: Module, ts: string): string {
   return `entries/${module}-${monthKey(ts)}.jsonl`
 }
+
+/** Sunday to Saturday. Local throughout — the week is the user's, so its edges
+ *  are midnights on their clock rather than an offset from an instant, which is
+ *  also what keeps it right across a DST change. */
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+const midnight = (at: Date): number => new Date(at).setHours(0, 0, 0, 0)
+
+/** `[start, end)` — `end` is the next week's first midnight, so a Saturday
+ *  23:59 is inside and the Sunday 00:00 after it is not.
+ *
+ *  Lifted here out of `objectives.ts` when objectives were cut (ADR 0006):
+ *  *the week runs Sunday morning to Saturday evening* is a hard rule that
+ *  outlives the first thing to need it, and this is the module that owns a
+ *  timestamp's arithmetic.
+ *
+ *  Which day it opens on is the caller's to read out of `config/app.json`.
+ *  This file is the primitive `store.ts` is built on, so reading a config here
+ *  would point the dependency back at itself — and handing the day in is also
+ *  what lets the boundary be tested with no store at all. */
+export function weekBounds(date: Date, starts: string): { start: Date; end: Date } {
+  /* An unrecognised day name falls back to the boundary `RULES.md` states
+     rather than to index -1, which would shift the week by a day in silence. */
+  const first = Math.max(0, DAYS.indexOf(starts))
+
+  const start = new Date(midnight(date))
+  start.setDate(start.getDate() - ((start.getDay() - first + DAYS.length) % DAYS.length))
+  const end = new Date(start)
+  end.setDate(end.getDate() + DAYS.length)
+  return { start, end }
+}

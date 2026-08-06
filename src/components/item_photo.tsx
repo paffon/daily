@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import { token } from '../data/drive'
-import { itemPhotoPath, photoUrl, putBinary, resize } from '../data/photos'
+import { itemPhotoPath, photoUrl, putBinary, shrinkItemPhoto } from '../data/photos'
 import './item_photo.css'
 
 /** A library item's own picture — the yellow machine, the actual plate — added
@@ -52,10 +52,12 @@ export function ItemPhoto({
 
   useEffect(() => () => show(''), [])
 
-  /** The same press as the body module's photo: resized on import, straight to
-   *  Drive, and shown from the very bytes that went up rather than fetched
-   *  back. Offline this is the one press on the screen that cannot work, and
-   *  saying so beats doing nothing visibly. */
+  /** The body module's press, with the opposite policy: this one is compressed
+   *  hard on the way in (§10.2), because a picture of a machine is a reminder
+   *  and a picture of a body is a measurement. Straight to Drive either way,
+   *  and shown from the very bytes that went up rather than fetched back.
+   *  Offline this is the one press on the screen that cannot work, and saying
+   *  so beats doing nothing visibly. */
   const add = async (picker: HTMLInputElement) => {
     const file = picker.files?.[0]
     /* cleared so choosing the same file again is still a change event */
@@ -64,7 +66,7 @@ export function ItemPhoto({
     setTrouble('')
     const item = showing.current
     try {
-      const small = await resize(file)
+      const small = await shrinkItemPhoto(file)
       await putBinary(itemPhotoPath(kind, id), small)
       if (showing.current === item) show(URL.createObjectURL(small))
     } catch {

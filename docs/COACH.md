@@ -104,7 +104,6 @@ else.
 | Clock | `now.zone`, `now.weekday`, `week.day_index` |
 | Recency | `since.workout.days`, `since.workout.back.days`, `since.food.log.hours`, `since.weight.days`, `since.<exercise>.days` |
 | Counts | `count.workout.week`, `count.dance.week`, `count.food.today` |
-| Objectives | `target.<name>`, `done.<name>`, `gap.<name>` |
 | Comparative | `best.<metric>.<window>`, `since_when.<metric>` |
 | Delta | `delta.<exercise>.kg`, `delta.<exercise>.since` |
 | Away | `away.active`, `away.days` |
@@ -121,9 +120,19 @@ The utterance log being a first-class store is what lets the coach avoid
 repeating itself: **it knows what it already said.** Structurally that is most of
 what "remembering" means here.
 
-The **objectives** family is new and is what makes the coach able to say anything
-beyond gap arithmetic. If objectives are empty, most of the corpus is ineligible
-and the coach is quiet. That is correct behaviour, not a bug.
+There was an **objectives** family here — `target.<name>`, `done.<name>`,
+`gap.<name>` — and it was what made the coach able to say anything beyond gap
+arithmetic. It went with the module on 2026-08-06
+([ADR 0006](adr/0006-objectives-are-cut-and-body-parts-survive.md)), and with it
+most of what the corpus was ever eligible to say. No line may name a fact the
+snapshot does not hold (§10), so any line reading `target.*`, `done.*` or
+`gap.*` is now unauthorable.
+
+What remains is **Recency** — `since.workout.days`, `since.workout.back.days` —
+which is gap arithmetic, and it is enough for a coach that is absent on most
+opens. `since.workout.back.days` is worth naming twice: it is the eventual
+reader that `payload.body_parts` is stamped for, and the reason ADR 0006 keeps a
+field nothing currently reads.
 
 ## 4. Lines
 
@@ -164,8 +173,7 @@ conditions                                → line
 since.workout.days ≥ 3                    → "Three days since the gym."
 
 since.workout.days ≥ 3
-gap.workouts.week ≥ 2                     → "Two of three sessions still open,
-now.zone = evening                           and dance tomorrow."
+now.zone = evening                        → "Three days, and dance tomorrow."
 dance.tomorrow = true
 ```
 
@@ -392,7 +400,7 @@ Declared in both directions: prospectively (*"away two weeks from Sunday"*) or
 retroactively (*"ignore the last two weeks"*).
 
 Days are marked `away` in the record, permanently, and never erased. Gap
-conditions skip them; objective counts skip them. **Staleness is untouched** —
+conditions skip them. **Staleness is untouched** —
 after two weeks off everything really is two weeks stale, and pretending
 otherwise would be a lie about the body, which is a worse category of lie than an
 unflattering statistic.
@@ -465,7 +473,7 @@ Every line is hand-written. These are the constraints.
 ```
 07:40   nothing new overnight
 
-        Workouts: 1 of 3 this week.
+        Four days since the gym.
           Gym today?   [ yes ]  [ no ]  [ maybe later ]
 
         ── workout ─ nutrition ─ movement ─ dance ─ body ──

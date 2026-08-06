@@ -13,8 +13,12 @@ const enter = (id: string): void => {
 
 /** The registry, one row per profile, and a name box for the next one. What a
  *  profile is — same libraries, separate records — is ADR 0004's to say; this
- *  screen only lists and switches. */
-export function Profiles({ startNew = false }: { startNew?: boolean }): VNode {
+ *  screen only lists and switches.
+ *
+ *  Since 2026-08-06 it is also the only place a profile is made (§2). The box
+ *  is not focused on arrival: the screen's first job is switching, and stealing
+ *  focus puts a keyboard over the list it opened to show. */
+export function Profiles(): VNode {
   const [profiles] = useState(readProfiles)
   const [name, setName] = useState('')
 
@@ -53,7 +57,6 @@ export function Profiles({ startNew = false }: { startNew?: boolean }): VNode {
             class="profiles-input"
             aria-label="new profile name"
             placeholder="a name"
-            autofocus={startNew}
             value={name}
             onInput={(e) => setName(e.currentTarget.value)}
             onKeyDown={(e) => {

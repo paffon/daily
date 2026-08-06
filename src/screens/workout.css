@@ -59,6 +59,37 @@
   color: var(--mono);
 }
 
+/* a performed exercise and the way out of it — the pair nutrition's meal rows
+   already wear. Session state only: nothing has been written yet, so it
+   neither arms nor warns, and it never wears danger. `delete this entry` stays
+   the one control in the app that does. */
+.workout-rail-item {
+  display: flex;
+  align-items: stretch;
+}
+
+.workout-rail-item .workout-rail-row {
+  flex: 1;
+  min-width: 0;
+  padding-right: 0;
+}
+
+.workout-rail-drop {
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 0 24px 0 0;
+  border: none;
+  background: none;
+  color: var(--mono-faint);
+  font: 400 14px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.workout-rail-drop:hover {
+  color: var(--ink);
+}
+
 .workout-rail-row {
   align-items: center;
   justify-content: space-between;
@@ -111,6 +142,14 @@
   color: var(--mono);
 }
 
+/* the exercise library's door, in the register home's `objectives →` had */
+.workout-library {
+  padding: 0 24px 28px;
+  font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono);
+  text-decoration: none;
+}
+
 /* the module's landing: the list of past workouts, `+ new` above them */
 
 .workout-rail-page {
@@ -145,7 +184,9 @@
 
 .workout-head {
   display: flex;
-  align-items: baseline;
+  /* two equal boxes have no shared baseline worth aligning to, and baseline is
+     what used to sit a 44px select against a 27px input */
+  align-items: center;
   flex-wrap: wrap;
   gap: 14px;
 }
@@ -156,26 +197,61 @@
   color: var(--ink);
 }
 
+/* the heading is the name box (§8.1) — one thing shown and edited, so the
+   screen cannot hold two names that disagree */
+.workout-name {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 0 0 2px;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
+  color: inherit;
+}
+
+.workout-name:focus {
+  border-bottom-color: var(--steel);
+  outline: none;
+}
+
 /* the kind and the body part are controls rather than captions: both are
-   editable here, and this is the only surface either is reachable from */
+   editable here, and this is the fast surface either is reachable from — the
+   library screen (§7) is the slow one.
+
+   They are a pair, and one of them looking larger reads as a hierarchy that is
+   not there. Two equal columns rather than two widths, because a kind is the
+   user's own word and no number written here can be the right one — the
+   library ships `bodyweight`, which already overflowed the `11ch` this
+   replaces. `minmax(0, 1fr)` is what stops the select's intrinsic minimum
+   pushing the row wider than the screen: nothing scrolls sideways. */
+
+.workout-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 34ch;
+}
 
 .workout-kind,
 .workout-part {
-  padding: 5px 8px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--hit-min);
+  padding: 0 8px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-control);
   background: none;
   font: 400 10.5px/1 var(--family-mono);
   letter-spacing: 0.1em;
   color: var(--mono);
+  text-overflow: ellipsis;
 }
 
 .workout-kind {
   cursor: pointer;
-}
-
-.workout-part {
-  width: 11ch;
 }
 
 .workout-kind:focus,
@@ -248,11 +324,6 @@
   cursor: pointer;
 }
 
-.workout-end:disabled {
-  color: var(--mono-faint);
-  cursor: default;
-}
-
 /* editing a past workout, inside frame 4h */
 
 .workout-edit,
@@ -302,13 +373,18 @@
   .workout-rail-label,
   .workout-rail-row,
   .workout-rail-add,
-  .workout-rail-progress {
+  .workout-rail-progress,
+  .workout-library {
     padding-left: 34px;
     padding-right: 34px;
   }
 
   .workout-rail-row {
     padding-left: 31px;
+  }
+
+  .workout-rail-drop {
+    padding-right: 34px;
   }
 
   .workout-rail-progress {

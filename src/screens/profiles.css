@@ -1,6 +1,6 @@
-/* Profiles. The module screens' 52/56px strip and 760px breakpoint, and the
-   objectives screen's row-list arrangement — a registry is closer to a list of
-   targets than to a log. */
+/* Profiles. The module screens' 52/56px strip and 760px breakpoint, and a
+   row-list arrangement rather than a log's — a registry is a list of things,
+   not a list of things that happened. */
 
 .profiles {
   display: flex;
