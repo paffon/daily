@@ -1,0 +1,63 @@
+name: deploy
+
+# A merge into master is the deploy. Nothing else is — the gap this closes is a
+# merged pull request that reached nobody, which happened often enough to be
+# worth a machine. `workflow_dispatch` is the same pipeline on a button, for a
+# redeploy that has no new commit behind it.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# One deploy at a time, newest commit wins. Two merges a minute apart would
+# otherwise race to upload and the older build could be the one that lands.
+# Cancelling mid-run is safe: a Firebase release is activated at the end, so a
+# deploy that never finishes never goes live.
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The same two gates that guard a local change, in the same order, so
+      # nothing reaches the live site that would not have passed on a laptop.
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+
+      # The specific failure this exists for: `.env.local` is gitignored, a
+      # build without it exits 0, and the bundle it produces looks fine and
+      # cannot sign in. That has reached the live site before. Vite inlines the
+      # id at build time, so the built file either contains it or the deploy is
+      # already broken — which is a thing worth learning here rather than from
+      # a sign-in button that does nothing.
+      - name: refuse a build that cannot sign in
+        env:
+          CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          test -n "$CLIENT_ID" || { echo "VITE_GOOGLE_CLIENT_ID is not set on this repository"; exit 1; }
+          grep -rqF "$CLIENT_ID" dist/assets || { echo "the client id is absent from the built bundle"; exit 1; }
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OMRINARDINIRI }}
+          projectId: omrinardiniri
+          channelId: live
