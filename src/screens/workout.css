@@ -218,41 +218,8 @@
   color: var(--steel-text);
 }
 
-.workout-previous-comment {
-  display: block;
-  margin-top: 10px;
-  font: 300 italic 16px/1.4 var(--family-serif);
-  color: var(--ink-quiet);
-}
-
-/* the comment on what is being logged now */
-
-.workout-comment {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.workout-label {
-  font: 400 10px/1 var(--family-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mono);
-}
-
-.workout-comment input {
-  height: 52px;
-  padding: 0 16px;
-  border: 1px solid var(--rule);
-  background: var(--paper-control);
-  font: 300 18px/1 var(--family-serif);
-  color: var(--ink-quiet);
-}
-
-.workout-comment input:focus {
-  border-color: var(--steel);
-  outline: none;
-}
+/* the comment, both as it is typed and as `previous` reads it back, lives in
+   `fields.css` — nutrition wanted the same box (2026-08-06) */
 
 /* the last thing in the column and stuck to the bottom edge, so it is both
    under the workout it ends and always within reach of a thumb */

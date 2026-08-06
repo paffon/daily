@@ -5,7 +5,7 @@ import { newEntry, toIso } from '../data/entry'
 import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
 import { bodyPartsOf, fieldsFor, loadExercises, setLine } from '../data/exercise'
-import { Danger, Previous, Timestamp, dayTimeOf } from '../components/fields'
+import { Comment, Danger, Previous, Timestamp, dayTimeOf } from '../components/fields'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { SetTable } from '../components/set_table'
@@ -59,24 +59,8 @@ function Sets({ performed, exercise }: { performed: Performed; exercise: Exercis
           </span>
         ))}
       </span>
-      {performed.comment !== '' && <q class="workout-previous-comment">{performed.comment}</q>}
+      {performed.comment !== '' && <q class="field-previous-comment">{performed.comment}</q>}
     </>
-  )
-}
-
-/** A single-line comment, and the reason the log remembers *how* to do a
- *  movement rather than only how much. */
-function Comment({ value, onChange }: { value: string; onChange: (v: string) => void }): VNode {
-  return (
-    <label class="workout-comment">
-      <span class="workout-label">comment</span>
-      <input
-        type="text"
-        aria-label="comment"
-        value={value}
-        onInput={(e) => onChange(e.currentTarget.value)}
-      />
-    </label>
   )
 }
 

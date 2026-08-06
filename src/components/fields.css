@@ -77,3 +77,40 @@
 .field-previous-what {
   color: var(--ink-quiet);
 }
+
+/* the comment read back inside `previous`, in the hand the user wrote it in */
+.field-previous-comment {
+  display: block;
+  margin-top: 10px;
+  font: 300 italic 16px/1.4 var(--family-serif);
+  color: var(--ink-quiet);
+}
+
+/* the comment on what is being logged now */
+
+.field-comment {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-comment-label {
+  font: 400 10px/1 var(--family-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mono);
+}
+
+.field-comment input {
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  font: 300 18px/1 var(--family-serif);
+  color: var(--ink-quiet);
+}
+
+.field-comment input:focus {
+  border-color: var(--steel);
+  outline: none;
+}

@@ -12,8 +12,10 @@ How much of a library item an entry records, in that item's own unit. Fractional
 — `3.5 slices` is valid.
 
 **Comment**:
-Free text attached to a performed exercise, usually a form cue. Carried forward
-with *Previous* so the log remembers how to do a movement, not only how much.
+Free text attached to a performed exercise — usually a form cue — or, since
+2026-08-06, to a food in a meal. Carried forward with *Previous* so the log
+remembers how a movement was done and what a portion actually was, not only how
+much of either.
 
 **Entry**:
 One logged occurrence: a timestamp plus whatever its module records. Every entry
