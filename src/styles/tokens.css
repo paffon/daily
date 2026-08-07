@@ -1,7 +1,7 @@
-/* Design tokens — the whole palette, from the handoff README's colour table.
-   Every colour stays in oklch(); hex conversion loses the shared
-   lightness/chroma relationships the three families are built on.
-   Where the README gives a range, the value below is its midpoint. */
+/* Design tokens — the whole palette. Every colour stays in oklch(); hex
+   conversion loses the shared lightness/chroma relationships the three
+   families are built on. Where the original design gave a range, the value
+   below is its midpoint. */
 
 :root {
   /* paper — near-white neutrals at hue 255 */
