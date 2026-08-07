@@ -381,9 +381,9 @@ valid entry and is worth more than an entry that was never made.
 Two entry types, because they are genuinely different data.
 
 **A segment** is an event: a walk, a commute leg, a flight of stairs. It records
-a segment from the library (or an ad-hoc one), a duration, a speed level and a
-difficulty. A **segment** in the library carries a name (`to work`,
-`from work`), a distance and a gradient (flat / rising / descending / mixed).
+a segment from the library (or an ad-hoc one), a duration and a speed level. A
+**segment** in the library carries a name (`to work`, `from work`), a distance
+and a gradient (flat / rising / descending / mixed).
 
 Stairs count. Sprint work does not — that is a workout, and the line is intent,
 rather than intensity.
@@ -592,11 +592,6 @@ before there is data to read.
 
 | item | owner |
 | :- | :- |
-| Storage format — text / CSV / JSON, possibly mixed per module | implementation, once data requirements are firm |
-| Polarity of the `+` / `-` marker (§7.1) | user — one question |
-| Seed contents of the exercise, food and segment libraries | implementation drafts, user corrects |
-| Level multiplier seed values | implementation, editable |
-| Host choice and the one-time OAuth setup | implementation |
 | The provocation pool's contents | user |
 | Whether sleep becomes a sixth thing | user — deliberately left out for now |
 | Language of the line corpus (assumed English) | user |
