@@ -10,7 +10,6 @@
     "jsxImportSource": "preact",
     "types": ["vitest/globals", "vite/client"],
     "skipLibCheck": true,
-    "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true
   },
