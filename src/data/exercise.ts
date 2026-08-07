@@ -53,6 +53,21 @@ export function writeExercises(change: (held: Library) => Exercise[]): void {
 export const performedIn = (entry: Entry): Performed[] =>
   (entry.payload['exercises'] as Performed[]) ?? []
 
+/** An exercise the library no longer has — renamed away on another device, or
+ *  deleted, since nothing in a seed is protected. Its own rows say what fields
+ *  it was logged with, so the numbers stay visible rather than silently
+ *  dropping out of the screen while sitting in the file. */
+export const asExercise = (performed: Performed, library: Exercise[]): Exercise =>
+  library.find((item) => item.id === performed.exercise_id) ?? {
+    id: performed.exercise_id,
+    name: performed.exercise_id,
+    body_part: '',
+    kind: '',
+    fields: Object.keys(performed.sets[0] ?? {})
+      .filter((key) => key !== 'mark')
+      .map((name) => ({ name, unit: '' })),
+  }
+
 /** The distinct body parts a workout touched, resolved against the library at
  *  the moment it is logged and written onto the entry. Nothing reads it today —
  *  `docs/adr/0006-objectives-are-cut-and-body-parts-survive.md` is the file

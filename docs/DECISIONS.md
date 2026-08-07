@@ -85,10 +85,12 @@ right and the line is stale.
 | an item's picture is shown 1:1, cropped for display and never on import | [§10.2](DESIGN.md#102-images) |
 | the export is one self-contained HTML file, serving a trainer and an LLM alike | [§10.3](DESIGN.md#103-export) |
 
-**Built on 2026-08-07, except the export.** Every row above landed on
-`claude/workout-module-refinements-8c24c8` but the HTML export, which is
+**Built on 2026-08-07.** Every row above landed on
+`claude/workout-module-refinements-8c24c8` except the HTML export —
 `DESIGN.md` §13's last step and the one row here that is not a workout-module
-refinement — it gets its own branch.
+refinement — which landed the same day on its own branch,
+`claude/downloadable-html-report-12182c`. `CONTEXT.md` gained **Report** with
+it.
 
 `DESIGN.md` says what the app does; `RULES.md` and `CONTEXT.md` say what is true
 now, so their edits were written when the code landed rather than when the

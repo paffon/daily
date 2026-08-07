@@ -3,8 +3,12 @@ import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
-import type { Food, FoodLibrary } from '../data/food'
+import type { Food, FoodLibrary, Logged } from '../data/food'
 import {
+  asFood,
+  commentOf,
+  foodsIn,
+  foodsOf,
   loadFoods,
   loadLevels,
   nutritionConfig,
@@ -26,31 +30,8 @@ import './nutrition.css'
  *  foods added one at a time, one entry holding the lot — and it is untyped:
  *  no breakfast, no lunch, no dinner. A snack is a meal of one. */
 
-/** `comment` is free text on this food in this meal — *the good bakery*, *left
- *  half of it*, *reheated*. Optional and absent until something is typed: a
- *  meal of six should not carry six empty strings, and every entry logged
- *  before comments stays exactly as it was written. */
-type Logged = { food_id: string; amount: number; level: string; comment?: string }
-
-/** Both shapes a payload can hold: `{ foods: [...] }` since meals landed, and
- *  the flat single-food payload every entry before them was written with. The
- *  log is never migrated — an old entry keeps saying what it said. */
-const foodsOf = (payload: Entry['payload']): Logged[] => {
-  const foods = payload['foods']
-  return Array.isArray(foods) ? (foods as Logged[]) : [payload as Logged]
-}
-
-const foodsIn = (entry: Entry): Logged[] => foodsOf(entry.payload)
-
-/** A food logged before comments carries no key, and an emptied box leaves a
- *  blank one behind. Both mean nothing was said. */
-const commentOf = (logged: Logged): string => logged.comment ?? ''
-
-/** A food the library no longer has — renamed on another device, or deleted,
- *  since nothing in a seed is protected. The entry keeps saying what it said;
- *  only the name falls back to the id it was stored under. */
-const asFood = (id: string, library: FoodLibrary): Food =>
-  library.foods.find((item) => item.id === id) ?? { id, name: id, unit: '', default_level: '' }
+/* `Logged`, `foodsOf` and their family live in `src/data/food.ts` since the
+   export needed them too — the payload key lives with the type it names. */
 
 /** `2 slices · loaded`, which is the same sentence the rail and `Previous` both
  *  say. The unit is blank where the food counts as itself, and then an apple

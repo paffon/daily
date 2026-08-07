@@ -43,4 +43,14 @@ describe('home, silent state', () => {
     expect(container.textContent ?? '').not.toContain('new profile')
     expect(container.querySelector('a[href="#/exercises"]')).toBeNull()
   })
+
+  /* §10.3: the report is downloaded from home's footer — a control, not a
+     door: the file leaves and the screen stays, so it must not be a link. */
+  it('offers the report from the footer, as a control rather than a route', () => {
+    const { getByText, container } = render(<Home />)
+    const control = getByText('download report')
+    expect(control.closest('.home-foot')).not.toBeNull()
+    expect(control.closest('a')).toBeNull()
+    expect(container.querySelectorAll('.home-report')).toHaveLength(1)
+  })
 })

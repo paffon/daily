@@ -80,6 +80,13 @@ browser that has never been switched opens on — is shared, like the registry i
 is written in.
 _Avoid_: user, account (the account is Google's, and every profile lives in one)
 
+**Report**:
+The export (`DESIGN.md` §10.3): one self-contained HTML document holding
+everything the active profile has recorded, downloaded from home's footer.
+Sent to a trainer whole; an LLM is handed text copied out of it, which is how
+a second opinion stays outside the walls. It states, it does not judge.
+_Avoid_: dump, backup (the data's home is Drive; the report is a document)
+
 **Segment**:
 A named route in the movement library — `to work`, `from work` — carrying a
 distance and a gradient. Also, loosely, one logged movement event.
