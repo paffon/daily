@@ -21,7 +21,7 @@ type Session = { duration_min: number; level: string }
 
 /** `a duration · a level` — the list, `Previous`, home's recent row and the
  *  edit screen all say the same sentence about a session. */
-export const sessionLine = ({ duration_min, level }: Session): string =>
+const sessionLine = ({ duration_min, level }: Session): string =>
   [`${duration_min} min`, level].filter((part) => part !== '').join(' · ')
 
 /** What home's recent row says about a dance entry. */

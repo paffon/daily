@@ -9,7 +9,7 @@ import exercisesSeed from '../seed/exercises.json'
 /** One column of a set row. `sep` is what precedes the value when the row is
  *  written out as a line (`47.5 kg × 10`, `5 km / 28 min`), which is why the
  *  four separators the design uses need no formatting code. */
-export type Field = { name: string; unit: string; optional?: boolean; sep?: string }
+type Field = { name: string; unit: string; optional?: boolean; sep?: string }
 
 export type Exercise = {
   id: string
@@ -25,9 +25,9 @@ export type Exercise = {
 }
 
 /** `sign` is the fast input's trailing character, `short` the phone's glyph. */
-export type Mark = { value: string; short: string; sign: string }
+type Mark = { value: string; short: string; sign: string }
 
-export type Library = { kinds: Record<string, Field[]>; marks: Mark[]; exercises: Exercise[] }
+type Library = { kinds: Record<string, Field[]>; marks: Mark[]; exercises: Exercise[] }
 
 /** A set row: one value per field its kind declares, plus the next-time mark.
  *  A blank field is `null` — a set with nothing in it is a valid set. */

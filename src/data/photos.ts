@@ -81,7 +81,7 @@ export const shrinkItemPhoto = (file: Blob): Promise<Blob> =>
 /** A body photograph is the thing being measured, so it is kept at the
  *  resolution it was shot at (§10.2, reversing §12 R4 for the body alone) and
  *  re-encoded to JPEG all the same. */
-export const recodeBodyPhoto = (file: Blob): Promise<Blob> => encode(file, settings().body_quality)
+const recodeBodyPhoto = (file: Blob): Promise<Blob> => encode(file, settings().body_quality)
 
 /** Straight to Drive, never through the store. The one write in the app that
  *  does not touch the mirror. */

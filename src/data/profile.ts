@@ -12,7 +12,7 @@
 import { readJson, writeJson } from './store'
 import profilesSeed from '../seed/profiles.json'
 
-export type Profile = { id: string; name: string }
+type Profile = { id: string; name: string }
 
 /** The registry file: the profiles, and which of them is starred. `default`
  *  is optional because a registry written before starring existed has no such
@@ -20,7 +20,7 @@ export type Profile = { id: string; name: string }
 type Registry = { profiles: Profile[]; default?: string }
 
 /** The one profile whose files carry no prefix. */
-export const ORIGINAL = 'main'
+const ORIGINAL = 'main'
 
 /** Which profile this device is reading as. Device state rather than data —
  *  it sits beside the mirror, never in it, and never syncs: each device is on

@@ -227,7 +227,7 @@ async function subfolders(parent: string): Promise<Map<string, string>> {
  *  and nothing is held past a reload, so trashing `daily/` costs one reload
  *  rather than a hand-cleared key. Idempotent, and every call below funnels
  *  through it, so no caller has to remember to sequence it first. */
-export async function ensureFolders(): Promise<Record<string, string>> {
+async function ensureFolders(): Promise<Record<string, string>> {
   if (Object.keys(folders).length > 0) return folders
 
   const root = (await findId(ROOT, null, true)) ?? (await create(ROOT, null, true))
@@ -289,7 +289,7 @@ export async function putFile(path: string, content: string | Blob): Promise<str
 
 /** One file in Drive as the store sees it. `modifiedTime` is Drive's own
  *  change token: the pull compares it and downloads only what moved. */
-export type DriveFile = { path: string; modifiedTime: string }
+type DriveFile = { path: string; modifiedTime: string }
 
 /** Drive's own ceiling for one listing, not a number worth tuning. */
 const PAGE = 1000

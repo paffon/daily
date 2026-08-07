@@ -39,7 +39,7 @@ export type FoodLibrary = { units: Record<string, string>; foods: Food[] }
 
 /** One module's level scale. `multipliers` is nutrition's alone — a walking
  *  speed is what the thing was and multiplies nothing. */
-export type Scale = { scale: string[]; multipliers?: Record<string, number> }
+type Scale = { scale: string[]; multipliers?: Record<string, number> }
 
 /** One food inside a meal. `comment` is free text on this food in this meal —
  *  *the good bakery*, *left half of it*, *reheated*. Optional and absent until
@@ -83,7 +83,7 @@ export const nutritionConfig = (): typeof appSeed.nutrition => ({
   ...readJson('config/app.json', appSeed).nutrition,
 })
 
-export type Nutrition = { kcal: number | null; protein: number | null }
+type Nutrition = { kcal: number | null; protein: number | null }
 
 /** The food's normal-case numbers, times the amount, times the level's
  *  multiplier. A food with no number stays `null` rather than becoming 0: an

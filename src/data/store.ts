@@ -41,7 +41,7 @@ export function readText(path: string): string | null {
   return adapter.get(path)
 }
 
-export function writeText(path: string, text: string): void {
+function writeText(path: string, text: string): void {
   adapter.set(path, text)
 }
 
