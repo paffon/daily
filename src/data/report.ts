@@ -28,12 +28,35 @@ import { getBlob } from './drive'
 import { itemPhotoPath, photoOf } from './photos'
 import appSeed from '../seed/app.json'
 
+/** An entry's timestamp read in the offset the entry itself carries, rather
+ *  than in whatever zone the report happens to be built in. `new Date(ts)`
+ *  alone would render a 07:40 workout as 04:40 on a machine set to UTC and as
+ *  13:40 on one set to Tokyo, so a week abroad would rewrite the hours of
+ *  every past session. The offset is written into every `ts` for this reason
+ *  (`toIso`), and a document that outlives the device has to keep it: history
+ *  says what the clock on the wall said. Shifting the instant by the offset
+ *  and reading it as UTC is that wall clock. A `ts` without an offset has no
+ *  wall clock of its own, so it keeps the reader's. */
+const OFFSET = /(?:Z|([+-])(\d{2}):(\d{2}))$/
+
+const asWritten = (ts: string): { at: Date; zone: string | undefined } => {
+  const found = OFFSET.exec(ts)
+  const at = new Date(ts)
+  if (found === null) return { at, zone: undefined }
+  const [, sign, hours, minutes] = found
+  const offset =
+    sign === undefined ? 0 : (sign === '-' ? -1 : 1) * (Number(hours) * 60 + Number(minutes))
+  return { at: new Date(at.getTime() + offset * 60_000), zone: 'UTC' }
+}
+
 /** A report spans months and can span years, so unlike the rails' `12 july`
  *  the year is part of the fact here — the file is read long after the
  *  conversation that would have supplied it. Lowercased like every date the
  *  app writes. */
-const format = (ts: string, locale: string, opts: Intl.DateTimeFormatOptions): string =>
-  new Intl.DateTimeFormat(locale, opts).format(new Date(ts)).toLowerCase()
+const format = (ts: string, locale: string, opts: Intl.DateTimeFormatOptions): string => {
+  const { at, zone } = asWritten(ts)
+  return new Intl.DateTimeFormat(locale, { ...opts, timeZone: zone }).format(at).toLowerCase()
+}
 
 const dayOf = (ts: string, locale: string): string =>
   format(ts, locale, { day: 'numeric', month: 'long', year: 'numeric' })

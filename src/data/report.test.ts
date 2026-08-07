@@ -246,6 +246,18 @@ describe('buildReport', () => {
     expect(html).toContain('2 may 2026 to')
   })
 
+  /* the offset is written into every ts so a late entry keeps its own day
+     (`toIso`); a report built elsewhere — a machine on UTC, a week abroad —
+     has to read the hours the way they were logged, not re-zone them. Both
+     offsets here are foreign to whatever clock is running this test. */
+  it('tells the hour the entry was logged at, wherever the report is built', async () => {
+    logWorkout('2026-07-12T21:15:00+09:00', [{ mark: '', weight: 40, reps: 10 }])
+    putEntry(newEntry('body', { weight: 74.2 }, '2026-07-12T23:30:00-05:00'))
+    const html = await buildReport()
+    expect(html).toContain('12 july 2026 21:15')
+    expect(html).toContain('12 july 2026 23:30')
+  })
+
   it('writes what the user typed as text, never as markup', async () => {
     logWorkout('2026-07-12T07:40:00+03:00', [{ mark: '', weight: 40, reps: 10 }], '<b>30°</b>')
     const html = await buildReport()
