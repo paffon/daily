@@ -89,14 +89,10 @@ const allLines = (): Entry[] => adapter.list(`entries/${scope()}`).filter(mine).
  *  daylight saving, so the strings do not sort in the order the clocks ran. */
 const byNewest = (a: Entry, b: Entry) => Date.parse(b.ts) - Date.parse(a.ts)
 
-/** Newest first, tombstones dropped. `months` narrows to specific month keys;
- *  without it every month file the module has is read. */
-export function readEntries(module: Module, months?: string[]): Entry[] {
-  const paths =
-    months === undefined
-      ? adapter.list(`entries/${scope()}${module}-`)
-      : months.map((month) => `entries/${scope()}${module}-${month}.jsonl`)
-  return paths
+/** Newest first, tombstones dropped. */
+export function readEntries(module: Module): Entry[] {
+  return adapter
+    .list(`entries/${scope()}${module}-`)
     .flatMap(readLines)
     .filter((entry) => !entry.deleted)
     .sort(byNewest)

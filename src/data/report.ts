@@ -20,7 +20,7 @@ import { readEntries, readJson } from './store'
 import { activeProfile } from './profile'
 import type { Exercise } from './exercise'
 import { asExercise, fieldsFor, loadExercises, performedIn, setLine } from './exercise'
-import type { Food, FoodLibrary, Logged } from './food'
+import type { Food, Logged } from './food'
 import { asFood, commentOf, foodsIn, loadFoods, nutritionFor, nutritionLine, unitOf } from './food'
 import type { Segment } from './segment'
 import { asSegment, hintOf, loadSegments } from './segment'
@@ -315,7 +315,7 @@ function exerciseItems(used: Exercise[], srcs: Map<string, string>): string {
   return items.join('')
 }
 
-function foodItems(used: Food[], library: FoodLibrary, srcs: Map<string, string>): string {
+function foodItems(used: Food[], srcs: Map<string, string>): string {
   const items = used.map((food) => {
     const src = srcs.get(itemPhotoPath('food', food.id))
     const picture = src === undefined ? '' : `<img class="item" src="${src}" alt="${esc(food.name)}">`
@@ -496,7 +496,7 @@ export async function buildReport(): Promise<string> {
         `<p>what the log's names refer to, as the library holds them today.</p>` +
         [
           exercises.length === 0 ? '' : `<h3>exercises</h3>${exerciseItems(exercises, srcs)}`,
-          usedFoods.length === 0 ? '' : `<h3>foods</h3>${foodItems(usedFoods, foods, srcs)}`,
+          usedFoods.length === 0 ? '' : `<h3>foods</h3>${foodItems(usedFoods, srcs)}`,
           segments.length === 0 ? '' : `<h3>segments</h3>${segmentItems(segments)}`,
         ].join('') +
         `</section>`
