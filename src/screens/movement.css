@@ -72,14 +72,6 @@
   cursor: pointer;
 }
 
-/* a proportion is not an event — one rule above the blocks is the whole of
-   that distinction, and the group carries it rather than each row */
-.movement-rail-blocks:not(:empty) {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--rule-light);
-}
-
 .movement-rail-when {
   font: 400 12px/1 var(--family-mono);
   color: var(--mono);
