@@ -52,3 +52,9 @@ the entire install over the missing lines. Running `npm install
 nothing wrong with it. The repair is to run that same command on Linux, where
 npm adds what it finds missing; WSL is enough, and what it writes is two
 entries and no version changes.
+
+**The pipeline is not the whole path to a browser.** What a change has to clear
+to be visible — this workflow, and then a service worker, and then a check
+against the live bundle rather than the source — is `../DEPLOY.md`. It also
+carries the laptop fallback for when this pipeline cannot run at all, which
+happened on the day it was written.

@@ -15,6 +15,7 @@ opens. If a decision trades logging speed for anything else, logging speed wins.
 | `docs/COACH.md` | the utterance layer — what the coach says, when, and how |
 | `docs/RULES.md` | the short list of rules that are easy to break by accident |
 | `docs/CONTEXT.md` | glossary — the project's canonical vocabulary |
+| `docs/DEPLOY.md` | what it takes for a change to reach the live app, and how to prove it did |
 | `docs/adr/` | why the build is shaped the way it is — decisions, with their trade-offs |
 | `docs/DECISIONS.md` | every decision and where it is written — the log, the ADR index, and the bar an ADR clears |
 | `docs/OPEN.md` | what the v1 build left unresolved — read before picking up new work |

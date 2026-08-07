@@ -73,6 +73,8 @@ noticing:
 - Every data type needs two paths: prompted by the coach, and logged
   spontaneously.
 - Prefer deleting a feature over adding a setting that disables it.
+- A merged pull request is not a deployed one, and a green run is not a visible
+  change. Prove it by fetching the live bundle — `DEPLOY.md`.
 - Never show a field the thing does not have. Running has no weight box.
 - Locale is Israel. Portion sizes, week boundaries and units follow the user,
   not US defaults.
