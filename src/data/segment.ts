@@ -19,6 +19,11 @@ export type Segment = {
 export const loadSegments = (): Segment[] =>
   readJson<Segment[]>('library/segments.json', segmentsSeed)
 
+/** A segment the library no longer has — renamed or deleted on another device,
+ *  since nothing in a seed is protected. The entry keeps saying what it said. */
+export const asSegment = (id: string, library: Segment[]): Segment =>
+  library.find((item) => item.id === id) ?? { id, name: id }
+
 /** `2.8 km · mixed`, and nothing at all for a segment carrying neither. */
 export const hintOf = ({ distance_km, gradient }: Segment): string =>
   [distance_km === undefined ? '' : `${distance_km} km`, gradient ?? '']

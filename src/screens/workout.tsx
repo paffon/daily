@@ -5,6 +5,7 @@ import { newEntry, toIso } from '../data/entry'
 import { deleteEntry, putEntry, readEntries, readJson, updateEntry } from '../data/store'
 import type { Exercise, Performed } from '../data/exercise'
 import {
+  asExercise,
   bodyPartsOf,
   byStaleness,
   fieldsFor,
@@ -42,20 +43,8 @@ export const workoutLine = (entry: Entry): string => {
   return names.length === 0 ? 'nothing done' : names.join(', ')
 }
 
-/** An exercise the library no longer has — renamed away on another device, or
- *  deleted, since nothing in a seed is protected. Its own rows say what fields
- *  it was logged with, so the numbers stay visible rather than silently
- *  dropping out of the screen while sitting in the file. */
-const asExercise = (performed: Performed, library: Exercise[]): Exercise =>
-  library.find((item) => item.id === performed.exercise_id) ?? {
-    id: performed.exercise_id,
-    name: performed.exercise_id,
-    body_part: '',
-    kind: '',
-    fields: Object.keys(performed.sets[0] ?? {})
-      .filter((key) => key !== 'mark')
-      .map((name) => ({ name, unit: '' })),
-  }
+/* `asExercise` lives in `src/data/exercise.ts` since the export needed it
+   too — the fallback belongs with the type it stands in for. */
 
 /** The sets of one performed exercise, with the marks as prominent as the
  *  numbers — a set reads `47.5 kg × 10 more`, and `more` is the half that is

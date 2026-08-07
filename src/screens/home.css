@@ -139,6 +139,23 @@
   text-decoration: none;
 }
 
+/* the report's one control, dressed like its neighbour: quiet mono text, not
+   a filled button — the footer is a margin, not a toolbar */
+.home-report {
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono);
+  cursor: pointer;
+}
+
+.home-report:disabled {
+  color: var(--mono-faint);
+  cursor: default;
+}
+
 @media (min-width: 760px) {
   .home {
     padding-top: 34px;
@@ -214,6 +231,10 @@
   }
 
   .home-profile {
+    font-size: 12px;
+  }
+
+  .home-report {
     font-size: 12px;
   }
 }

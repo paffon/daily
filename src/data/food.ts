@@ -6,6 +6,7 @@
  *  numbers for every food would turn the library into a data-entry project, and
  *  a food library that is a project does not get maintained. */
 
+import type { Entry } from './entry'
 import { readJson } from './store'
 import appSeed from '../seed/app.json'
 import foodsSeed from '../seed/foods.json'
@@ -39,6 +40,34 @@ export type FoodLibrary = { units: Record<string, string>; foods: Food[] }
 /** One module's level scale. `multipliers` is nutrition's alone — a walking
  *  speed is what the thing was and multiplies nothing. */
 export type Scale = { scale: string[]; multipliers?: Record<string, number> }
+
+/** One food inside a meal. `comment` is free text on this food in this meal —
+ *  *the good bakery*, *left half of it*, *reheated*. Optional and absent until
+ *  something is typed: a meal of six should not carry six empty strings, and
+ *  every entry logged before comments stays exactly as it was written. */
+export type Logged = { food_id: string; amount: number; level: string; comment?: string }
+
+/** Both shapes a payload can hold: `{ foods: [...] }` since meals landed, and
+ *  the flat single-food payload every entry before them was written with. The
+ *  log is never migrated — an old entry keeps saying what it said. The payload
+ *  key lives with the type it names rather than in the screen that happens to
+ *  render it, the way `performedIn` does for a workout's. */
+export const foodsOf = (payload: Entry['payload']): Logged[] => {
+  const foods = payload['foods']
+  return Array.isArray(foods) ? (foods as Logged[]) : [payload as Logged]
+}
+
+export const foodsIn = (entry: Entry): Logged[] => foodsOf(entry.payload)
+
+/** A food logged before comments carries no key, and an emptied box leaves a
+ *  blank one behind. Both mean nothing was said. */
+export const commentOf = (logged: Logged): string => logged.comment ?? ''
+
+/** A food the library no longer has — renamed on another device, or deleted,
+ *  since nothing in a seed is protected. The entry keeps saying what it said;
+ *  only the name falls back to the id it was stored under. */
+export const asFood = (id: string, library: FoodLibrary): Food =>
+  library.foods.find((item) => item.id === id) ?? { id, name: id, unit: '', default_level: '' }
 
 export const loadFoods = (): FoodLibrary => readJson('library/foods.json', foodsSeed)
 

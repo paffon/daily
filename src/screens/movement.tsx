@@ -4,7 +4,7 @@ import type { Entry } from '../data/entry'
 import { newEntry, toIso } from '../data/entry'
 import { deleteEntry, putEntry, readEntries, readJson, updateEntry, writeJson } from '../data/store'
 import type { Segment } from '../data/segment'
-import { hintOf, loadSegments } from '../data/segment'
+import { asSegment, hintOf, loadSegments } from '../data/segment'
 import { loadLevels } from '../data/food'
 import { Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { LibraryPicker } from '../components/library_picker'
@@ -38,10 +38,8 @@ const movementConfig = (): typeof appSeed.movement => ({
 
 const isPosture = (entry: Entry): boolean => entry.payload['type'] === 'posture'
 
-/** A segment the library no longer has — renamed or deleted on another device,
- *  since nothing in a seed is protected. The entry keeps saying what it said. */
-const asSegment = (id: string, library: Segment[]): Segment =>
-  library.find((item) => item.id === id) ?? { id, name: id }
+/* `asSegment` lives in `src/data/segment.ts` since the export needed it too —
+   the fallback belongs with the type it stands in for. */
 
 /** `18 min · steady`, which is the same sentence the list and `Previous` say. */
 const segmentLine = ({ duration_min, level }: Walk): string =>
