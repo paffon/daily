@@ -25,6 +25,13 @@ export default defineConfig({
       },
     }),
   ],
+  /* The one origin Google knows. Left to itself Vite steps to 5174, 5175, …
+     when the port is busy — a second checkout or a forgotten server is enough —
+     and the app then serves fine while sign-in comes back `Error 400:
+     origin_mismatch`, because the client ID authorises `localhost:5173` and
+     nothing else. Refusing to start is the better failure: it names the busy
+     port at the moment it is busy, rather than a Google error page later. */
+  server: { port: 5173, strictPort: true },
   test: {
     environment: 'jsdom',
     globals: true,
