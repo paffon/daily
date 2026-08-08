@@ -90,7 +90,7 @@ describe('buildReport', () => {
     expect(await buildReport()).toContain('nothing done')
   })
 
-  it('keeps a meal food by food — amount, level, the library’s numbers, the comment', async () => {
+  it('keeps a meal food by food — amount, level and the comment', async () => {
     putEntry(
       newEntry(
         'nutrition',
@@ -107,11 +107,11 @@ describe('buildReport', () => {
     expect(html).toContain('pizza')
     expect(html).toContain('2 slices')
     expect(html).toContain('loaded')
-    /* 285 kcal × 2 × the loaded multiplier the seed names, and fat beside the
-       other two since 2026-08-08 */
-    expect(html).toContain('798 kcal · 34 g protein · 28 g fat')
     expect(html).toContain('the good bakery')
     expect(html).toContain('1 cup')
+    /* no numbers column: a food carries none since 2026-08-08, and what a
+       portion was is the level plus the food's own note */
+    expect(html).not.toContain('kcal')
   })
 
   it('reads the flat single-food shape every entry before meals was written with', async () => {
@@ -124,7 +124,7 @@ describe('buildReport', () => {
     )
     const html = await buildReport()
     expect(html).toContain('coffee')
-    expect(html).toContain('6 kcal')
+    expect(html).toContain('1 cup')
   })
 
   it('keeps what an entry says when the library no longer has its item', async () => {
@@ -239,7 +239,7 @@ describe('buildReport', () => {
     expect(html).not.toContain('pec deck')
   })
 
-  it('gives a food’s normal case at one unit, with what its levels mean', async () => {
+  it('gives a food its unit, the level it opens at, and its note', async () => {
     putEntry(
       newEntry(
         'nutrition',
@@ -248,10 +248,12 @@ describe('buildReport', () => {
       ),
     )
     const html = await buildReport()
-    /* the library half states the food itself, unmultiplied — the meal above
-       it is where the level has already been applied */
-    expect(html).toContain('per slice · normal is 285 kcal · 12 g protein · 10 g fat')
-    expect(html).toContain('lean — thin crust, light cheese, vegetable toppings')
+    /* the library half states the food itself; the meal above it is where the
+       amount and the level were recorded */
+    expect(html).toContain('per slice · opens at normal')
+    /* the note is the whole of what says how big a lean slice was, which is
+       why it is the one thing here written as prose */
+    expect(html).toContain('lean is thin crust with vegetables')
   })
 
   it('reads oldest first — a report is a history, not a rail', async () => {
