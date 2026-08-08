@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 34ch;
+  max-width: 38ch;
 }
 
 .facts-group {
@@ -21,19 +21,15 @@
   color: var(--mono);
 }
 
-/* three equal columns rather than three widths: kcal is not more important
-   than fat, and nothing scrolls sideways at any width */
-.facts-numbers {
+/* the level's word, then three equal columns rather than three widths: kcal is
+   not more important than fat, and nothing scrolls sideways at any width. The
+   label column is the width the level prose below uses, so the two blocks read
+   as the same three rows about the same three levels */
+.facts-matrix {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.facts-number {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
+  grid-template-columns: 7ch repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
 }
 
 .facts-number-label {
@@ -41,15 +37,20 @@
   color: var(--mono-faint);
 }
 
-.facts-number input {
+.facts-matrix-level {
+  font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono);
+}
+
+.facts-matrix input {
   width: 100%;
   min-width: 0;
   height: var(--hit-min);
-  padding: 0 8px;
+  padding: 0 6px;
   border: 1px solid var(--rule);
   border-radius: var(--radius-control);
   background: var(--paper-control);
-  font: 400 15px/1 var(--family-mono);
+  font: 400 14px/1 var(--family-mono);
   color: var(--ink-body);
 }
 
@@ -81,12 +82,16 @@
   color: var(--ink-body);
 }
 
-.facts-number input:focus,
+.facts-matrix input:focus,
 .facts-example input:focus {
   border-color: var(--steel);
   outline: none;
 }
 
+/* what an untyped cell would be given anyway, and the level prose's own dash.
+   Faint on purpose: it is the app's arithmetic showing its work, never a
+   number somebody wrote down */
+.facts-matrix input::placeholder,
 .facts-example input::placeholder {
   color: var(--mono-faint);
 }

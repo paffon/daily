@@ -354,7 +354,8 @@ A **food item** carries:
 | `name` | pizza, coffee, cottage cheese |
 | `unit` | the natural unit for *this* food — slice, cup, piece, gram, plate |
 | `default level` | so a normal entry is one tap and lean/loaded is the exception |
-| `kcal`, `protein`, `fat` | for the **normal** case, at one unit. All optional, each unknown on its own |
+| `kcal`, `protein`, `fat` | the matrix's base row, at one unit — the level the scale multiplies by 1. All optional, each unknown on its own |
+| `levels` | the rest of the matrix: what a level *is* in numbers, for the foods a multiplier is wrong about. Optional, cell by cell |
 | `examples` | what lean, normal and loaded look like for this food. Optional |
 
 **Every one of these is editable, from either end** — the food library's screen
@@ -373,15 +374,32 @@ food that has just been invented is exactly the one whose numbers are at hand.
 **Drinks are food items.** Coffee, beer, juice. "What I ate" silently excludes a
 real part of an office day, so the module does not use that framing.
 
-**Levels are multipliers, examples are prose.** The nutritional effect of a level
-is a global editable multiplier (seed defaults: lean 0.7×, loaded 1.4×), applied
-to the item's normal-case numbers. Only the **examples** are per-item, and they
-are optional — written once for foods where the distinction is genuinely
-confusing, blank everywhere else.
+**A food's numbers are a matrix, and the multiplier fills the cells nobody
+typed** (2026-08-08, reversing this section's own *levels are multipliers*).
+Three levels by three numbers, at one unit, and every one of the nine is
+optional. What is typed for a level is what that level is. What is not is the
+**base row** — the level the scale multiplies by 1, `normal` in the seeded scale
+— times that level's global editable multiplier (seed defaults: lean 0.7×,
+loaded 1.4×).
 
-This is deliberate. Authoring three sets of numbers for every food turns the
-library into a data-entry project, and a food library that is a project does not
-get maintained.
+The multiplier survives because the argument for it was right: authoring three
+sets of numbers for every food turns the library into a data-entry project, and
+a food library that is a project does not get maintained. What was wrong was
+making it the only answer. A constant cannot say what a loaded salad is, because
+what makes it loaded is the tahini rather than more salad, and the same schnitzel
+baked or fried differs by its fat — which is the argument this section already
+made for recording fat at all. So the numbers a constant gets wrong are typed,
+on the two or three foods that have them, and every other food stays one row.
+
+**A derived cell shows its working.** An untyped box carries the number that
+level would be given anyway, greyed, in the box where typing over it is the
+correction. Nothing is hidden and nothing is filled in — the app never turns a
+guess into stored data.
+
+**Examples are prose, and per item.** They are optional in the same way —
+written once for foods where the distinction is genuinely confusing, blank
+everywhere else — and a level can carry prose without numbers or numbers without
+prose.
 
 The worked example, in the user's own case:
 
@@ -407,7 +425,9 @@ paragraph used to give for all three: noise at this level of measurement
 precision.
 
 **Nothing is required.** An entry with a name, a time and no numbers at all is a
-valid entry and is worth more than an entry that was never made.
+valid entry and is worth more than an entry that was never made — and so is a
+food whose whole matrix is blank. Nine boxes are on offer; none of them is a
+question the food has to answer.
 
 ### 8.3 Movement
 
