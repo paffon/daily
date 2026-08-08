@@ -66,21 +66,30 @@ it('follows every page of the listing, so a file past the first is not dropped',
 const DRIVE = 'https://www.googleapis.com/auth/drive.file'
 const PROFILE = 'https://www.googleapis.com/auth/userinfo.profile'
 
-/** GIS, reduced to the two things this module reads: what `prompt` was asked
- *  for, and what came back. */
-function fakeGoogle(reply: { access_token?: string; scope?: string }): { prompts: string[] } {
+/** GIS, reduced to the three things this module reads: what `prompt` and what
+ *  `login_hint` were asked for, and what came back. */
+function fakeGoogle(reply: { access_token?: string; scope?: string; expires_in?: number }): {
+  prompts: string[]
+  hints: (string | undefined)[]
+} {
   const prompts: string[] = []
+  const hints: (string | undefined)[] = []
   vi.stubGlobal('google', {
     accounts: {
       oauth2: {
-        initTokenClient: (config: { prompt: string; callback: (r: unknown) => void }) => {
+        initTokenClient: (config: {
+          prompt: string
+          login_hint?: string
+          callback: (r: unknown) => void
+        }) => {
           prompts.push(config.prompt)
+          hints.push(config.login_hint)
           return { requestAccessToken: () => config.callback(reply) }
         },
       },
     },
   })
-  return { prompts }
+  return { prompts, hints }
 }
 
 describe('a grant that came up short', () => {
@@ -136,5 +145,106 @@ describe('a grant that came up short', () => {
     /* a failed name is not a failed sign-in — Drive is reachable either way */
     expect(await signIn()).toBe(true)
     expect(account()).toBe('')
+  })
+})
+
+/** Remember me. The whole of it is that a token bought once is found again at
+ *  module load and a dead one never is — so the press is per hour rather than
+ *  per page load. The module is re-imported rather than reset in place,
+ *  because the restore runs once at load and that is the moment being tested. */
+
+const TOKEN_KEY = 'daily:token'
+
+const whole = { access_token: 'whole', scope: `${DRIVE} ${PROFILE}`, expires_in: 3600 }
+
+/** The profile call, naming the account and handing back the opaque id that
+ *  later presses go back with. */
+const profile = () =>
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => answer({ name: 'Omri Nardin', sub: 'the-sub' })),
+  )
+
+describe('a token that outlives the tab', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.resetModules()
+    import.meta.env.VITE_GOOGLE_CLIENT_ID = 'test-client'
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('is found by the next page load, carrying the name it came with', async () => {
+    fakeGoogle(whole)
+    profile()
+    const pressed = await import('./drive')
+    expect(await pressed.signIn()).toBe(true)
+
+    /* the reload: a fresh module, and nothing pressed */
+    vi.resetModules()
+    const reloaded = await import('./drive')
+
+    expect(reloaded.token()).toBe('whole')
+    expect(reloaded.account()).toBe('Omri Nardin')
+  })
+
+  it('names the account on the press after it, so no chooser opens', async () => {
+    fakeGoogle(whole)
+    profile()
+    expect(await (await import('./drive')).signIn()).toBe(true)
+
+    /* an hour later, on a load that restored nothing */
+    localStorage.removeItem(TOKEN_KEY)
+    vi.resetModules()
+    vi.unstubAllGlobals()
+    const later = fakeGoogle(whole)
+    profile()
+    const fresh = await import('./drive')
+    expect(fresh.token()).toBe('')
+
+    await fresh.signIn()
+    expect(later.hints).toEqual(['the-sub'])
+  })
+
+  it('is not restored once its hour is up', async () => {
+    localStorage.setItem(
+      TOKEN_KEY,
+      JSON.stringify({ token: 'stale', name: 'Omri Nardin', until: Date.now() - 1 }),
+    )
+
+    const reloaded = await import('./drive')
+
+    expect(reloaded.token()).toBe('')
+    expect(reloaded.account()).toBe('')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+  })
+
+  it('is dropped rather than repaired when what is on disk is not a token', async () => {
+    localStorage.setItem(TOKEN_KEY, 'half a write')
+
+    expect((await import('./drive')).token()).toBe('')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+  })
+
+  it('goes off the disk the moment Drive refuses it', async () => {
+    localStorage.setItem(
+      TOKEN_KEY,
+      JSON.stringify({ token: 'stale', name: 'Omri Nardin', until: Date.now() + 600_000 }),
+    )
+    const reloaded = await import('./drive')
+    expect(reloaded.token()).toBe('stale')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })),
+    )
+    await expect(reloaded.listFiles()).rejects.toThrow()
+
+    /* or the next load restores the very token that just proved itself dead */
+    expect(reloaded.token()).toBe('')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
   })
 })

@@ -1,8 +1,12 @@
-/** Google sign-in, and later the Drive calls themselves. The access token
- *  lives in this module's memory and nowhere else — never `localStorage`,
- *  never a cookie. There is no refresh token and no server by design: an
- *  expiry mid-session just re-prompts on the next sync, and the mirror means
- *  nothing is lost meanwhile. */
+/** Google sign-in, and later the Drive calls themselves. The access token is
+ *  held here and copied into `localStorage` beside the moment it dies, so a
+ *  reload inside its hour opens an app that is already signed in. The note
+ *  above `TOKEN_KEY` is where that is argued — it reverses a sentence this
+ *  header used to carry.
+ *
+ *  There is still no refresh token and no server by design, so the hour is a
+ *  ceiling rather than a setting: past it the next press buys another one, and
+ *  the mirror means nothing is lost in between. */
 
 /** Per-file access — the app sees only files it created itself — and the name
  *  on the account, which the app shows above every screen so it is never a
@@ -13,7 +17,7 @@ const SCOPE = ['https://www.googleapis.com/auth/drive.file', PROFILE].join(' ')
 
 /** The slice of Google Identity Services this app touches. Declaring it beats
  *  a types package for one call. The script tag in `index.html` defines it. */
-type TokenResponse = { access_token?: string; scope?: string }
+type TokenResponse = { access_token?: string; scope?: string; expires_in?: number }
 type TokenClient = { requestAccessToken(): void }
 
 declare const google: {
@@ -23,6 +27,7 @@ declare const google: {
         client_id: string
         scope: string
         prompt: string
+        login_hint?: string
         callback: (response: TokenResponse) => void
         error_callback: (error: unknown) => void
       }): TokenClient
@@ -30,18 +35,97 @@ declare const google: {
   }
 }
 
+/** The token, and the moment it stops being one. In `localStorage`, which the
+ *  header of this file used to forbid in as many words — *never
+ *  `localStorage`, never a cookie* — and which is reversed here deliberately.
+ *
+ *  What that sentence bought was a browser profile holding no key to Drive.
+ *  What it cost was a press on every single page load: Google Identity
+ *  Services has no silent mode, `requestAccessToken` opens a popup, and a
+ *  popup needs a gesture — so a token that does not outlive a reload cannot be
+ *  got back without one. It also meant the app could not be opened without a
+ *  signal at all, since the press needs Google; inside the hour it now can,
+ *  because this is read from disk and no network is touched to do it.
+ *
+ *  The key is worth less than it looks. It expires in under an hour and cannot
+ *  be renewed — there is no refresh token to be had by a page with no server
+ *  behind it — `drive.file` reaches only files this app itself wrote, and
+ *  every entry ever logged is already sitting in this same `localStorage` in
+ *  the clear. What it reaches that the mirror does not is the body
+ *  photographs, which are deliberately never mirrored, and write access to all
+ *  of it. That is the trade, and it was taken knowingly. */
+const TOKEN_KEY = 'daily:token'
+
+/** The OIDC `sub` of the account last signed in — an opaque id, never the
+ *  email. Kept past the token's death rather than beside it: handed back as
+ *  `login_hint`, it is what keeps the once-an-hour press from opening an
+ *  account chooser. */
+const ACCOUNT_KEY = 'daily:account'
+
+/** Two minutes short of the expiry Google names. A token with seconds left is
+ *  restored only to 401 on the pass that boot starts, so it is treated as
+ *  already gone. Not a threshold anyone would tune — it is slack against the
+ *  round trip, like the milliseconds-per-minute in `entry.ts`. */
+const MARGIN = 120_000
+
+/** What Google hands back when it says nothing. It always names an expiry in
+ *  practice; this is the value that stops a missing one meaning `NaN`. */
+const HOUR = 3600
+
 let accessToken = ''
 let accountName = ''
+let accountSub = localStorage.getItem(ACCOUNT_KEY) ?? ''
 
-/** Empty until a sign-in succeeds. */
+/** The last sign-in, if its hour is not up. Runs at module load, before
+ *  anything has painted, so a reload inside the hour never shows a signed-out
+ *  app on its way to a signed-in one.
+ *
+ *  Anything unreadable is dropped rather than repaired. The cost of dropping a
+ *  good token is one press; the cost of restoring a half-parsed one is a pass
+ *  that can only fail. */
+function restore(): void {
+  const held = localStorage.getItem(TOKEN_KEY)
+  if (held === null) return
+  try {
+    const kept = JSON.parse(held) as { token?: string; name?: string; until?: number }
+    if (typeof kept.until !== 'number' || kept.until <= Date.now() || !kept.token) {
+      localStorage.removeItem(TOKEN_KEY)
+      return
+    }
+    accessToken = kept.token
+    accountName = kept.name ?? ''
+  } catch {
+    localStorage.removeItem(TOKEN_KEY)
+  }
+}
+
+restore()
+
+/** The token as the next page load will find it. Written on every press that
+ *  wins one, not only the first: each buys a fresh hour, and the copy on disk
+ *  has to name the new one or the reload after it hands back a corpse. */
+function keep(expiresIn: number): void {
+  localStorage.setItem(
+    TOKEN_KEY,
+    JSON.stringify({
+      token: accessToken,
+      name: accountName,
+      until: Date.now() + expiresIn * 1000 - MARGIN,
+    }),
+  )
+}
+
+/** Empty until a sign-in succeeds — or until one that succeeded in the last
+ *  hour is found on disk, which is the same statement made a reload later.
+ *  Empty again the moment Drive answers 401. */
 export function token(): string {
   return accessToken
 }
 
-/** The name on the signed-in account. Memory only, beside the token and for
- *  the same reasons — it is the token's fact, so it arrives with one and goes
- *  when one is dropped. Empty when nobody is signed in, and empty in the one
- *  case where a token arrived but the profile call did not. */
+/** The name on the signed-in account. Kept beside the token and for the same
+ *  reasons — it is the token's fact, so it arrives with one, is written down
+ *  with one and goes when one is dropped. Empty when nobody is signed in, and
+ *  empty in the one case where a token arrived but the profile call did not. */
 export function account(): string {
   return accountName
 }
@@ -77,7 +161,7 @@ const CONSENT_KEY = 'daily:needs-consent'
  *  see the note above `signIn`.
  *
  *  Resolves `false` instead of throwing: offline, consent declined and
- *  script-never-loaded all land back on the sign-in screen, so the caller has
+ *  script-never-loaded all leave the door exactly as it was, so the caller has
  *  nothing to tell apart. */
 export function signIn(): Promise<boolean> {
   return new Promise((resolve) => {
@@ -87,12 +171,19 @@ export function signIn(): Promise<boolean> {
         client_id: clientId(),
         scope: SCOPE,
         prompt: localStorage.getItem(CONSENT_KEY) === null ? '' : 'consent',
+        /* Absent until an account has signed in here once, which is the only
+           press that has any business showing a chooser. */
+        ...(accountSub === '' ? {} : { login_hint: accountSub }),
         callback: (response) => {
           accessToken = response.access_token ?? ''
           if (accessToken === '') return resolve(false)
           /* Resolved only once the name is in, so the first painted frame
-             already carries it rather than filling in a beat later. */
-          void whoAmI(response.scope ?? '').then(() => resolve(true))
+             already carries it rather than filling in a beat later — and
+             written down only then, since the name is part of what is kept. */
+          void whoAmI(response.scope ?? '').then(() => {
+            keep(response.expires_in ?? HOUR)
+            resolve(true)
+          })
         },
         error_callback: () => resolve(false),
       })
@@ -129,18 +220,30 @@ async function whoAmI(granted: string): Promise<void> {
   try {
     const who = await (await api('/oauth2/v3/userinfo')).json()
     accountName = (who.name as string | undefined) ?? ''
+    /* Kept whether or not the name came with it: the chooser this suppresses
+       is a nuisance on exactly the presses that follow this one. */
+    accountSub = (who.sub as string | undefined) ?? ''
+    if (accountSub !== '') localStorage.setItem(ACCOUNT_KEY, accountSub)
     if (accountName === '') console.warn('daily: the profile call named no account')
   } catch (failure) {
     console.warn('daily: the profile call failed', failure)
   }
 }
 
-/* There is no `trySilentSignIn`, though the phase doc asks for one. A GIS
-   token client has no silent mode — every request opens a popup, and a popup
-   outside a user gesture is blocked, so a boot-time attempt either hangs on a
-   window nobody can complete or is refused. With the token held in memory and
-   no refresh token, both by design, a press per page load is the cost of that
-   design rather than something to work around. `signIn` is the only door. */
+/* There is still no `trySilentSignIn`, and there cannot be one. A GIS token
+   client has no silent mode — `requestAccessToken` has a single code path and
+   it opens a popup, `ux_mode` is ignored for tokens, and a popup outside a
+   user gesture is blocked — so a boot-time attempt either hangs on a window
+   nobody can complete or is refused outright.
+
+   What changed is what that costs. The press used to be per page load, because
+   the token died with the tab; now it is per hour, because `restore` finds the
+   one already bought. Nothing else was available: the redirect flow returns its
+   token in the fragment, which is where this app's router lives; the iframe
+   flow is refused by `X-Frame-Options` on Google's endpoint; and a refresh
+   token needs a client secret, which a page anyone can read the source of
+   cannot hold. `signIn` is still the only door — it is just no longer the only
+   way through it. */
 
 /* ── Drive ─────────────────────────────────────────────────────────────────
    Paths are always `{prefix}/{name}` — `entries/body-2026-08.jsonl`,
@@ -177,6 +280,11 @@ async function api(path: string, init?: RequestInit): Promise<Response> {
   if (response.status === 401) {
     accessToken = ''
     accountName = ''
+    /* And off the disk with it, or the next boot restores the very token that
+       just proved itself dead and starts a pass that can only fail again. This
+       is the whole of the expiry handling: nothing polls, nothing counts down,
+       a stale token 401s once and clears itself. */
+    localStorage.removeItem(TOKEN_KEY)
   }
   if (!response.ok) throw new Error(`drive ${response.status} on ${path}`)
   return response
