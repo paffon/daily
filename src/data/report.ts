@@ -20,8 +20,8 @@ import { readEntries, readJson } from './store'
 import { activeProfile } from './profile'
 import type { Exercise } from './exercise'
 import { asExercise, fieldsFor, loadExercises, performedIn, setLine } from './exercise'
-import type { Food, FoodLibrary, Logged } from './food'
-import { asFood, commentOf, foodsIn, loadFoods, nutritionFor, nutritionLine, unitOf } from './food'
+import type { Food, Logged } from './food'
+import { asFood, commentOf, foodsIn, loadFoods, notesOf, unitOf } from './food'
 import type { Segment } from './segment'
 import { asSegment, hintOf, loadSegments } from './segment'
 import { getBlob } from './drive'
@@ -148,9 +148,10 @@ function workoutSection(entries: Entry[], locale: string): string {
   return section('workout', blocks.join(''))
 }
 
-/** A meal is its foods, food by food: what, how much, at what level, the
- *  numbers the library carries for it, and the comment. Per entry only —
- *  nothing sums these, in the report as in the app. */
+/** A meal is its foods, food by food: what, how much, at what level, and the
+ *  comment. There is no numbers column — a food carries none since 2026-08-08,
+ *  and what a portion was is read off the level and the food's own note, which
+ *  the foods list at the foot of the report carries once per food. */
 function nutritionSection(entries: Entry[], locale: string): string {
   const library = loadFoods()
   const row = (logged: Logged): string => {
@@ -158,12 +159,10 @@ function nutritionSection(entries: Entry[], locale: string): string {
     const measure = [String(logged.amount), unitOf(library, food, logged.amount)]
       .filter((part) => part !== '')
       .join(' ')
-    const numbers = nutritionLine(nutritionFor(food, logged.amount, logged.level))
     const comment = commentOf(logged)
     return (
       `<tr><td class="name">${esc(food.name)}</td><td class="mono">${esc(measure)}</td>` +
-      `<td>${esc(logged.level)}</td><td class="mono">${esc(numbers)}</td>` +
-      `<td class="quote">${esc(comment)}</td></tr>`
+      `<td>${esc(logged.level)}</td><td class="quote">${esc(comment)}</td></tr>`
     )
   }
   const blocks = entries.map(
@@ -315,28 +314,22 @@ function exerciseItems(used: Exercise[], srcs: Map<string, string>): string {
   return items.join('')
 }
 
-function foodItems(used: Food[], library: FoodLibrary, srcs: Map<string, string>): string {
+/** A food, once however often it recurs: its unit, its note, and its picture.
+ *  The note is the whole of what the report says a portion was made of, which
+ *  is why it is worth the same room an exercise's setup note gets — the reader
+ *  is a trainer or an LLM, and a sentence is what either of them reads. */
+function foodItems(used: Food[], srcs: Map<string, string>): string {
   const items = used.map((food) => {
     const src = srcs.get(itemPhotoPath('food', food.id))
     const picture = src === undefined ? '' : `<img class="item" src="${src}" alt="${esc(food.name)}">`
-    const numbers = nutritionLine({
-      kcal: food.kcal ?? null,
-      protein: food.protein ?? null,
-      fat: food.fat ?? null,
-    })
     const facts = bare([
       food.unit === '' ? null : `per ${food.unit}`,
-      numbers === '' ? null : `normal is ${numbers}`,
+      food.default_level === '' ? null : `opens at ${food.default_level}`,
     ])
-    const examples =
-      food.examples === undefined
-        ? ''
-        : Object.entries(food.examples)
-            .map(([level, prose]) => `<p class="quote">${esc(level)} — ${esc(prose)}</p>`)
-            .join('')
+    const note = notesOf(food) === '' ? '' : `<p class="quote">${esc(notesOf(food))}</p>`
     return (
       `<div class="entry">${picture}<div><h4>${esc(food.name)}</h4>` +
-      `${facts === '' ? '' : `<p>${esc(facts)}</p>`}${examples}</div></div>`
+      `${facts === '' ? '' : `<p>${esc(facts)}</p>`}${note}</div></div>`
     )
   })
   return items.join('')
@@ -420,7 +413,8 @@ const STYLE = `
   .meal td:nth-child(1) { width: 22%; }
   .meal td:nth-child(2) { width: 13%; }
   .meal td:nth-child(3) { width: 12%; }
-  .meal td:nth-child(4) { width: 26%; }
+  /* the fourth is the comment and takes what is left, which is what the fifth
+     used to do — the numbers column between them went with the numbers */
   .quote { font-style: italic; color: var(--mono); }
   .empty { color: var(--mono-faint); }
   .unreached { color: var(--mono); margin-top: 32px; }
@@ -500,7 +494,7 @@ export async function buildReport(): Promise<string> {
         `<p>what the log's names refer to, as the library holds them today.</p>` +
         [
           exercises.length === 0 ? '' : `<h3>exercises</h3>${exerciseItems(exercises, srcs)}`,
-          usedFoods.length === 0 ? '' : `<h3>foods</h3>${foodItems(usedFoods, foods, srcs)}`,
+          usedFoods.length === 0 ? '' : `<h3>foods</h3>${foodItems(usedFoods, srcs)}`,
           segments.length === 0 ? '' : `<h3>segments</h3>${segmentItems(segments)}`,
         ].join('') +
         `</section>`

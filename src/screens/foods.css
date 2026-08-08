@@ -2,13 +2,11 @@
    purpose: the two catalogs are the same screen about different things, and one
    of them looking different would read as a difference that is not there. That
    the file is a copy is the same duplication `OPEN.md` records for the module
-   skeleton, one family down. What a food has and an exercise does not — the
-   numbers and the level prose — is `food_facts.css`, since the meal builder
-   wears that block too.
+   skeleton, one family down.
 
    A row opens in place rather than onto a screen of its own: what is being
-   corrected is usually one word or one number, and a second navigation to fix
-   one number is the ceremony §7 exists to remove. */
+   corrected is usually one word or one sentence, and a second navigation to fix
+   one word is the ceremony §7 exists to remove. */
 
 .foods {
   display: flex;
@@ -147,8 +145,16 @@
   font-size: 13px;
 }
 
-/* the numbers and the level prose are `food_facts.css` — one block, worn here
-   and in the meal builder alike */
+/* the note is a sentence rather than a value, so it gets the width one needs
+   and the serif this app sets prose in — the boxes above it are a name and a
+   word */
+.foods-prose {
+  max-width: 52ch;
+}
+
+.foods-prose input {
+  font: 300 15.5px/1.4 var(--family-serif);
+}
 
 /* quiet, and never danger: `delete this entry` stays the one control in the
    app that wears it, and this refuses itself whenever history is watching */

@@ -1,6 +1,6 @@
-/* Frame 4c's level control. The buttons and the prose share one column each,
-   so a column is `flex: 1` on both rows and neither needs to know how long the
-   scale is. */
+/* Frame 4c's level control. Each level takes an equal share of the row, so a
+   column is `flex: 1` and the control never needs to know how long the scale
+   is. */
 
 .level {
   display: flex;
@@ -15,33 +15,11 @@
   height: 62px;
 }
 
-.level-examples {
-  display: flex;
-}
-
-/* serif, because it is prose about a plate of food rather than a value */
-.level-example {
-  flex: 1;
-  margin: 0;
-  padding-right: 18px;
-  font: 300 15px/1.45 var(--family-serif);
-  color: var(--mono);
-  text-wrap: pretty;
-}
-
-.level-example.chosen {
-  color: var(--ink-quiet);
-}
-
-/* the laptop caps a column rather than the row, so the buttons and the prose
-   stay aligned whatever the length of the scale */
+/* the laptop caps a column rather than the row, so the buttons stay the same
+   width whatever the length of the scale */
 @media (min-width: 760px) {
-  .level .segmented button,
-  .level-example {
-    max-width: 172px;
-  }
-
   .level .segmented button {
+    max-width: 172px;
     height: 60px;
   }
 }

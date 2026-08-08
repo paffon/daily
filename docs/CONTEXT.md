@@ -12,10 +12,12 @@ How much of a library item an entry records, in that item's own unit. Fractional
 — `3.5 slices` is valid.
 
 **Comment**:
-Free text attached to a performed exercise — usually a form cue — or, since
-2026-08-06, to a food in a meal. Carried forward with *Previous* so the log
-remembers how a movement was done and what a portion actually was, not only how
-much of either.
+Free text attached to one *occurrence* — a performed exercise, usually a form
+cue, or, since 2026-08-06, a food in a meal. Carried forward with *Previous* so
+the log remembers how a movement was done and what a portion actually was, not
+only how much of either. What a library item says about itself is a *note*, not
+a comment; the two live one above the other on the nutrition screen and are
+deliberately different fields.
 
 **Entry**:
 One logged occurrence: a timestamp plus whatever its module records. Every entry
@@ -40,16 +42,6 @@ ship seeded with useful defaults and grow by use; nothing in a seed list is
 protected.
 _Avoid_: catalogue entry, template, preset
 
-**Matrix** (food):
-What a food is made of: its levels by kcal, protein and fat, at one unit — three
-by three in the seeded scale. Every cell is optional. A cell that was typed is
-what that level is; a blank one is the **base row** — the level the scale
-multiplies by 1 — times that level's multiplier, shown greyed in the box that
-would override it. Since 2026-08-08, when the multiplier stopped being the only
-answer.
-_Avoid_: nutrition table, macro grid, profile (taken — a profile is whose log it
-is)
-
 **Meal**:
 One nutrition entry: an untyped container of the foods eaten together, started
 and ended the way a workout is. Reintroduced 2026-08-06 — only the word came
@@ -64,6 +56,16 @@ instruction to a future reader, not a rating of how hard it felt, and the thing
 field in its original form and is the fast input for it. Workout sets only; no
 other module has one.
 _Avoid_: difficulty, effort, RPE, exertion, rating
+
+**Note**:
+Free text on a *library item* rather than on an occurrence — an exercise's setup
+detail (`seat 4, handles at nipple height`), or, since 2026-08-08, what a food is
+and what its levels mean for it. Written once and read by every entry that
+references the item. On a food it is the whole of what says how big a portion
+was, since a food carries no numbers; it replaced the three-line per-level
+`examples` block on the same day.
+_Avoid_: comment (taken — a comment belongs to one occurrence), description,
+macros, nutrition
 
 **Performed exercise**:
 One exercise inside a workout: the library exercise, an ordered list of sets, and
@@ -211,4 +213,6 @@ than reintroduced by habit.
 | Battery, bar, protocol, test week | a workout whose exercises do not change; not built now |
 | Month plan, week plan, planning conversation | replaced by *objectives*, which were themselves cut on 2026-08-06 — see the row below |
 | Objective, target, done, gap | cut on 2026-08-06 (ADR 0006). Nothing is compared against a number. *Gap* survives only as arithmetic — how long since a thing last happened |
+| Matrix, base row, level multiplier, macro | cut on 2026-08-08 with the numbers themselves. A food carries no kcal, protein or fat, so nothing scales and nothing is derived — see *Note* |
+| Examples (food) | one per-level line each; replaced 2026-08-08 by a single *note* on the food |
 | Session runner | logging live and logging afterwards are the same screen |

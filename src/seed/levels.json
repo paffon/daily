@@ -1,7 +1,6 @@
 {
   "nutrition": {
-    "scale": ["lean", "normal", "loaded"],
-    "multipliers": { "lean": 0.7, "normal": 1, "loaded": 1.4 }
+    "scale": ["lean", "normal", "loaded"]
   },
   "movement": {
     "scale": ["stroll", "steady", "brisk"]

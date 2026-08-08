@@ -1,10 +1,9 @@
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Food } from '../data/food'
-import { editFood, loadFoods, loadLevels, unitsIn, usedBy, writeFoods } from '../data/food'
+import { editFood, loadFoods, loadLevels, notesOf, said, unitsIn, usedBy, writeFoods } from '../data/food'
 import { readEntries, readJson } from '../data/store'
 import { DeleteRefused } from '../components/delete_refused'
-import { FoodFacts } from '../components/food_facts'
 import { ItemPhoto } from '../components/item_photo'
 import { Segmented } from '../components/segmented'
 import appSeed from '../seed/app.json'
@@ -13,9 +12,13 @@ import './foods.css'
 /** The food library's own screen — `DESIGN.md` §7, which said foods would take
  *  this shape when they were asked for. They were, on 2026-08-08. Inline at the
  *  point of logging stays and is still the fast path; this is the slow one, for
- *  filling in a food you are not currently eating. The numbers and the level
- *  prose are the same block either way — `FoodFacts` — because a field written
- *  twice drifts twice.
+ *  filling in a food you are not currently eating.
+ *
+ *  It draws every field a food has, which since the numbers went is four of
+ *  them: the name, the unit, the level it opens at, and the note. The meal
+ *  builder draws three of the four — a food is small enough now that it can
+ *  hold nearly the whole of one — and leaves the opening level here, because
+ *  the meal is choosing a level of its own a line below it.
  *
  *  It is opened from the nutrition module's list rather than from home, the way
  *  the exercise library is opened from workout's. Segments still have no door.
@@ -148,14 +151,20 @@ export function Foods(): VNode {
                       />
                     </div>
 
-                    <FoodFacts
-                      food={item}
-                      scale={scale}
-                      onEdit={(change) => {
-                        editFood(item.id, change)
-                        wrote((n) => n + 1)
-                      }}
-                    />
+                    <label class="foods-field foods-prose">
+                      <span class="foods-field-label">about this food</span>
+                      {/* what the numbers used to be for. One sentence about
+                          the food itself — what it is, and what its levels
+                          mean for it — written once here or where it is
+                          logged, and read by every meal that holds it */}
+                      <input
+                        type="text"
+                        aria-label={`about ${item.name}`}
+                        placeholder="what it is, and what its levels mean for it"
+                        value={notesOf(item)}
+                        onChange={(e) => edit(item.id, { notes: said(e.currentTarget.value) })}
+                      />
+                    </label>
 
                     <ItemPhoto kind="food" id={item.id} name={item.name} />
 

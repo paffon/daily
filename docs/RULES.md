@@ -54,6 +54,8 @@ change back looks like the decision it would be, rather than a correction.
 | Resize every photo on import | Item pictures are capped; a body photograph is kept at the size it was shot (2026-08-06), because it is the thing being measured. Both are still re-encoded to JPEG |
 | Calories and protein, and nothing else — fat is noise at this measurement precision | Fat is the third number (2026-08-08), optional like the other two and blank on most of the library. Carbohydrate and fibre stay cut. See `DESIGN.md` §8.2 |
 | A level is a multiplier on one row of numbers — three sets per food would make the library a data-entry project | A food's numbers are a 3×3 matrix (2026-08-08), every cell optional. A typed cell is what that level is; a blank one is still the base row times the multiplier, so a food nobody filled in reads exactly as before. See `DESIGN.md` §8.2 |
+| A food carries numbers — kcal, protein and fat, in a matrix a multiplier fills in | A food carries none (2026-08-08, later the same day, reversing both rows above). Four fields and no fifth: name, unit, the level it opens at, and one free-text note. What a portion was is read off the food, the level and the note. See `DESIGN.md` §8.2 |
+| A level's prose is three fields, one per level of the scale | One note on the food (2026-08-08), which is where the numbers' job went too. Three boxes per food is a form; one is a sentence |
 
 ## The coach's voice
 

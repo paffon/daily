@@ -3,10 +3,10 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
-import { baseLevel, loadFoods, loadLevels, nutritionFor, perUnit } from '../data/food'
+import { loadFoods, loadLevels } from '../data/food'
 import type { Food } from '../data/food'
 import { newEntry } from '../data/entry'
-import { ensureSeeded, getEntry, putEntry, readEntries, writeJson } from '../data/store'
+import { ensureSeeded, getEntry, putEntry, readEntries } from '../data/store'
 import { EditEntry } from './edit_entry'
 import { Nutrition, nutritionLineFor } from './nutrition'
 
@@ -19,113 +19,6 @@ const named = (name: string): Food => {
 beforeEach(() => {
   localStorage.clear()
   ensureSeeded()
-})
-
-describe('a food’s numbers are a matrix, and the multiplier fills what is blank', () => {
-  const plain: Food = { id: 'plain', name: 'plain', unit: 'slice', default_level: 'normal', kcal: 200 }
-
-  it('applies the scale to the food’s base-row numbers', () => {
-    expect(nutritionFor(plain, 2, 'loaded').kcal).toBe(560)
-    expect(nutritionFor(plain, 2, 'normal').kcal).toBe(400)
-    expect(nutritionFor(plain, 2, 'lean').kcal).toBe(280)
-  })
-
-  it('leaves a food with no number null rather than calling it 0', () => {
-    expect(nutritionFor(named('water'), 3, 'loaded')).toEqual({
-      kcal: null,
-      protein: null,
-      fat: null,
-    })
-    expect(nutritionFor(named('apple'), 1, 'normal').protein).toBeNull()
-    // apple carries calories and nothing else, and each number is unknown on
-    // its own — a food is not obliged to answer all three
-    expect(nutritionFor(named('apple'), 1, 'normal').kcal).toBe(95)
-    expect(nutritionFor(named('apple'), 1, 'normal').fat).toBeNull()
-  })
-
-  it('scales fat the way it scales the other two', () => {
-    const fatty: Food = { ...plain, protein: 4, fat: 10 }
-    expect(nutritionFor(fatty, 2, 'loaded')).toEqual({ kcal: 560, protein: 11, fat: 28 })
-  })
-
-  it('reads a written-out null in the library as the same unknown', () => {
-    // the library is a file the user edits, and `"kcal": null` is how a person
-    // writes down that there is no number
-    const written = { ...plain, kcal: null } as unknown as Food
-    expect(nutritionFor(written, 2, 'loaded').kcal).toBeNull()
-  })
-
-  it('multiplies a fractional amount, because half a slice is an entry', () => {
-    expect(nutritionFor(plain, 0.5, 'normal').kcal).toBe(100)
-  })
-
-  it('takes the multipliers from the file and never from source', () => {
-    const levels = loadLevels()
-    writeJson('config/levels.json', {
-      ...levels,
-      nutrition: { ...levels['nutrition'], multipliers: { lean: 0.5, normal: 1, loaded: 2 } },
-    })
-
-    expect(nutritionFor(plain, 2, 'loaded').kcal).toBe(800)
-    expect(nutritionFor(plain, 2, 'lean').kcal).toBe(200)
-  })
-
-  it('leaves the numbers alone for a level the scale gives no multiplier', () => {
-    expect(nutritionFor(plain, 1, 'invented').kcal).toBe(200)
-  })
-
-  it('takes a level’s own number over anything the multiplier would have said', () => {
-    // what makes a loaded salad loaded is the tahini, and a constant is wrong
-    // about it in a way no scale can be right about
-    const salad: Food = { ...plain, fat: 6, levels: { loaded: { kcal: 260, fat: 22 } } }
-
-    expect(nutritionFor(salad, 1, 'loaded')).toMatchObject({ kcal: 260, fat: 22 })
-    // and only the cells that were typed: protein is still unknown, and the
-    // levels nobody wrote a row for are the multiplier exactly as before
-    expect(nutritionFor(salad, 1, 'loaded').protein).toBeNull()
-    expect(nutritionFor(salad, 1, 'lean')).toMatchObject({ kcal: 140, fat: 4 })
-    expect(nutritionFor(salad, 2, 'loaded').kcal).toBe(520)
-  })
-
-  it('answers a level that was typed even when the base row is blank', () => {
-    // the food nobody weighed at normal, only at the one portion that mattered
-    const only: Food = {
-      id: 'only',
-      name: 'only',
-      unit: '',
-      default_level: 'normal',
-      levels: { loaded: { kcal: 300 } },
-    }
-
-    expect(nutritionFor(only, 1, 'loaded').kcal).toBe(300)
-    expect(nutritionFor(only, 1, 'normal').kcal).toBeNull()
-  })
-
-  it('keeps a typed zero, because no fat in the lean one is a fact', () => {
-    const dressed: Food = { ...plain, fat: 6, levels: { lean: { fat: 0 } } }
-    expect(nutritionFor(dressed, 1, 'lean').fat).toBe(0)
-  })
-
-  it('names the base row from the scale rather than from the word normal', () => {
-    expect(baseLevel()).toBe('normal')
-
-    const levels = loadLevels()
-    writeJson('config/levels.json', {
-      ...levels,
-      nutrition: { scale: ['half', 'whole'], multipliers: { half: 0.5, whole: 1 } },
-    })
-    // the base is whatever the scale multiplies by 1 — rename the scale and it
-    // moves, because nothing in source knows the word
-    expect(baseLevel()).toBe('whole')
-    expect(nutritionFor(plain, 1, 'half').kcal).toBe(100)
-  })
-
-  it('gives one unit at a level, which is what the empty cell offers', () => {
-    expect(perUnit(plain, 'lean')).toEqual({ kcal: 140, protein: null, fat: null })
-    // 0.7 × 1.03 is 0.7209999999999999 in binary, and a cell saying so would
-    // read as a number somebody typed
-    expect(perUnit({ ...plain, kcal: 1.03 }, 'lean').kcal).toBe(0.721)
-  })
 })
 
 describe('the amount stepper', () => {
@@ -189,32 +82,19 @@ describe('the amount stepper', () => {
 
 describe('the level control', () => {
   const scale = ['lean', 'normal', 'loaded']
-  const examples = { lean: 'thin crust', normal: 'standard slice', loaded: 'thick crust' }
 
-  const drawn = (props: { examples?: Record<string, string> }) =>
-    render(
-      <LevelControl scale={scale} value="normal" onChange={() => {}} label="level" {...props} />,
-    ).container
+  const drawn = () =>
+    render(<LevelControl scale={scale} value="normal" onChange={() => {}} label="level" />).container
 
-  it('shows all three examples at once, because comparing is the point', () => {
-    const container = drawn({ examples })
-    const prose = [...container.querySelectorAll('.level-example')].map((p) => p.textContent)
-    expect(prose).toEqual(['thin crust', 'standard slice', 'thick crust'])
-  })
-
-  it('renders no prose at all for a food that has none', () => {
-    expect(drawn({}).querySelector('.level-examples')).toBeNull()
-    expect(drawn({}).querySelectorAll('.level-example')).toHaveLength(0)
-  })
-
-  it('draws identical buttons whether or not there are examples', () => {
-    const withProse = drawn({ examples }).querySelector('.segmented')!.outerHTML
-    const without = drawn({}).querySelector('.segmented')!.outerHTML
-    expect(withProse).toBe(without)
+  it('draws one button per level and nothing else', () => {
+    // the per-level prose it used to carry is one note on the food since
+    // 2026-08-08, so every module wears the identical control
+    expect(drawn().querySelectorAll('.segmented button')).toHaveLength(3)
+    expect(drawn().querySelector('.level-examples')).toBeNull()
   })
 
   it('wears ink-select, because a level is not the live one', () => {
-    const control = drawn({}).querySelector('.segmented')!
+    const control = drawn().querySelector('.segmented')!
     expect(control.className).toContain('segmented-ink-select')
     expect(control.className).not.toContain('segmented-steel')
   })
@@ -253,6 +133,15 @@ describe('the nutrition screen', () => {
     fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="comment"]')!, {
       target: { value },
     })
+
+  /** The food's own note, which is the library's — the box beside it labelled
+   *  `comment` is this food in this meal, and the two are deliberately not the
+   *  same field. */
+  const note = (container: Element) =>
+    container.querySelector<HTMLInputElement>('[aria-label="about this food"]')!
+
+  const typeNote = (container: Element, value: string) =>
+    fireEvent.change(note(container), { target: { value } })
 
   const endMeal = (container: Element) =>
     fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-log')!)
@@ -344,45 +233,29 @@ describe('the nutrition screen', () => {
     ])
   })
 
-  it('shows the food’s own numbers with the level’s multiplier applied', () => {
+  it('shows the food’s own note, and no numbers anywhere', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     pick(container, 'pizza')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '285 kcal · 12 g protein · 10 g fat',
-    )
 
-    typeAmount(container, '2')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '570 kcal · 24 g protein · 20 g fat',
+    expect(note(container).value).toBe(
+      'lean is thin crust with vegetables; loaded is thick crust, meat and extra cheese',
     )
-
-    chooseLevel(container, 'loaded')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '798 kcal · 34 g protein · 28 g fat',
-    )
+    // the numbers went with the matrix on 2026-08-08 — the level and this
+    // sentence are the whole of what says how big the plate was
+    expect(container.querySelector('.nutrition-numbers')).toBeNull()
+    expect(container.querySelector('.nutrition-facts-open')).toBeNull()
   })
 
-  it('says only the numbers the food has, and never a dash for the rest', () => {
-    const { container } = render(<Nutrition />)
-    openNew(container)
-    pick(container, 'apple')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('95 kcal')
-  })
-
-  it('says nothing about numbers for a food that carries none, but offers the way in', () => {
+  it('offers the box empty for a food nobody has described', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     pick(container, 'water')
 
-    // no number is invented for it, and none is shown
-    expect(container.querySelector('.nutrition-numbers')).toBeNull()
-    // and the press that writes one is there rather than nowhere
-    expect(container.querySelector('.nutrition-facts-open')?.textContent).toBe('+ numbers')
-    expect(container.querySelector('.facts')).toBeNull()
+    expect(note(container).value).toBe('')
   })
 
-  it('writes a just-made food’s numbers without leaving the meal', () => {
+  it('writes a just-made food’s note without leaving the meal', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
@@ -390,55 +263,42 @@ describe('the nutrition screen', () => {
     })
     fireEvent.click(container.querySelector<HTMLButtonElement>('.picker-new')!)
 
-    // the food is invented here, so this is where its numbers are known
-    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-facts-open')!)
-    const type = (label: string, value: string) =>
-      fireEvent.change(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
-        target: { value },
-      })
-    type('normal kcal of malabi', '210')
-    type('normal protein of malabi', '4')
-    type('normal fat of malabi', '9')
-    type('what loaded means for malabi', 'the big one, with all the syrup')
+    // the food is invented here, so this is where anybody knows what it is
+    typeNote(container, 'semolina pudding; loaded is the big one with all the syrup')
 
-    expect(loadFoods().foods.find((food) => food.name === 'malabi')).toMatchObject({
-      kcal: 210,
-      protein: 4,
-      fat: 9,
-      examples: { loaded: 'the big one, with all the syrup' },
-    })
-    // the line above the panel now says them, at this amount and this level
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '210 kcal · 4 g protein · 9 g fat',
+    expect(loadFoods().foods.find((food) => food.name === 'malabi')?.notes).toBe(
+      'semolina pudding; loaded is the big one with all the syrup',
     )
-    // and the prose is under the buttons it describes, in the same breath
-    expect(container.querySelectorAll('.level-example')).toHaveLength(3)
-
     // the meal was never left, and it still saves
     endMeal(container)
     expect(railLines(container)).toEqual(['malabi · 1 · normal'])
   })
 
-  it('opens the same fields from the numbers line of a food that has them', () => {
+  it('writes the note onto the library, so every meal that holds the food reads it', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     pick(container, 'pizza')
 
-    expect(container.querySelector('.facts')).toBeNull()
-    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-numbers')!)
-    expect(
-      container.querySelector<HTMLInputElement>('[aria-label="normal fat of pizza"]')?.value,
-    ).toBe('10')
+    typeNote(container, 'the good bakery does a thinner one')
+    expect(loadFoods().foods.find((food) => food.id === 'pizza')?.notes).toBe(
+      'the good bakery does a thinner one',
+    )
+    // nothing of it lands on the entry — the note belongs to the food
+    endMeal(container)
+    expect(readEntries('nutrition')[0]?.payload['foods']).toEqual([
+      { food_id: 'pizza', amount: 1, level: 'normal' },
+    ])
+  })
 
-    fireEvent.change(
-      container.querySelector<HTMLInputElement>('[aria-label="normal fat of pizza"]')!,
-      { target: { value: '14' } },
-    )
-    // it edits the library, so the line above it moves with it
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '285 kcal · 12 g protein · 14 g fat',
-    )
-    expect(loadFoods().foods.find((food) => food.id === 'pizza')?.fat).toBe(14)
+  it('drops the note outright once the box is emptied', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+
+    typeNote(container, '   ')
+    // the key goes rather than a blank string staying behind: a food nobody
+    // has described and one whose note was cleared are the same food
+    expect('notes' in loadFoods().foods.find((food) => food.id === 'pizza')!).toBe(false)
   })
 
   it('carries the food’s own unit into a meal of one’s line, pluralised past one', () => {
@@ -758,7 +618,6 @@ describe('editing a past meal', () => {
     expect(container.querySelector<HTMLInputElement>('[aria-label="amount"]')?.value).toBe('2')
     expect(container.querySelector('.stepper-unit')?.textContent).toBe('slices')
     expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('loaded')
-    expect(container.querySelectorAll('.level-example')).toHaveLength(3)
   })
 
   it('corrects a comment on a past meal, the way it corrects a number', () => {
@@ -857,37 +716,30 @@ describe('the food library', () => {
     for (const drink of ['coffee', 'beer', 'orange juice']) expect(names).toContain(drink)
   })
 
-  it('ships most foods with no numbers at all, which is the common case', () => {
-    const { foods } = loadFoods()
-    expect(foods.filter((food) => food.kcal === undefined).length).toBeGreaterThan(3)
+  it('gives a food four things and no fifth', () => {
+    // the whole of what a food is since 2026-08-08: a name, a unit, the level
+    // it opens at, and a sentence. No cell of it is a number
+    for (const food of loadFoods().foods) {
+      expect(Object.keys(food).sort()).toEqual(
+        expect.arrayContaining(['default_level', 'id', 'name', 'unit']),
+      )
+      for (const key of Object.keys(food)) {
+        expect(['id', 'name', 'unit', 'default_level', 'notes']).toContain(key)
+      }
+    }
   })
 
-  it('overrides a level on the two foods the multiplier is wrong about', () => {
+  it('describes the few foods where the levels are genuinely confusing, and no more', () => {
     const { foods } = loadFoods()
-    // the seed is a demonstration, not a project: the matrix is filled in
-    // where a constant genuinely cannot say what the level is, and nowhere else
-    expect(foods.filter((food) => food.levels !== undefined).map((food) => food.name)).toEqual([
-      'salad',
-      'schnitzel',
-    ])
-    // a loaded salad is not a normal one times a constant, because what makes
-    // it loaded is the tahini
-    expect(nutritionFor(named('salad'), 1, 'loaded')).toEqual({ kcal: 260, protein: 5, fat: 22 })
-    // and the same schnitzel baked or fried is the fat, which is the argument
-    // §8.2 made for recording fat at all
-    expect(nutritionFor(named('schnitzel'), 1, 'lean').fat).toBe(6)
-    expect(nutritionFor(named('schnitzel'), 1, 'loaded').fat).toBe(30)
-  })
-
-  it('writes examples for a few foods and leaves the rest blank', () => {
-    const { foods } = loadFoods()
-    const described = foods.filter((food) => food.examples !== undefined)
+    // the seed is a demonstration, not a project: a note is written where a
+    // level needs saying and left blank everywhere else
+    const described = foods.filter((food) => food.notes !== undefined)
     expect(described.length).toBeLessThan(6)
-    expect(named('pizza').examples).toEqual({
-      lean: 'thin crust, light cheese, vegetable toppings',
-      normal: 'plain cheese and tomato, standard slice',
-      loaded: 'thick crust, meat, extra cheese',
-    })
+    expect(described.length).toBeGreaterThan(0)
+    // what makes a loaded salad loaded is the tahini, and that is the kind of
+    // thing no number ever said
+    expect(named('salad').notes).toContain('tahini')
+    expect(named('water').notes).toBeUndefined()
   })
 
   it('gives every food a unit of its own and a level to open at', () => {

@@ -42,8 +42,9 @@ const logMeal = (food: string) => {
   screen.unmount()
 }
 
-/** What the module shows about a food at the point of logging it — the numbers
- *  line and the level prose both come from the library this screen writes. */
+/** What the module shows about a food at the point of logging it. The note it
+ *  prints comes from the library this screen writes, which is the whole point
+ *  of the pair of surfaces. */
 const logging = (food: string) => {
   const screen = render(<Nutrition />)
   press(screen.container, '.nutrition-new')
@@ -124,154 +125,48 @@ describe('the food library screen', () => {
     expect(held('leftovers')?.unit).toBe('')
   })
 
-  it('writes the three numbers of the base row at one unit', () => {
+  it('writes the food’s note, and it shows where the food is logged', () => {
     const { container } = render(<Foods />)
     open(container, 'leftovers')
 
-    set(container, 'normal kcal of leftovers', '480')
-    set(container, 'normal protein of leftovers', '26')
-    set(container, 'normal fat of leftovers', '18')
+    set(container, 'about leftovers', 'friday’s pot, whatever is left of it')
+    expect(held('leftovers')?.notes).toBe('friday’s pot, whatever is left of it')
 
-    expect(held('leftovers')).toMatchObject({ kcal: 480, protein: 26, fat: 18 })
-
-    // and the food says so where it is logged, with the level's multiplier on
+    // the note belongs to the food, so the meal builder reads the same sentence
     const screen = logging('leftovers')
-    expect(screen.container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '480 kcal · 26 g protein · 18 g fat',
-    )
+    expect(
+      screen.container.querySelector<HTMLInputElement>('[aria-label="about this food"]')?.value,
+    ).toBe('friday’s pot, whatever is left of it')
   })
 
-  it('draws a box for every level by every number, three by three', () => {
-    const { container } = render(<Foods />)
-    open(container, 'pizza')
-
-    expect(container.querySelectorAll('.facts-matrix input')).toHaveLength(9)
-    // one row per level of the scale, in the scale's own order
-    expect([...container.querySelectorAll('.facts-matrix-level')].map((s) => s.textContent)).toEqual(
-      ['lean', 'normal', 'loaded'],
-    )
-    // and none of them is required: the untyped cells stand empty, showing what
-    // the multiplier makes of the row that was typed
-    const cell = (label: string) =>
-      container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
-    expect(cell('normal kcal of pizza').value).toBe('285')
-    expect(cell('lean kcal of pizza').value).toBe('')
-    expect(cell('lean kcal of pizza').placeholder).toBe('199.5')
-    expect(cell('loaded kcal of pizza').placeholder).toBe('399')
-    // the base row has nothing behind it, and neither has a number the food
-    // does not carry — an unknown does not become a derived one
-    expect(cell('normal kcal of pizza').placeholder).toBe('—')
-    open(container, 'apple')
-    expect(cell('lean kcal of apple').placeholder).toBe('66.5')
-    expect(cell('lean protein of apple').placeholder).toBe('—')
-  })
-
-  it('writes one level’s own numbers, and drops the row once it is emptied', () => {
-    const { container } = render(<Foods />)
-    open(container, 'pizza')
-
-    set(container, 'loaded kcal of pizza', '520')
-    set(container, 'loaded fat of pizza', '26')
-    expect(held('pizza')?.levels).toEqual({ loaded: { kcal: 520, fat: 26 } })
-
-    // the level that was typed is the level that is used, and the one that was
-    // not is still the multiplier
-    const screen = logging('pizza')
-    fireEvent.click(
-      [...screen.container.querySelectorAll<HTMLButtonElement>('.level .segmented button')].find(
-        (button) => button.textContent?.includes('loaded'),
-      )!,
-    )
-    expect(screen.container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '520 kcal · 17 g protein · 26 g fat',
-    )
-    screen.unmount()
-
-    set(container, 'loaded kcal of pizza', '')
-    expect(held('pizza')?.levels).toEqual({ loaded: { fat: 26 } })
-    set(container, 'loaded fat of pizza', '')
-    // no empty row and no empty key: a food that overrode nothing reads exactly
-    // as it did before the matrix existed
-    expect('levels' in held('pizza')!).toBe(false)
-  })
-
-  it('says which unit the numbers are for, in the food’s own word', () => {
-    const { container } = render(<Foods />)
-
-    open(container, 'pizza')
-    expect(container.querySelector('.facts-label')?.textContent).toBe('per slice')
-
-    open(container, 'apple')
-    expect(container.querySelector('.facts-label')?.textContent).toBe('per one')
-  })
-
-  it('empties a number back to unknown rather than to zero', () => {
-    const { container } = render(<Foods />)
-    open(container, 'pizza')
-    set(container, 'normal protein of pizza', '')
-
-    // the key goes outright: an unknown is not a zero, and `12 g protein` must
-    // not come back as `0 g protein`
-    expect('protein' in held('pizza')!).toBe(false)
-    const screen = logging('pizza')
-    expect(screen.container.querySelector('.nutrition-numbers')?.textContent).toBe(
-      '285 kcal · 10 g fat',
-    )
-  })
-
-  it('keeps a zero that was typed on purpose, because no fat in it is a fact', () => {
-    const { container } = render(<Foods />)
-    open(container, 'pizza')
-    set(container, 'normal fat of pizza', '0')
-
-    expect(held('pizza')?.fat).toBe(0)
-  })
-
-  it('writes what each level means, and the prose shows where the food is logged', () => {
-    const { container } = render(<Foods />)
-    open(container, 'tuna')
-
-    set(container, 'what lean means for tuna', 'in water, drained')
-    set(container, 'what normal means for tuna', 'in water, half the oil left')
-    set(container, 'what loaded means for tuna', 'in oil, with mayonnaise')
-
-    expect(held('tuna')?.examples).toEqual({
-      lean: 'in water, drained',
-      normal: 'in water, half the oil left',
-      loaded: 'in oil, with mayonnaise',
-    })
-
-    const screen = logging('tuna')
-    expect([...screen.container.querySelectorAll('.level-example')].map((p) => p.textContent)).toEqual(
-      ['in water, drained', 'in water, half the oil left', 'in oil, with mayonnaise'],
-    )
-  })
-
-  it('opens the prose it already has, and the coffee it ships with', () => {
+  it('opens the note it already has, on a food that ships with one', () => {
     const { container } = render(<Foods />)
     open(container, 'coffee')
 
-    expect(
-      container.querySelector<HTMLInputElement>('[aria-label="what lean means for coffee"]')?.value,
-    ).toBe('black, no sugar')
-    expect(
-      container.querySelector<HTMLInputElement>('[aria-label="what loaded means for coffee"]')?.value,
-    ).toBe('large, with milk and sugar')
+    expect(container.querySelector<HTMLInputElement>('[aria-label="about coffee"]')?.value).toBe(
+      'lean is black and unsweetened; loaded is a large one with milk and sugar',
+    )
   })
 
-  it('drops the examples entirely once the last line is cleared', () => {
+  it('drops the note entirely once the box is cleared', () => {
     const { container } = render(<Foods />)
     open(container, 'coffee')
 
-    set(container, 'what lean means for coffee', '')
-    set(container, 'what normal means for coffee', '')
-    expect(held('coffee')?.examples).toEqual({ loaded: 'large, with milk and sugar' })
+    set(container, 'about coffee', '   ')
+    // no key at all rather than a stored blank: a food nobody has described and
+    // one whose note was cleared are the same food
+    expect('notes' in held('coffee')!).toBe(false)
+  })
 
-    set(container, 'what loaded means for coffee', '')
-    // no key at all, rather than three blanks — which is what makes the control
-    // draw no prose block instead of three empty lines
-    expect('examples' in held('coffee')!).toBe(false)
-    expect(logging('coffee').container.querySelector('.level-examples')).toBeNull()
+  it('offers no number box at all, on either surface', () => {
+    const { container } = render(<Foods />)
+    open(container, 'pizza')
+
+    // the matrix and the level prose went on 2026-08-08 — a food is a name, a
+    // unit, the level it opens at and a sentence
+    expect(container.querySelector('.facts')).toBeNull()
+    expect(container.querySelectorAll('input[type="number"]')).toHaveLength(0)
+    expect(logging('pizza').container.querySelector('.nutrition-numbers')).toBeNull()
   })
 
   it('changes the level a food opens at', () => {

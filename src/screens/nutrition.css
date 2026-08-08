@@ -263,13 +263,6 @@
   text-decoration: none;
 }
 
-.nutrition-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 24px 44px;
-}
-
 .nutrition-field {
   display: flex;
   flex-direction: column;
@@ -283,40 +276,28 @@
   color: var(--mono);
 }
 
-/* the numbers are the control that writes them — what is shown and what is
-   edited are one thing, the same as the name box above. It carries no button
-   chrome: a box drawn around the one line of arithmetic on the screen would
-   read as an action rather than as a fact, and the underline is enough to say
-   it can be pressed */
-.nutrition-numbers {
-  align-items: center;
+/* prose about a plate of food, so serif and not the mono every measurement on
+   this screen is set in — it is the one field here that is a sentence rather
+   than a value. Underlined rather than boxed: it is the food's own note and it
+   belongs with the name above it, which is drawn the same way */
+.nutrition-about {
+  width: 100%;
+  min-width: 0;
   padding: 0 0 6px;
   border: none;
   border-bottom: 1px solid var(--rule-light);
   background: none;
-  font: 400 16px/1.4 var(--family-mono);
+  font: 300 16px/1.45 var(--family-serif);
   color: var(--ink-quiet);
-  text-align: left;
-  cursor: pointer;
 }
 
-.nutrition-numbers:hover,
-.nutrition-numbers[aria-expanded='true'] {
+.nutrition-about:focus {
   border-bottom-color: var(--steel);
+  outline: none;
 }
 
-/* a food with no numbers says so by offering the way in — it used to say
-   nothing at all, which is what left a just-made food with nowhere to type */
-.nutrition-facts-open {
-  align-items: center;
-  align-self: flex-start;
-  padding: 0 0 6px;
-  border: none;
-  background: none;
-  color: var(--steel-text);
-  font: 400 14.5px/1.4 var(--family-mono);
-  text-align: left;
-  cursor: pointer;
+.nutrition-about::placeholder {
+  color: var(--mono-faint);
 }
 
 /* the last thing in the column and stuck to the bottom edge, so it is both

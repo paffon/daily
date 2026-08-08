@@ -43,8 +43,8 @@ against the library copy read at render time, which is one press older than the
 food just made, so `asFood`'s fallback handed back a blank `default_level` and
 that blank was written onto the entry — invisibly, since the rail prints the
 level without comment. It now resolves against a fresh read. The blank unit
-beside it is answered rather than fixed: the builder's head carries the name and
-the unit, and its `this food` line opens the numbers and the level prose without
+beside it is answered rather than fixed: the builder's head carries the name,
+the unit and the food's note, so everything a food is can be written without
 leaving the meal.
 
 ## Data left behind
