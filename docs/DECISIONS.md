@@ -116,3 +116,23 @@ Built on the day it was decided. `DESIGN.md` §2 and the **Profile** entry in
 `CONTEXT.md` carry the behaviour; ADR 0004 gains the paragraph rather than a
 record of its own, since starring is a fallback the existing decision left to a
 source constant and reversing it is an afternoon.
+
+### 2026-08-08 · the food library
+
+| decided | written in |
+| :- | :- |
+| fat is the third number a food carries, beside calories and protein, and stays optional | [§8.2](DESIGN.md#82-nutrition), *Reversals* in [RULES.md](RULES.md#reversals) |
+| carbohydrate and fibre stay cut | [§8.2](DESIGN.md#82-nutrition) |
+| the food library gets a screen of its own, opened from the nutrition list, beside the inline path which stays | [§7](DESIGN.md#7-the-data-model) |
+| every field of a food is editable from either end — the library screen and the meal being logged — and every correction reaches every meal that ever held it | [§8.2](DESIGN.md#82-nutrition) |
+| the numbers and the level prose are one block, folded away behind the line that shows them, so the fast path is unchanged and a just-made food still has somewhere to type | [§8.2](DESIGN.md#82-nutrition) |
+| deleting a food is refused while a logged meal still holds it, the way deleting an exercise already was | [§7](DESIGN.md#7-the-data-model) |
+
+No ADR. Every row is undoable in an afternoon — the reversal is one optional
+field and one screen — which is the first of the three tests an ADR has to pass.
+
+Built on the day it was decided, on `claude/food-editing-nutrients-e7aae8`. The
+seeded library gained fat figures for the foods that already carried numbers;
+a browser holding its own `library/foods.json` keeps what it has, since a seed
+is written only when the file is absent, and the new screen is where those
+foods get their third number.

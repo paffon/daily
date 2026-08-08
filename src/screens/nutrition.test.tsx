@@ -8,7 +8,7 @@ import type { Food } from '../data/food'
 import { newEntry } from '../data/entry'
 import { ensureSeeded, getEntry, putEntry, readEntries, writeJson } from '../data/store'
 import { EditEntry } from './edit_entry'
-import { Nutrition } from './nutrition'
+import { Nutrition, nutritionLineFor } from './nutrition'
 
 const named = (name: string): Food => {
   const food = loadFoods().foods.find((item) => item.name === name)
@@ -317,11 +317,72 @@ describe('the nutrition screen', () => {
     expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('95 kcal')
   })
 
-  it('says nothing about numbers for a food that carries none', () => {
+  it('says nothing about numbers for a food that carries none, but offers the way in', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     pick(container, 'water')
+
+    // no number is invented for it, and none is shown
     expect(container.querySelector('.nutrition-numbers')).toBeNull()
+    // and the press that writes one is there rather than nowhere
+    expect(container.querySelector('.nutrition-facts-open')?.textContent).toBe('+ numbers')
+    expect(container.querySelector('.facts')).toBeNull()
+  })
+
+  it('writes a just-made food’s numbers without leaving the meal', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: 'malabi' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.picker-new')!)
+
+    // the food is invented here, so this is where its numbers are known
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-facts-open')!)
+    const type = (label: string, value: string) =>
+      fireEvent.change(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
+        target: { value },
+      })
+    type('kcal of malabi', '210')
+    type('protein of malabi', '4')
+    type('fat of malabi', '9')
+    type('what loaded means for malabi', 'the big one, with all the syrup')
+
+    expect(loadFoods().foods.find((food) => food.name === 'malabi')).toMatchObject({
+      kcal: 210,
+      protein: 4,
+      fat: 9,
+      examples: { loaded: 'the big one, with all the syrup' },
+    })
+    // the line above the panel now says them, at this amount and this level
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '210 kcal · 4 g protein · 9 g fat',
+    )
+    // and the prose is under the buttons it describes, in the same breath
+    expect(container.querySelectorAll('.level-example')).toHaveLength(3)
+
+    // the meal was never left, and it still saves
+    endMeal(container)
+    expect(railLines(container)).toEqual(['malabi · 1 · normal'])
+  })
+
+  it('opens the same fields from the numbers line of a food that has them', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+
+    expect(container.querySelector('.facts')).toBeNull()
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-numbers')!)
+    expect(container.querySelector<HTMLInputElement>('[aria-label="fat of pizza"]')?.value).toBe('10')
+
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="fat of pizza"]')!, {
+      target: { value: '14' },
+    })
+    // it edits the library, so the line above it moves with it
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '285 kcal · 12 g protein · 14 g fat',
+    )
+    expect(loadFoods().foods.find((food) => food.id === 'pizza')?.fat).toBe(14)
   })
 
   it('carries the food’s own unit into a meal of one’s line, pluralised past one', () => {
@@ -418,8 +479,12 @@ describe('the nutrition screen', () => {
     })
     fireEvent.click(container.querySelector<HTMLButtonElement>('.picker-new')!)
 
-    expect(container.querySelector('.nutrition-title')?.textContent).toBe('malabi')
+    // the heading is the name box, so what it holds is a value and not text
+    expect(container.querySelector<HTMLInputElement>('.nutrition-name')?.value).toBe('malabi')
     expect(loadFoods().foods.some((food) => food.name === 'malabi')).toBe(true)
+    // and it opens at the level config gives a new food, rather than at the
+    // blank a stale library copy used to hand back
+    expect(container.querySelector('.level [aria-pressed="true"]')?.textContent).toContain('normal')
   })
 
   it('lands back on the list once the meal is ended, with the meal in it', () => {
@@ -506,6 +571,61 @@ describe('the nutrition screen', () => {
     )
   })
 
+  it('names the unit of a food made mid-meal, and the meal reads in it', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    fireEvent.input(container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: 'malabi' },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.picker-new')!)
+
+    // a food made here opens with the blank unit config gives it, and this is
+    // where that is answered — otherwise it keeps the blank forever
+    expect(container.querySelector<HTMLInputElement>('[aria-label="unit"]')?.value).toBe('')
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="unit"]')!, {
+      target: { value: 'cup' },
+    })
+    endMeal(container)
+
+    expect(loadFoods().foods.find((food) => food.name === 'malabi')?.unit).toBe('cup')
+    expect(railLines(container)).toEqual(['malabi · 1 cup · normal'])
+  })
+
+  it('renames a food from the meal it is in, and reaches every meal before it', () => {
+    const first = render(<Nutrition />)
+    logPizza(first.container)
+    first.unmount()
+
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="name"]')!, {
+      target: { value: 'pizza · the good bakery' },
+    })
+    endMeal(container)
+
+    // an entry stores the id and resolves the name at read time, so the meal
+    // logged before the rename says the new name too
+    expect(railLines(container)).toEqual(
+      expect.arrayContaining([
+        'pizza · the good bakery · 1 slice · normal',
+        'pizza · the good bakery · 2 slices · loaded',
+      ]),
+    )
+  })
+
+  it('refuses a blank name here too, and puts the old one back', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'pizza')
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="name"]')!, {
+      target: { value: '  ' },
+    })
+
+    expect(loadFoods().foods.some((food) => food.name === 'pizza')).toBe(true)
+    expect(container.querySelector<HTMLInputElement>('[aria-label="name"]')?.value).toBe('pizza')
+  })
+
   it('arms a library delete on the first press and deletes on the second', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
@@ -524,6 +644,33 @@ describe('the nutrition screen', () => {
     ).toBe(false)
   })
 
+  it('refuses that delete while a meal still holds the food (§7)', () => {
+    const first = render(<Nutrition />)
+    logPizza(first.container)
+    first.unmount()
+    const id = readEntries('nutrition')[0]!.id
+
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    fireEvent.click(container.querySelector<HTMLButtonElement>('[aria-label="delete pizza"]')!)
+
+    expect(container.querySelector('.refused-line')?.textContent).toBe('in a meal, still')
+    expect(container.querySelector('.refused-link')?.getAttribute('href')).toBe(`#/entry/${id}`)
+    // it never armed, so a second press cannot get through by accident
+    expect(container.querySelector('[aria-label="delete pizza"]')?.textContent).toBe('×')
+    expect(loadFoods().foods.some((food) => food.id === 'pizza')).toBe(true)
+
+    // and the rename it offers instead reaches the meal holding it
+    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="rename pizza"]')!, {
+      target: { value: 'pizza · frozen' },
+    })
+    expect(nutritionLineFor(readEntries('nutrition')[0]!)).toContain('pizza · frozen')
+  })
+
+  it('opens the food library from the list rather than from home', () => {
+    const { container } = render(<Nutrition />)
+    expect(container.querySelector('.nutrition-library')?.getAttribute('href')).toBe('#/foods')
+  })
 })
 
 describe('editing a past meal', () => {

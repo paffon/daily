@@ -7,7 +7,7 @@
  *  a food library that is a project does not get maintained. */
 
 import type { Entry } from './entry'
-import { readJson } from './store'
+import { readJson, writeJson } from './store'
 import appSeed from '../seed/app.json'
 import foodsSeed from '../seed/foods.json'
 import levelsSeed from '../seed/levels.json'
@@ -77,6 +77,47 @@ export const asFood = (id: string, library: FoodLibrary): Food =>
   library.foods.find((item) => item.id === id) ?? { id, name: id, unit: '', default_level: '' }
 
 export const loadFoods = (): FoodLibrary => readJson('library/foods.json', foodsSeed)
+
+/** Read-modify-write of the stored file, never of a copy the caller is holding.
+ *  Two library edits can land before a re-render — a name typed and then a
+ *  unit, on the same panel — and spreading a copy read at render time writes
+ *  the first one back out. Both surfaces that edit this library go through
+ *  here, the way `writeExercises` holds the other one, so the race cannot come
+ *  back on one side only. The read is the mirror, so it costs nothing.
+ *
+ *  A patch may carry `undefined` for a number that has become unknown again:
+ *  `JSON.stringify` drops the key outright, which is the same absence a food
+ *  that never had the number wears. */
+export function writeFoods(change: (held: FoodLibrary) => Food[]): void {
+  const held = loadFoods()
+  writeJson('library/foods.json', { ...held, foods: change(held) })
+}
+
+/** One food, changed against the stored copy rather than against the caller's.
+ *  Every field edited on either surface goes through this, so a merge — the
+ *  three level lines are one object — happens inside the write and not against
+ *  a render that is one keystroke old. */
+export function editFood(id: string, change: (held: Food) => Food): void {
+  writeFoods((held) => held.foods.map((item) => (item.id === id ? change(item) : item)))
+}
+
+/** The stored meals that logged this food, in the order they were handed over.
+ *  A delete names them rather than refusing in the abstract (§7), the same way
+ *  `usedBy` does for an exercise.
+ *
+ *  `readEntries` has already dropped the tombstones, so a deleted meal does not
+ *  hold a food hostage. */
+export const usedBy = (food_id: string, meals: Entry[]): Entry[] =>
+  meals.filter((entry) => foodsIn(entry).some((logged) => logged.food_id === food_id))
+
+/** The units the library already knows — the plural map's names and whatever
+ *  the foods are counted in. Offered rather than enforced: a unit nothing has
+ *  heard of is still typeable, and one the map has no plural for simply reads
+ *  the same past one, which is what `g` needs. */
+export const unitsIn = (library: FoodLibrary): string[] =>
+  [...new Set([...Object.keys(library.units), ...library.foods.map((food) => food.unit)])]
+    .filter((unit) => unit !== '')
+    .sort()
 
 export const loadLevels = (): Record<string, Scale> => readJson('config/levels.json', levelsSeed)
 

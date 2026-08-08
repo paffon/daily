@@ -167,18 +167,27 @@ logging stays — it is the fast path and the rule above still holds — but it 
 the *only* way to reach an item, so correcting a name meant starting a workout
 you did not intend to log. Exercises get a screen, opened from the workout
 module's list rather than from home, where an item's name, kind, body part and
-picture are edited directly. Foods and segments have the same problem and will
-take the same shape when they are asked for.
+picture are edited directly.
+
+**Foods got the same screen on 2026-08-08**, opened from the nutrition module's
+list. It carries what a food is made of and what its levels mean (§8.2) as well
+as its name, unit and picture, and it is for filling in a food you are not
+currently eating — the one thing that used to mean starting a meal you did not
+intend to log. It is not the only door: a food's numbers are also written where
+the food is being logged (§8.2), because the moment a food is invented is the
+moment its numbers are known, and sending that press to another screen would
+lose the meal being built. Both surfaces render the same block. Segments have
+the same problem and will take the same shape when they are asked for.
 
 **Delete is refused while history depends on it.** Deleting a library item is
 unconditional only while nothing references it. Once an exercise appears in a
-logged workout, the delete names the workouts that use it — as links — and
-offers to rename it instead. Renaming reaches every one of them, because an
-entry stores the item's id and resolves its name at read time, so the case that
-usually wants deleting is answered without touching a single set. There is no
-bulk edit of past workouts behind this dialog and no hidden state: to actually
-remove the item, remove it from those workouts first, one at a time, with the
-numbers in front of you. The consequence is deliberate — **an item that has been
+logged workout — or, since 2026-08-08, a food in a logged meal — the delete
+names the entries that use it, as links, and offers to rename it instead.
+Renaming reaches every one of them, because an entry stores the item's id and
+resolves its name at read time, so the case that usually wants deleting is
+answered without touching a single set. There is no bulk edit of past entries
+behind this dialog and no hidden state: to actually remove the item, remove it
+from those entries first, one at a time, with the numbers in front of you. The consequence is deliberate — **an item that has been
 used once stays in its picker**, and the way out is through the entries, not
 around them.
 
@@ -347,6 +356,19 @@ A **food item** carries:
 | `default level` | so a normal entry is one tap and lean/loaded is the exception |
 | `kcal`, `protein`, `fat` | for the **normal** case, at one unit. All optional, each unknown on its own |
 | `examples` | what lean, normal and loaded look like for this food. Optional |
+
+**Every one of these is editable, from either end** — the food library's screen
+(§7) and the meal being logged — and a correction reaches every meal that ever
+held the food, the unit and the numbers as much as the name, because all of
+them belong to the food and none is stored on the entry.
+
+Where the food is being logged, the name and the unit are the heading: a food
+made mid-meal opens with the blank unit config gives it, and that is the field
+it would otherwise keep forever. The numbers and the level prose sit behind the
+line that shows them — `285 kcal · 12 g protein · 10 g fat` is a press, and a
+food carrying none says `+ numbers` instead of saying nothing. Folded away
+rather than absent: the fast path stays a name, an amount and a press, and the
+food that has just been invented is exactly the one whose numbers are at hand.
 
 **Drinks are food items.** Coffee, beer, juice. "What I ate" silently excludes a
 real part of an office day, so the module does not use that framing.

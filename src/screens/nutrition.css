@@ -186,8 +186,9 @@
 
 .nutrition-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 16px;
+  gap: 14px;
 }
 
 .nutrition-change {
@@ -205,6 +206,61 @@
   margin: 0;
   font: 200 clamp(30px, 5vw, 38px) / 1.1 var(--family-serif);
   color: var(--ink);
+}
+
+/* the heading is the name box, the same as workout's (§8.1) — one thing shown
+   and edited, so the screen cannot hold two names that disagree */
+.nutrition-name {
+  flex: 1 1 100%;
+  min-width: 0;
+  padding: 0 0 2px;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
+  color: inherit;
+}
+
+.nutrition-name:focus {
+  border-bottom-color: var(--steel);
+  outline: none;
+}
+
+/* the unit is a control rather than a caption, and it is the one field a food
+   made mid-meal otherwise keeps blank forever. Narrower than workout's pair
+   because it has no second control to be equal to — a unit is one short word,
+   and a box the width of the name would read as the more important of the
+   two */
+.nutrition-unit {
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 16ch;
+  height: var(--hit-min);
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: none;
+  font: 400 10.5px/1 var(--family-mono);
+  letter-spacing: 0.1em;
+  color: var(--mono);
+  text-overflow: ellipsis;
+}
+
+.nutrition-unit:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.nutrition-unit::placeholder {
+  color: var(--mono-faint);
+}
+
+/* the food library's door, in the register workout's `exercises →` has */
+.nutrition-library {
+  padding: 0 24px 28px;
+  font: 400 11.5px/1 var(--family-mono);
+  color: var(--mono);
+  text-decoration: none;
 }
 
 .nutrition-row {
@@ -227,10 +283,40 @@
   color: var(--mono);
 }
 
+/* the numbers are the control that writes them — what is shown and what is
+   edited are one thing, the same as the name box above. It carries no button
+   chrome: a box drawn around the one line of arithmetic on the screen would
+   read as an action rather than as a fact, and the underline is enough to say
+   it can be pressed */
 .nutrition-numbers {
-  padding-bottom: 6px;
+  align-items: center;
+  padding: 0 0 6px;
+  border: none;
+  border-bottom: 1px solid var(--rule-light);
+  background: none;
   font: 400 16px/1.4 var(--family-mono);
   color: var(--ink-quiet);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nutrition-numbers:hover,
+.nutrition-numbers[aria-expanded='true'] {
+  border-bottom-color: var(--steel);
+}
+
+/* a food with no numbers says so by offering the way in — it used to say
+   nothing at all, which is what left a just-made food with nowhere to type */
+.nutrition-facts-open {
+  align-items: center;
+  align-self: flex-start;
+  padding: 0 0 6px;
+  border: none;
+  background: none;
+  color: var(--steel-text);
+  font: 400 14.5px/1.4 var(--family-mono);
+  text-align: left;
+  cursor: pointer;
 }
 
 /* the last thing in the column and stuck to the bottom edge, so it is both
@@ -332,6 +418,11 @@
   }
 
   .nutrition-rail-add {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .nutrition-library {
     padding-left: 34px;
     padding-right: 34px;
   }
