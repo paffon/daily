@@ -1,12 +1,9 @@
-/** The food library, and what a level does to its numbers.
- *
- *  A food's numbers are a matrix — three levels by three macros — and every
- *  cell of it is optional (`DESIGN.md` §8.2, 2026-08-08). What was typed for a
- *  level is what that level is. What was not is the base row times the global
- *  multiplier in `config/levels.json`, which is what keeps the library from
- *  becoming a data-entry project: nine numbers are available and three are
- *  usually enough. A food with nothing typed anywhere has no numbers at all,
- *  and that is a complete food. */
+/** The food library. A food is four things — a name, the unit it is counted
+ *  in, the level it opens at, and a note saying what it is (`DESIGN.md` §8.2,
+ *  2026-08-08). It carries no numbers: calories, protein and fat were cut on
+ *  the same day the matrix that held them was, because what a portion was is
+ *  read off the food, its level and its note, and a number nobody maintains is
+ *  worse than a sentence somebody wrote. */
 
 import type { Entry } from './entry'
 import { readJson, writeJson } from './store'
@@ -24,40 +21,16 @@ export type Food = {
   unit: string
   /** So the common entry is one tap and lean or loaded is the exception. */
   default_level: string
-  /** The base row of the matrix, at one unit — the level the scale multiplies
-   *  by 1, which is `normal` in the seeded scale. All three optional. A name
-   *  and a time is a complete entry.
+  /** Free text about the food itself — what it is, and what its levels mean
+   *  for it: *lean is black; loaded is large with milk and sugar*. The food's
+   *  own, so every meal that ever holds it reads the same sentence, which is
+   *  what tells it apart from the comment on a food in one meal.
    *
-   *  `fat` arrived on 2026-08-08, reversing §8.2's *calories and protein, and
-   *  nothing else*. It is one more optional number on a food that already
-   *  carries two, not a field every food has to answer, and the argument that
-   *  cut it — a field costs a decision per food — is answered by leaving it
-   *  blank, which most of the library does. Carbohydrate and fibre stay cut. */
-  kcal?: number
-  protein?: number
-  fat?: number
-  /** The rest of the matrix: what a level is in numbers, for the foods where
-   *  the multiplier is wrong about it — a loaded salad is not a lean one times
-   *  a constant, because what makes it loaded is the tahini. Keyed by the
-   *  level's own word, cell by cell, and absent on nearly every food. A level
-   *  with nothing typed reads as the base times the multiplier, so leaving
-   *  this alone is the same library as before it existed. */
-  levels?: Record<string, LevelNumbers>
-  /** What each level looks like for this food. Written once for the foods where
-   *  the distinction is genuinely confusing, absent everywhere else. */
-  examples?: Record<string, string>
+   *  Optional and absent until something is typed. It is what the numbers used
+   *  to be for: a reader — the export's, or the user's — works out roughly what
+   *  a portion was from the food, the level and this. */
+  notes?: string
 }
-
-/** One row of the matrix. The same three optional numbers the food itself
- *  carries, which is what makes the grid one shape rather than two. */
-export type LevelNumbers = { kcal?: number; protein?: number; fat?: number }
-
-/** The three the matrix has columns for, in the order it draws them. Data
- *  rather than three boxes written out three times — and read by the grid and
- *  by the arithmetic alike, so a fourth macro would be one line here. */
-export const MACROS = ['kcal', 'protein', 'fat'] as const
-
-export type Macro = (typeof MACROS)[number]
 
 /** `units` maps a unit to how it reads past one. A shared vocabulary rather
  *  than a field on every food, and a unit that is absent reads the same at
@@ -65,9 +38,9 @@ export type Macro = (typeof MACROS)[number]
  *  would have got wrong. */
 export type FoodLibrary = { units: Record<string, string>; foods: Food[] }
 
-/** One module's level scale. `multipliers` is nutrition's alone — a walking
- *  speed is what the thing was and multiplies nothing. */
-export type Scale = { scale: string[]; multipliers?: Record<string, number> }
+/** One module's level scale. Names and order only: a level says what the thing
+ *  was, and since the food matrix went there is nothing for it to multiply. */
+export type Scale = { scale: string[] }
 
 /** One food inside a meal. `comment` is free text on this food in this meal —
  *  *the good bakery*, *left half of it*, *reheated*. Optional and absent until
@@ -91,6 +64,15 @@ export const foodsIn = (entry: Entry): Logged[] => foodsOf(entry.payload)
  *  blank one behind. Both mean nothing was said. */
 export const commentOf = (logged: Logged): string => logged.comment ?? ''
 
+/** The same absence, on the library side: a food nobody has described, and one
+ *  whose note was emptied, say nothing in the same way. */
+export const notesOf = (food: Food): string => food.notes ?? ''
+
+/** What a box that has been emptied is worth to the library — nothing, rather
+ *  than a stored blank. `JSON.stringify` drops an `undefined`, so the food
+ *  wears the same absence as one that was never described. */
+export const said = (typed: string): string | undefined => typed.trim() || undefined
+
 /** A food the library no longer has — renamed on another device, or deleted,
  *  since nothing in a seed is protected. The entry keeps saying what it said;
  *  only the name falls back to the id it was stored under. */
@@ -106,18 +88,17 @@ export const loadFoods = (): FoodLibrary => readJson('library/foods.json', foods
  *  here, the way `writeExercises` holds the other one, so the race cannot come
  *  back on one side only. The read is the mirror, so it costs nothing.
  *
- *  A patch may carry `undefined` for a number that has become unknown again:
+ *  A patch may carry `undefined` for a field that has become blank again:
  *  `JSON.stringify` drops the key outright, which is the same absence a food
- *  that never had the number wears. */
+ *  that never had it wears. */
 export function writeFoods(change: (held: FoodLibrary) => Food[]): void {
   const held = loadFoods()
   writeJson('library/foods.json', { ...held, foods: change(held) })
 }
 
 /** One food, changed against the stored copy rather than against the caller's.
- *  Every field edited on either surface goes through this, so a merge — the
- *  three level lines are one object — happens inside the write and not against
- *  a render that is one keystroke old. */
+ *  Every field edited on either surface goes through this, so a write happens
+ *  inside the read rather than against a render that is one keystroke old. */
 export function editFood(id: string, change: (held: Food) => Food): void {
   writeFoods((held) => held.foods.map((item) => (item.id === id ? change(item) : item)))
 }
@@ -144,83 +125,14 @@ export const loadLevels = (): Record<string, Scale> => readJson('config/levels.j
 
 /** `ensureSeeded` writes a seed only when the whole file is absent, so a browser
  *  holding an `app.json` from before this phase has no `nutrition` section at
- *  all — and `undefined` reaching the arithmetic would round to `NaN`. The seed
- *  underneath is the same defence P8 had to write twice; the duplication is the
- *  symptom of a store that does not backfill. */
+ *  all. The seed underneath is the same defence P8 had to write twice; the
+ *  duplication is the symptom of a store that does not backfill. */
 export const nutritionConfig = (): typeof appSeed.nutrition => ({
   ...appSeed.nutrition,
   ...readJson('config/app.json', appSeed).nutrition,
 })
 
-export type Nutrition = { kcal: number | null; protein: number | null; fat: number | null }
-
-/** The level the food's own three numbers are for — the one the scale
- *  multiplies by 1, since the multipliers are relative to something and that
- *  something is whatever they leave alone. `normal`, in the seeded scale, and
- *  the word is nowhere in source: rename the scale and the base row moves with
- *  it. A scale that multiplies nothing makes its first level the base. */
-export const baseLevel = (levels: Record<string, Scale> = loadLevels()): string => {
-  const nutrition = levels['nutrition']
-  return nutrition?.scale.find((level) => (nutrition.multipliers?.[level] ?? 1) === 1) ?? ''
-}
-
-/** 0.7 × 1.03 is 0.7209999999999999 in binary floating point, and a placeholder
- *  saying so would read as a number somebody typed. This trims the noise and
- *  nothing else — it is not a rounding policy, which is `decimals` and belongs
- *  to the entry rather than to the library. */
-const exact = (value: number): number => Number(value.toPrecision(12))
-
-/** One unit of this food at one level: the cell that was typed for that level,
- *  or the base row times the level's multiplier where none was. `null` rather
- *  than 0 for a number the food does not carry — an unknown is not a zero.
- *
- *  This is the whole of what a level does to a food's numbers, and both the
- *  arithmetic below and the grid that edits the matrix read it, so what the
- *  builder prints and what the empty cell offers can never disagree. */
-export function perUnit(food: Food, level: string, levels = loadLevels()): Nutrition {
-  /* an unmultiplied level is identity, not a tunable default: a scale that
-     names no multiplier for one of its levels leaves the numbers alone */
-  const factor = levels['nutrition']?.multipliers?.[level] ?? 1
-  const typed = food.levels?.[level]
-
-  /* `== null` catches the written-out `"kcal": null` as well as the absent
-     key: the library is a file the user edits, and both spellings mean the
-     same unknown — where `null * amount` would quietly mean 0 */
-  const at = (macro: Macro): number | null => {
-    const said = typed?.[macro]
-    if (said != null) return said
-    const base = food[macro]
-    return base == null ? null : exact(base * factor)
-  }
-
-  return { kcal: at('kcal'), protein: at('protein'), fat: at('fat') }
-}
-
-/** What one entry of this food is: its numbers at the level it was logged at,
- *  times the amount. Per entry only — nothing sums these. */
-export function nutritionFor(food: Food, amount: number, level: string): Nutrition {
-  const { decimals } = nutritionConfig()
-  const one = perUnit(food, level)
-  const scaled = (value: number | null): number | null =>
-    value === null ? null : Number((value * amount).toFixed(decimals))
-
-  return { kcal: scaled(one.kcal), protein: scaled(one.protein), fat: scaled(one.fat) }
-}
-
 /** `slices` past one, `cup` at one, `g` at either. */
 export function unitOf(library: FoodLibrary, food: Food, amount: number): string {
   return amount === 1 ? food.unit : (library.units[food.unit] ?? food.unit)
-}
-
-/** `570 kcal · 24 g protein · 20 g fat`, and nothing where the food carries no
- *  numbers. Each part is dropped on its own, so a food that knows its calories
- *  and nothing else says only that. */
-export function nutritionLine({ kcal, protein, fat }: Nutrition): string {
-  return [
-    kcal === null ? '' : `${kcal} kcal`,
-    protein === null ? '' : `${protein} g protein`,
-    fat === null ? '' : `${fat} g fat`,
-  ]
-    .filter((part) => part !== '')
-    .join(' · ')
 }

@@ -26,7 +26,6 @@
   "nutrition": {
     "amount_start": 1,
     "amount_step": 1,
-    "decimals": 0,
     "new_food": { "unit": "", "default_level": "normal" }
   },
   "movement": {
