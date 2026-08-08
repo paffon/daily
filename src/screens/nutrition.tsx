@@ -7,14 +7,13 @@ import type { Food, FoodLibrary, Logged } from '../data/food'
 import {
   asFood,
   commentOf,
-  editFood,
   foodsIn,
   foodsOf,
   loadFoods,
   loadLevels,
+  notesOf,
   nutritionConfig,
-  nutritionFor,
-  nutritionLine,
+  said,
   unitOf,
   unitsIn,
   usedBy,
@@ -22,7 +21,6 @@ import {
 } from '../data/food'
 import { Comment, Danger, Previous, Timestamp, clockOf, dayTimeOf } from '../components/fields'
 import { DeleteRefused } from '../components/delete_refused'
-import { FoodFacts } from '../components/food_facts'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
 import { AmountStepper } from '../components/amount_stepper'
@@ -104,7 +102,6 @@ registerEditor('nutrition', (payload, onChange) => {
                 scale={scaleOf()}
                 value={logged.level}
                 onChange={(level) => write(at, { ...logged, level })}
-                examples={food.examples}
                 label="level"
               />
             </div>
@@ -147,11 +144,6 @@ function Builder({ entry, locale, onClose }: {
   /** Bumped when the library is written, since `library` above is read on
    *  render and nothing else here would ask for a fresher one. */
   const [, changed] = useState(0)
-  /** Whether the food's own numbers and level prose are open. Shut on arrival,
-   *  because the fast path is a name, an amount and a press — and it stays as
-   *  it was left while the meal is built, since a meal of six new foods is one
-   *  decision about typing numbers, not six. */
-  const [facts, setFacts] = useState(false)
 
   const write = (next: Logged) => setMeal(meal.map((food, i) => (i === at ? next : food)))
 
@@ -168,10 +160,9 @@ function Builder({ entry, locale, onClose }: {
 
   /** What was typed to filter is the new food's name. Its unit and its opening
    *  level come from config rather than from a choice made here — a food added
-   *  mid-meal is one press — and the head above the amount is where the unit is
-   *  answered, since a blank one is the field a food made this way otherwise
-   *  keeps forever. The numbers and the level prose are the library screen's,
-   *  and nothing about them belongs in the middle of a meal. */
+   *  mid-meal is one press — and the head above the amount is where the unit
+   *  and the note are answered, since a blank unit is the field a food made
+   *  this way otherwise keeps forever. */
   const create = (name: string) => {
     const food: Food = { id: crypto.randomUUID(), name, ...config.new_food }
     writeFoods((held) => [...held.foods, food])
@@ -245,8 +236,6 @@ function Builder({ entry, locale, onClose }: {
      checker's rather than a state the screen can be in */
   const current = meal[at]
   const food = current === undefined ? null : asFood(current.food_id, library)
-  const nutrition =
-    current === undefined || food === null ? null : nutritionFor(food, current.amount, current.level)
 
   return (
     <main class="nutrition">
@@ -352,6 +341,24 @@ function Builder({ entry, locale, onClose }: {
                 </datalist>
               </div>
 
+              {/* the food's own sentence, written where the food is invented
+                  because that is the moment anybody knows what it is. It sits
+                  with the name and the unit rather than down beside the
+                  comment: these three are the library's and reach every meal
+                  that ever holds the food, and the amount, the level and the
+                  comment below them belong to this meal alone. */}
+              <label class="nutrition-field">
+                <span class="nutrition-label">about this food</span>
+                <input
+                  class="nutrition-about"
+                  type="text"
+                  aria-label="about this food"
+                  placeholder="what it is, and what its levels mean for it"
+                  value={notesOf(food)}
+                  onChange={(e) => edit(food.id, { notes: said(e.currentTarget.value) })}
+                />
+              </label>
+
               <ItemPhoto kind="food" id={food.id} name={food.name} />
 
               <Previous
@@ -378,63 +385,20 @@ function Builder({ entry, locale, onClose }: {
                 }}
               />
 
-              <div class="nutrition-row">
-                <label class="nutrition-field">
-                  <span class="nutrition-label">amount</span>
-                  {/* keyed on the position as well as the food: the box holds
-                      what was typed, and the same food twice in one meal is
-                      two different numbers */}
-                  <AmountStepper
-                    key={`${at}:${current.food_id}`}
-                    value={current.amount}
-                    unit={unitOf(library, food, current.amount)}
-                    step={config.amount_step}
-                    onChange={(amount) => write({ ...current, amount })}
-                    label="amount"
-                  />
-                </label>
-
-                {/* the line that shows the numbers is the way to write them:
-                    the moment a food is invented is the moment its numbers are
-                    known, and sending that press to another screen would lose
-                    the meal being built. A food with none offers the way in
-                    rather than saying nothing at all, which is what left a
-                    just-made food with nowhere to type. */}
-                <div class="nutrition-field">
-                  <span class="nutrition-label">this food</span>
-                  {nutrition !== null && nutritionLine(nutrition) !== '' ? (
-                    /* per food, and never summed across the meal or the day */
-                    <button
-                      type="button"
-                      class="nutrition-numbers hit"
-                      aria-expanded={facts}
-                      onClick={() => setFacts(!facts)}
-                    >
-                      {nutritionLine(nutrition)}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      class="nutrition-facts-open hit"
-                      aria-expanded={facts}
-                      onClick={() => setFacts(!facts)}
-                    >
-                      + numbers
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {facts && (
-                <FoodFacts
-                  food={food}
-                  scale={scale}
-                  onEdit={(change) => {
-                    editFood(food.id, change)
-                    changed((n) => n + 1)
-                  }}
+              <label class="nutrition-field">
+                <span class="nutrition-label">amount</span>
+                {/* keyed on the position as well as the food: the box holds
+                    what was typed, and the same food twice in one meal is two
+                    different numbers */}
+                <AmountStepper
+                  key={`${at}:${current.food_id}`}
+                  value={current.amount}
+                  unit={unitOf(library, food, current.amount)}
+                  step={config.amount_step}
+                  onChange={(amount) => write({ ...current, amount })}
+                  label="amount"
                 />
-              )}
+              </label>
 
               <div class="nutrition-field">
                 <span class="nutrition-label">level</span>
@@ -442,7 +406,6 @@ function Builder({ entry, locale, onClose }: {
                   scale={scale}
                   value={current.level}
                   onChange={(level) => write({ ...current, level })}
-                  examples={food.examples}
                   label="level"
                 />
               </div>

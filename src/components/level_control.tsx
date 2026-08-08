@@ -2,12 +2,13 @@ import type { VNode } from 'preact'
 import { Segmented } from './segmented'
 import './level_control.css'
 
-/** One control in two conditions, never two controls. With examples the prose
- *  sits under the buttons; with none it simply does not exist, and the buttons
- *  are identical either way.
+/** The scale a module records its level on, given the row to itself.
  *
- *  All three examples show at once rather than only the chosen one, because
- *  comparing them is what makes them useful.
+ *  It carried per-level prose until 2026-08-08 — three lines under the buttons
+ *  saying what lean, normal and loaded meant for one food. That prose is now
+ *  one note on the food itself (`DESIGN.md` §8.2), written where the food is
+ *  rather than repeated per level, so the control is the buttons and nothing
+ *  else and every module wears the same one.
  *
  *  `ink-select`, never `steel`: a level is a recorded property of the thing,
  *  and `steel` means *this is the live one* — which belongs to the next-time
@@ -16,14 +17,11 @@ export function LevelControl({
   scale,
   value,
   onChange,
-  examples,
   label,
 }: {
   scale: string[]
   value: string
   onChange: (level: string) => void
-  /** Per food, and optional — blank is the common case. */
-  examples?: Record<string, string>
   label: string
 }): VNode {
   return (
@@ -35,16 +33,6 @@ export function LevelControl({
         tone="ink-select"
         label={label}
       />
-
-      {examples !== undefined && (
-        <div class="level-examples">
-          {scale.map((level) => (
-            <p class={level === value ? 'level-example chosen' : 'level-example'} key={level}>
-              {examples[level]}
-            </p>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
