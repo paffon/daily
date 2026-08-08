@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import { AmountStepper } from '../components/amount_stepper'
 import { LevelControl } from '../components/level_control'
-import { loadFoods, loadLevels, nutritionFor } from '../data/food'
+import { baseLevel, loadFoods, loadLevels, nutritionFor, perUnit } from '../data/food'
 import type { Food } from '../data/food'
 import { newEntry } from '../data/entry'
 import { ensureSeeded, getEntry, putEntry, readEntries, writeJson } from '../data/store'
@@ -21,10 +21,10 @@ beforeEach(() => {
   ensureSeeded()
 })
 
-describe('a level is a multiplier', () => {
+describe('a food’s numbers are a matrix, and the multiplier fills what is blank', () => {
   const plain: Food = { id: 'plain', name: 'plain', unit: 'slice', default_level: 'normal', kcal: 200 }
 
-  it('applies the scale to the food’s normal-case numbers', () => {
+  it('applies the scale to the food’s base-row numbers', () => {
     expect(nutritionFor(plain, 2, 'loaded').kcal).toBe(560)
     expect(nutritionFor(plain, 2, 'normal').kcal).toBe(400)
     expect(nutritionFor(plain, 2, 'lean').kcal).toBe(280)
@@ -72,6 +72,59 @@ describe('a level is a multiplier', () => {
 
   it('leaves the numbers alone for a level the scale gives no multiplier', () => {
     expect(nutritionFor(plain, 1, 'invented').kcal).toBe(200)
+  })
+
+  it('takes a level’s own number over anything the multiplier would have said', () => {
+    // what makes a loaded salad loaded is the tahini, and a constant is wrong
+    // about it in a way no scale can be right about
+    const salad: Food = { ...plain, fat: 6, levels: { loaded: { kcal: 260, fat: 22 } } }
+
+    expect(nutritionFor(salad, 1, 'loaded')).toMatchObject({ kcal: 260, fat: 22 })
+    // and only the cells that were typed: protein is still unknown, and the
+    // levels nobody wrote a row for are the multiplier exactly as before
+    expect(nutritionFor(salad, 1, 'loaded').protein).toBeNull()
+    expect(nutritionFor(salad, 1, 'lean')).toMatchObject({ kcal: 140, fat: 4 })
+    expect(nutritionFor(salad, 2, 'loaded').kcal).toBe(520)
+  })
+
+  it('answers a level that was typed even when the base row is blank', () => {
+    // the food nobody weighed at normal, only at the one portion that mattered
+    const only: Food = {
+      id: 'only',
+      name: 'only',
+      unit: '',
+      default_level: 'normal',
+      levels: { loaded: { kcal: 300 } },
+    }
+
+    expect(nutritionFor(only, 1, 'loaded').kcal).toBe(300)
+    expect(nutritionFor(only, 1, 'normal').kcal).toBeNull()
+  })
+
+  it('keeps a typed zero, because no fat in the lean one is a fact', () => {
+    const dressed: Food = { ...plain, fat: 6, levels: { lean: { fat: 0 } } }
+    expect(nutritionFor(dressed, 1, 'lean').fat).toBe(0)
+  })
+
+  it('names the base row from the scale rather than from the word normal', () => {
+    expect(baseLevel()).toBe('normal')
+
+    const levels = loadLevels()
+    writeJson('config/levels.json', {
+      ...levels,
+      nutrition: { scale: ['half', 'whole'], multipliers: { half: 0.5, whole: 1 } },
+    })
+    // the base is whatever the scale multiplies by 1 — rename the scale and it
+    // moves, because nothing in source knows the word
+    expect(baseLevel()).toBe('whole')
+    expect(nutritionFor(plain, 1, 'half').kcal).toBe(100)
+  })
+
+  it('gives one unit at a level, which is what the empty cell offers', () => {
+    expect(perUnit(plain, 'lean')).toEqual({ kcal: 140, protein: null, fat: null })
+    // 0.7 × 1.03 is 0.7209999999999999 in binary, and a cell saying so would
+    // read as a number somebody typed
+    expect(perUnit({ ...plain, kcal: 1.03 }, 'lean').kcal).toBe(0.721)
   })
 })
 
@@ -343,9 +396,9 @@ describe('the nutrition screen', () => {
       fireEvent.change(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
         target: { value },
       })
-    type('kcal of malabi', '210')
-    type('protein of malabi', '4')
-    type('fat of malabi', '9')
+    type('normal kcal of malabi', '210')
+    type('normal protein of malabi', '4')
+    type('normal fat of malabi', '9')
     type('what loaded means for malabi', 'the big one, with all the syrup')
 
     expect(loadFoods().foods.find((food) => food.name === 'malabi')).toMatchObject({
@@ -373,11 +426,14 @@ describe('the nutrition screen', () => {
 
     expect(container.querySelector('.facts')).toBeNull()
     fireEvent.click(container.querySelector<HTMLButtonElement>('.nutrition-numbers')!)
-    expect(container.querySelector<HTMLInputElement>('[aria-label="fat of pizza"]')?.value).toBe('10')
+    expect(
+      container.querySelector<HTMLInputElement>('[aria-label="normal fat of pizza"]')?.value,
+    ).toBe('10')
 
-    fireEvent.change(container.querySelector<HTMLInputElement>('[aria-label="fat of pizza"]')!, {
-      target: { value: '14' },
-    })
+    fireEvent.change(
+      container.querySelector<HTMLInputElement>('[aria-label="normal fat of pizza"]')!,
+      { target: { value: '14' } },
+    )
     // it edits the library, so the line above it moves with it
     expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
       '285 kcal · 12 g protein · 14 g fat',
@@ -804,6 +860,23 @@ describe('the food library', () => {
   it('ships most foods with no numbers at all, which is the common case', () => {
     const { foods } = loadFoods()
     expect(foods.filter((food) => food.kcal === undefined).length).toBeGreaterThan(3)
+  })
+
+  it('overrides a level on the two foods the multiplier is wrong about', () => {
+    const { foods } = loadFoods()
+    // the seed is a demonstration, not a project: the matrix is filled in
+    // where a constant genuinely cannot say what the level is, and nowhere else
+    expect(foods.filter((food) => food.levels !== undefined).map((food) => food.name)).toEqual([
+      'salad',
+      'schnitzel',
+    ])
+    // a loaded salad is not a normal one times a constant, because what makes
+    // it loaded is the tahini
+    expect(nutritionFor(named('salad'), 1, 'loaded')).toEqual({ kcal: 260, protein: 5, fat: 22 })
+    // and the same schnitzel baked or fried is the fat, which is the argument
+    // §8.2 made for recording fat at all
+    expect(nutritionFor(named('schnitzel'), 1, 'lean').fat).toBe(6)
+    expect(nutritionFor(named('schnitzel'), 1, 'loaded').fat).toBe(30)
   })
 
   it('writes examples for a few foods and leaves the rest blank', () => {

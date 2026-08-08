@@ -40,6 +40,16 @@ ship seeded with useful defaults and grow by use; nothing in a seed list is
 protected.
 _Avoid_: catalogue entry, template, preset
 
+**Matrix** (food):
+What a food is made of: its levels by kcal, protein and fat, at one unit — three
+by three in the seeded scale. Every cell is optional. A cell that was typed is
+what that level is; a blank one is the **base row** — the level the scale
+multiplies by 1 — times that level's multiplier, shown greyed in the box that
+would override it. Since 2026-08-08, when the multiplier stopped being the only
+answer.
+_Avoid_: nutrition table, macro grid, profile (taken — a profile is whose log it
+is)
+
 **Meal**:
 One nutrition entry: an untyped container of the foods eaten together, started
 and ended the way a workout is. Reintroduced 2026-08-06 — only the word came

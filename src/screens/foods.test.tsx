@@ -124,13 +124,13 @@ describe('the food library screen', () => {
     expect(held('leftovers')?.unit).toBe('')
   })
 
-  it('writes the three numbers for the normal case at one unit', () => {
+  it('writes the three numbers of the base row at one unit', () => {
     const { container } = render(<Foods />)
     open(container, 'leftovers')
 
-    set(container, 'kcal of leftovers', '480')
-    set(container, 'protein of leftovers', '26')
-    set(container, 'fat of leftovers', '18')
+    set(container, 'normal kcal of leftovers', '480')
+    set(container, 'normal protein of leftovers', '26')
+    set(container, 'normal fat of leftovers', '18')
 
     expect(held('leftovers')).toMatchObject({ kcal: 480, protein: 26, fat: 18 })
 
@@ -141,20 +141,74 @@ describe('the food library screen', () => {
     )
   })
 
+  it('draws a box for every level by every number, three by three', () => {
+    const { container } = render(<Foods />)
+    open(container, 'pizza')
+
+    expect(container.querySelectorAll('.facts-matrix input')).toHaveLength(9)
+    // one row per level of the scale, in the scale's own order
+    expect([...container.querySelectorAll('.facts-matrix-level')].map((s) => s.textContent)).toEqual(
+      ['lean', 'normal', 'loaded'],
+    )
+    // and none of them is required: the untyped cells stand empty, showing what
+    // the multiplier makes of the row that was typed
+    const cell = (label: string) =>
+      container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!
+    expect(cell('normal kcal of pizza').value).toBe('285')
+    expect(cell('lean kcal of pizza').value).toBe('')
+    expect(cell('lean kcal of pizza').placeholder).toBe('199.5')
+    expect(cell('loaded kcal of pizza').placeholder).toBe('399')
+    // the base row has nothing behind it, and neither has a number the food
+    // does not carry — an unknown does not become a derived one
+    expect(cell('normal kcal of pizza').placeholder).toBe('—')
+    open(container, 'apple')
+    expect(cell('lean kcal of apple').placeholder).toBe('66.5')
+    expect(cell('lean protein of apple').placeholder).toBe('—')
+  })
+
+  it('writes one level’s own numbers, and drops the row once it is emptied', () => {
+    const { container } = render(<Foods />)
+    open(container, 'pizza')
+
+    set(container, 'loaded kcal of pizza', '520')
+    set(container, 'loaded fat of pizza', '26')
+    expect(held('pizza')?.levels).toEqual({ loaded: { kcal: 520, fat: 26 } })
+
+    // the level that was typed is the level that is used, and the one that was
+    // not is still the multiplier
+    const screen = logging('pizza')
+    fireEvent.click(
+      [...screen.container.querySelectorAll<HTMLButtonElement>('.level .segmented button')].find(
+        (button) => button.textContent?.includes('loaded'),
+      )!,
+    )
+    expect(screen.container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '520 kcal · 17 g protein · 26 g fat',
+    )
+    screen.unmount()
+
+    set(container, 'loaded kcal of pizza', '')
+    expect(held('pizza')?.levels).toEqual({ loaded: { fat: 26 } })
+    set(container, 'loaded fat of pizza', '')
+    // no empty row and no empty key: a food that overrode nothing reads exactly
+    // as it did before the matrix existed
+    expect('levels' in held('pizza')!).toBe(false)
+  })
+
   it('says which unit the numbers are for, in the food’s own word', () => {
     const { container } = render(<Foods />)
 
     open(container, 'pizza')
-    expect(container.querySelector('.facts-label')?.textContent).toBe('normal · per slice')
+    expect(container.querySelector('.facts-label')?.textContent).toBe('per slice')
 
     open(container, 'apple')
-    expect(container.querySelector('.facts-label')?.textContent).toBe('normal · per one')
+    expect(container.querySelector('.facts-label')?.textContent).toBe('per one')
   })
 
   it('empties a number back to unknown rather than to zero', () => {
     const { container } = render(<Foods />)
     open(container, 'pizza')
-    set(container, 'protein of pizza', '')
+    set(container, 'normal protein of pizza', '')
 
     // the key goes outright: an unknown is not a zero, and `12 g protein` must
     // not come back as `0 g protein`
@@ -168,7 +222,7 @@ describe('the food library screen', () => {
   it('keeps a zero that was typed on purpose, because no fat in it is a fact', () => {
     const { container } = render(<Foods />)
     open(container, 'pizza')
-    set(container, 'fat of pizza', '0')
+    set(container, 'normal fat of pizza', '0')
 
     expect(held('pizza')?.fat).toBe(0)
   })

@@ -136,3 +136,25 @@ seeded library gained fat figures for the foods that already carried numbers;
 a browser holding its own `library/foods.json` keeps what it has, since a seed
 is written only when the file is absent, and the new screen is where those
 foods get their third number.
+
+### 2026-08-08 · the level matrix
+
+| decided | written in |
+| :- | :- |
+| a food's numbers are three levels by three macros, and every one of the nine cells is optional | [§8.2](DESIGN.md#82-nutrition), *Reversals* in [RULES.md](RULES.md#reversals) |
+| a cell nobody typed is still the base row times the global multiplier, so a library nobody fills in behaves exactly as it did | [§8.2](DESIGN.md#82-nutrition) |
+| the base row is the level the scale multiplies by 1, never the word *normal* written into source | [§8.2](DESIGN.md#82-nutrition) |
+| a derived cell shows the number it would be given, greyed, in the box that overrides it — the app shows its working and stores nothing it was not told | [§8.2](DESIGN.md#82-nutrition) |
+
+No ADR, for the reason the batch above gives: the reversal is one optional field
+on the food and one grid in place of one row, which is an afternoon. It is
+recorded as a reversal because *levels are multipliers* was argued for
+explicitly, and the argument it was made from — a library that is a data-entry
+project does not get maintained — is still the reason the multiplier is what
+fills a blank cell rather than being deleted.
+
+Built on the day it was decided, on `claude/optional-nutrition-per-level-76l5bz`.
+The seeded library fills the matrix for two foods and no more: salad, whose
+loaded plate is tahini and avocado rather than more salad, and schnitzel, which
+is §8.2's own worked argument for recording fat. A browser holding its own
+`library/foods.json` keeps what it has and gains nine boxes to fill or ignore.

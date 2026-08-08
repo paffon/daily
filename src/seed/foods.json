@@ -100,6 +100,10 @@
       "kcal": 90,
       "protein": 2,
       "fat": 6,
+      "levels": {
+        "lean": { "kcal": 35, "protein": 2, "fat": 0 },
+        "loaded": { "kcal": 260, "protein": 5, "fat": 22 }
+      },
       "examples": {
         "lean": "vegetables and lemon",
         "normal": "vegetables, olive oil, a little cheese",
@@ -268,7 +272,16 @@
       "default_level": "normal",
       "kcal": 290,
       "protein": 22,
-      "fat": 16
+      "fat": 16,
+      "levels": {
+        "lean": { "kcal": 210, "protein": 24, "fat": 6 },
+        "loaded": { "kcal": 420, "protein": 22, "fat": 30 }
+      },
+      "examples": {
+        "lean": "baked, thin crumb",
+        "normal": "fried, standard",
+        "loaded": "thick, deep fried"
+      }
     },
     {
       "id": "pasta",
