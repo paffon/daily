@@ -49,9 +49,29 @@ function screen(hash: string): VNode {
 const mount = document.getElementById('app')!
 
 /** No token, no app — not the modules, not the mirror, not one entry. The
- *  sign-in screen is the whole of what a signed-out browser shows, and it is
- *  what every page load starts on, since the token lives in memory and GIS
- *  cannot hand one back without a press.
+ *  sign-in screen is the whole of what a signed-out browser shows.
+ *
+ *  It is no longer what every page load starts on, which is the point of the
+ *  change that put the token on disk: `drive.ts` restores one that has not run
+ *  out of hour, so a reload inside that hour arrives here already holding a
+ *  token and goes straight past. Only a browser that has never signed in, or
+ *  one whose hour is up, sees the door.
+ *
+ *  The gate stays, and it is worth writing down why, because removing it looks
+ *  free and is not. Every writer in the app is a read-modify-write over the
+ *  mirror with the seed as its fallback, `push` uploads whole files and runs
+ *  before `pull`, and `pull` skips dirty paths. So an entry logged on a
+ *  browser whose mirror has never been filled writes a one-line month file,
+ *  and the first pass after it puts that single line over the month Drive
+ *  holds — and then records the upload's own `modifiedTime`, so the pull that
+ *  follows skips it and there is nothing left anywhere to restore from. The
+ *  gate is what makes that unreachable: nothing can be typed until a token
+ *  exists, and a token means a pass has filled the mirror.
+ *
+ *  What that costs is that a browser whose hour is up cannot get in without a
+ *  signal. What it does not cost is the basement gym: the token is on disk, so
+ *  inside the hour this branch is skipped with no network at all, and the
+ *  mirror behind it has been pulled. `OPEN.md` carries the rest.
  *
  *  A 401 mid-session lands here too, which is the same statement made late:
  *  the token that dropped was the one holding the app open. Nothing is lost
@@ -126,6 +146,12 @@ addEventListener('online', () => {
 addEventListener('offline', paint)
 onPass(paint)
 
-/* Always the sign-in screen: the token is memory-only, so at boot there has
-   never been one. `catchUp` runs from the press, not from here. */
+/* The pass runs from here as well as from the press, which it did not used to:
+   the token can now be on disk already, and a restored one has to be spent or
+   a reload would open the app on a mirror nothing is refreshing. `syncNow`
+   answers false at once when there is no token, so a boot that landed on the
+   door costs nothing and — the part that matters — never reaches
+   `ensureSeeded`, so this browser's defaults are not written over a Drive
+   nobody has heard from. */
 paint()
+void catchUp()

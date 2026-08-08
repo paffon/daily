@@ -18,8 +18,13 @@ const press = (onDone: () => void) => () => {
  *  It is also the whole of a signed-out app. The mirror still holds every
  *  entry ever logged and still takes writes, but none of it is shown or
  *  reachable without a token: the log is the owner's, and this is the door.
- *  Since the token lives in memory and GIS has no silent mode, that door is
- *  one press per page load. */
+ *
+ *  It is no longer one press per page load. The token is written to disk with
+ *  its expiry and restored at boot, so this screen is what a browser that has
+ *  never signed in sees, and what one whose hour is up sees — not what every
+ *  reload sees. Why the door survived the change that did that is argued above
+ *  `paint` in `main.tsx`: it is the only thing standing between a mirror that
+ *  has never been filled and a push that would put it over Drive. */
 export function SignIn({ onDone }: { onDone: () => void }): VNode {
   return (
     <main class="signin">
