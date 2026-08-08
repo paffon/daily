@@ -187,3 +187,61 @@ seeded library keeps a note on the five foods whose levels the old `examples`
 described and is otherwise four fields per food. A browser holding its own
 `library/foods.json` keeps every number it has written there, unread: the app
 never migrates the store, and nothing looks at those keys any more.
+
+### 2026-08-09 · remember me
+
+| decided | written in |
+| :- | :- |
+| the access token is written to `localStorage` beside the moment it expires, so a reload inside its hour opens an app that is already signed in | [§10](DESIGN.md#10-platform), *Reversals* in [RULES.md](RULES.md#reversals) |
+| the account's opaque `sub` is kept past the token's death and handed back as `login_hint`, so the once-an-hour press opens no account chooser | [§10](DESIGN.md#10-platform) |
+| the sign-in gate stays — the app is still not enterable without a token, and offline entry is bounded by the token's hour rather than opened up | [§10](DESIGN.md#10-platform), [OPEN.md](OPEN.md) |
+
+No ADR, and the bar is worth stating because this reverses a security posture
+rather than a feature. It fails the first of the three tests: reverting is
+deleting two functions and restoring one branch in `main.tsx`, which is an
+afternoon. It passes the other two easily — a future reader finding a Drive
+token in `localStorage` will want to know who thought that was acceptable, and
+there were four genuine alternatives.
+
+All four are dead, which is the part worth recording, because each looks
+plausible until it is tried. A GIS token client has no silent mode —
+`requestAccessToken` has one code path and it opens a popup, `ux_mode` is
+ignored for tokens, and a popup outside a user gesture is blocked. The
+hand-rolled redirect flow returns its token in the URL fragment, which is
+where this app's router lives, and the two cannot share it. The hidden-iframe
+flow is refused outright by `X-Frame-Options: DENY` on Google's auth endpoint,
+and was never Google-applicable advice to begin with. A refresh token — the
+only thing that would buy more than an hour — requires a client secret on
+Google's token grant even under PKCE, and a static page cannot hold one
+without publishing it to anyone who opens the source.
+
+So the hour is the ceiling for any browser-only Google integration, and the
+honest shape of the decision is: one press per hour of active use instead of
+one per page load, and an app that works with no signal at all for the length
+of that hour, because the token is read from disk rather than from Google.
+
+**The gate came out and went back in the same day**, which is recorded because
+the reasoning is the useful part. Opening the app on the mirror regardless of a
+token looks free — the mirror is already what every screen reads, and the log is
+already in `localStorage` in the clear, so the door curtains nothing. It is not
+free. Every writer is a read-modify-write over the mirror with the seed as its
+fallback, `push` runs before `pull` and uploads whole files, and `pull` skips
+dirty paths — so an entry logged on a browser whose mirror has never been
+filled puts a one-line month file over the month Drive holds, and the pull that
+follows skips it. The gate is what keeps that unreachable: nothing can be typed
+until a token exists, and a token means a pass has run. Removing it needs a
+merge in `sync.ts` first, and a merge for the library and config JSON is a
+decision nobody has taken. `OPEN.md` carries both halves.
+
+What it costs is stated rather than hidden. A live Drive key sits on disk for
+up to an hour. It cannot be renewed, `drive.file` reaches only files the app
+itself wrote, and every entry is already in the same `localStorage` in the
+clear — so what the key adds over the status quo is the body photographs,
+which are deliberately never mirrored, and write access. `DESIGN.md` §10.1
+says the realistic risk here is losing years of history, not an attacker, and
+the exposure this genuinely adds is a stolen or forensically-imaged browser
+profile. The owner was asked and took the trade.
+
+Built on the day it was decided, on `claude/remember-me-login-3dce71`. A
+browser that has signed in before gains nothing until its next press, since
+there is no token on disk to restore until one is written.
