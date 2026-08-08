@@ -158,3 +158,32 @@ The seeded library fills the matrix for two foods and no more: salad, whose
 loaded plate is tahini and avocado rather than more salad, and schnitzel, which
 is §8.2's own worked argument for recording fat. A browser holding its own
 `library/foods.json` keeps what it has and gains nine boxes to fill or ignore.
+
+### 2026-08-08 · a food carries no numbers
+
+| decided | written in |
+| :- | :- |
+| a food item is four fields and no fifth — name, unit, the level it opens at, and one free-text note | [§8.2](DESIGN.md#82-nutrition), *Reversals* in [RULES.md](RULES.md#reversals) |
+| calories, protein and fat are cut, and the matrix and its multipliers with them | [§8.2](DESIGN.md#82-nutrition), *Reversals* in [RULES.md](RULES.md#reversals) |
+| the per-level `examples` block becomes one note on the food, and the level control loses its prose in every module | [§8.2](DESIGN.md#82-nutrition), *Reversals* in [RULES.md](RULES.md#reversals) |
+| a note is a library item's own free text and a comment is one occurrence's; the food screen shows both, one above the other | [CONTEXT.md](CONTEXT.md) |
+| the export prints a food's unit, its opening level and its note, and no numbers column in the meals | [§10.3](DESIGN.md#103-export) |
+
+No ADR, and the bar is worth stating because this is the third decision about
+the same field in a week. It is not hard to reverse — the numbers are one
+optional field group and one component — and there was no trade-off left to
+weigh once the user said the numbers were not wanted. What it costs is stated
+in §8.2 rather than hidden: the app can no longer say how much protein a day
+held, and nothing in it ever will unless the field comes back.
+
+Both rows it reverses were decided the same day and are left in the log above
+rather than deleted. The reversal is not that the earlier reasoning was wrong
+about maintenance cost — it was right, and it is the reason given here — but
+that the answer to a library nobody will maintain is not a cleverer way to
+fill it in.
+
+Built on the day it was decided, on `claude/food-item-parameters-09ae11`. The
+seeded library keeps a note on the five foods whose levels the old `examples`
+described and is otherwise four fields per food. A browser holding its own
+`library/foods.json` keeps every number it has written there, unread: the app
+never migrates the store, and nothing looks at those keys any more.

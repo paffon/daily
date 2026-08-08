@@ -170,13 +170,15 @@ module's list rather than from home, where an item's name, kind, body part and
 picture are edited directly.
 
 **Foods got the same screen on 2026-08-08**, opened from the nutrition module's
-list. It carries what a food is made of and what its levels mean (§8.2) as well
-as its name, unit and picture, and it is for filling in a food you are not
-currently eating — the one thing that used to mean starting a meal you did not
-intend to log. It is not the only door: a food's numbers are also written where
-the food is being logged (§8.2), because the moment a food is invented is the
-moment its numbers are known, and sending that press to another screen would
-lose the meal being built. Both surfaces render the same block. Segments have
+list. It carries the whole of a food — name, unit, the level it opens at, the
+note that says what it is (§8.2) — and its picture, and it is for filling one in
+when you are not currently eating it, which used to mean starting a meal you did
+not intend to log. It is not the only door: the name, the unit and the note are
+also written where the food is being logged (§8.2), because the moment a food is
+invented is the moment anybody knows what it is, and sending that press to
+another screen would lose the meal being built. The level it opens at is the
+library screen's alone — the meal is already choosing a level a line below, and
+a second level control there would read as the same field twice. Segments have
 the same problem and will take the same shape when they are asked for.
 
 **Delete is refused while history depends on it.** Deleting a library item is
@@ -347,87 +349,72 @@ exercise (§8.1). It is what a level cannot say: `loaded` records that the
 portion was large, and nothing but prose records that it was large *because it
 was shared off someone else's plate*. Optional, like every other field here.
 
-A **food item** carries:
+A **food item** carries four things, and there is no fifth:
 
 | field | purpose |
 | :- | :- |
 | `name` | pizza, coffee, cottage cheese |
 | `unit` | the natural unit for *this* food — slice, cup, piece, gram, plate |
 | `default level` | so a normal entry is one tap and lean/loaded is the exception |
-| `kcal`, `protein`, `fat` | the matrix's base row, at one unit — the level the scale multiplies by 1. All optional, each unknown on its own |
-| `levels` | the rest of the matrix: what a level *is* in numbers, for the foods a multiplier is wrong about. Optional, cell by cell |
-| `examples` | what lean, normal and loaded look like for this food. Optional |
+| `note` | free text about the food itself: what it is, and what its levels mean for it. Optional |
 
-**Every one of these is editable, from either end** — the food library's screen
-(§7) and the meal being logged — and a correction reaches every meal that ever
-held the food, the unit and the numbers as much as the name, because all of
-them belong to the food and none is stored on the entry.
+**Every one of these is editable on the library screen** (§7), **and the three
+that are not the opening level are editable in the meal being logged as well** —
+and a correction from either place reaches every meal that ever held the food,
+the unit and the note as much as the name, because all of them belong to the
+food and none is stored on the entry.
 
-Where the food is being logged, the name and the unit are the heading: a food
-made mid-meal opens with the blank unit config gives it, and that is the field
-it would otherwise keep forever. The numbers and the level prose sit behind the
-line that shows them — `285 kcal · 12 g protein · 10 g fat` is a press, and a
-food carrying none says `+ numbers` instead of saying nothing. Folded away
-rather than absent: the fast path stays a name, an amount and a press, and the
-food that has just been invented is exactly the one whose numbers are at hand.
+Where the food is being logged, those three are the head of the screen: the
+name, the unit beside it, the note under both. What sits below is the entry's
+own — the amount, the level, the comment — and that split is the whole grammar
+of the screen. A food made mid-meal opens with the blank unit config gives it
+and an empty note, which is the moment both are actually known. The opening
+level stays out of it: the entry is choosing a level a line further down, and
+two level controls on one screen read as one field drawn twice.
 
 **Drinks are food items.** Coffee, beer, juice. "What I ate" silently excludes a
 real part of an office day, so the module does not use that framing.
 
-**A food's numbers are a matrix, and the multiplier fills the cells nobody
-typed** (2026-08-08, reversing this section's own *levels are multipliers*).
-Three levels by three numbers, at one unit, and every one of the nine is
-optional. What is typed for a level is what that level is. What is not is the
-**base row** — the level the scale multiplies by 1, `normal` in the seeded scale
-— times that level's global editable multiplier (seed defaults: lean 0.7×,
-loaded 1.4×).
+**A food carries no numbers** (2026-08-08, reversing this section's own matrix,
+the multipliers that filled it, and calories, protein and fat with them — all of
+which this section argued for inside the same week). Nothing in the app records
+kcal, protein or fat. What a portion was is read off three things: what the food
+is, the level it was logged at, and the sentence written on the food.
 
-The multiplier survives because the argument for it was right: authoring three
-sets of numbers for every food turns the library into a data-entry project, and
-a food library that is a project does not get maintained. What was wrong was
-making it the only answer. A constant cannot say what a loaded salad is, because
-what makes it loaded is the tahini rather than more salad, and the same schnitzel
-baked or fried differs by its fat — which is the argument this section already
-made for recording fat at all. So the numbers a constant gets wrong are typed,
-on the two or three foods that have them, and every other food stays one row.
+The case for the numbers was that protein is the figure recomposition turns on.
+The case against is what the numbers turned into. Nine optional cells per food is
+a data-entry project by another name, and a library that is a project does not
+get maintained — which is the argument this section itself used to justify the
+multiplier. And the multiplier is worse than the gap it filled: eight cells
+derived from one is arithmetic wearing the clothes of a measurement, in an app
+whose fifth principle is that it never asserts something it did not observe.
+Remove the guesswork and what is left standing is the level and the prose, which
+were the parts that were true to begin with.
 
-**A derived cell shows its working.** An untyped box carries the number that
-level would be given anyway, greyed, in the box where typing over it is the
-correction. Nothing is hidden and nothing is filled in — the app never turns a
-guess into stored data.
+So the numbers are not folded away or made more optional. They are gone, and the
+note is where what they were reaching for now lives: *lean is baked with a thin
+crumb; loaded is thick and deep fried* says what `fat: 6` against `fat: 30` was
+trying to say, and says it in the form the reader of the export (§10.3) can
+actually use. Carbohydrate and fibre stay cut, and now so does everything that
+was beside them.
 
-**Examples are prose, and per item.** They are optional in the same way —
-written once for foods where the distinction is genuinely confusing, blank
-everywhere else — and a level can carry prose without numbers or numbers without
-prose.
+**The note is prose, and per food.** One field rather than the three-line
+`examples` block it replaces, for the same reason the numbers went: three boxes
+per food is a form, and one is a sentence. Written for the foods where the
+levels are genuinely confusing — five of them in the seeded library — and blank
+on everything else.
 
 The worked example, in the user's own case:
 
-| level | pizza |
+| food | note |
 | :- | :- |
-| lean | thin crust, light cheese, vegetable toppings |
-| normal | plain cheese and tomato, standard slice |
-| loaded | thick crust, meat, extra cheese |
+| pizza | lean is thin crust with vegetables; loaded is thick crust, meat and extra cheese |
+| salad | what makes it loaded is the tahini and the avocado, not more salad |
 
-**Which numbers.** Calories, protein and fat. For recomposition, protein is the
-number that matters more than calories; fat joined the two on 2026-08-08,
-reversing this section's own *calories and protein, and nothing else*.
-
-The argument it reverses was that a field costs a decision per food. That is
-true, and it is answered by the field being optional rather than by the field
-not existing: most of the library carries no fat figure, exactly as most of it
-carries no protein figure, and a food that answers only *kcal* says only that
-where it is logged. What changed the balance is that fat is the one macro a
-portion can be doubled by without the plate looking any different — the same
-schnitzel fried or baked — and that is a thing prose in `examples` describes
-and no number recorded it. Carbohydrate and fibre stay cut, for the reason this
-paragraph used to give for all three: noise at this level of measurement
-precision.
-
-**Nothing is required.** An entry with a name, a time and no numbers at all is a
-valid entry and is worth more than an entry that was never made — and so is a
-food whose whole matrix is blank. Nine boxes are on offer; none of them is a
-question the food has to answer.
+**Nothing is required.** An entry with a name, a time and nothing else is a valid
+entry and is worth more than an entry that was never made — and so is a food that
+is a name and a unit. The note is on offer; it is not a question the food has to
+answer.
 
 ### 8.3 Movement
 
@@ -591,7 +578,7 @@ this list may exist as a constant in source:
 - Every threshold the coach reads
 - Day-zone boundaries and per-line windows
 - Line weights, cooldowns and expiries; lines may be added, edited or disabled
-- Level multipliers and portion conventions
+- Portion conventions
 - Level scales per module — names, order, length
 - Body-part taxonomy; the exercise, food and segment libraries
 - Exercise kinds and per-exercise field lists
@@ -630,7 +617,7 @@ so the risk did not go away — it moved.
    delete, Drive storage, Google sign-in, offline shell.
 2. **Workout module** — exercise library with seeds, kinds and per-kind set
    rows, `Previous`, `+`/`-`, carried-forward comments.
-3. **Nutrition module** — food library with seeds, units, levels, multipliers.
+3. **Nutrition module** — food library with seeds, units, levels.
 4. **Movement and dance** — segments, posture blocks, sessions.
 5. **Body** — weight and photos.
 6. **The coach** — facts, lines as data, the cascade, the floor (`COACH.md`).
@@ -648,7 +635,7 @@ before there is data to read.
 | Storage format — text / CSV / JSON, possibly mixed per module | implementation, once data requirements are firm |
 | Polarity of the `+` / `-` marker (§7.1) | user — one question |
 | Seed contents of the exercise, food and segment libraries | implementation drafts, user corrects |
-| Level multiplier seed values | implementation, editable |
+| Seed notes on the foods whose levels need one | implementation drafts, user corrects |
 | Host choice and the one-time OAuth setup | implementation |
 | The provocation pool's contents | user |
 | Whether sleep becomes a sixth thing | user — deliberately left out for now |
