@@ -182,6 +182,8 @@ export function Exercises(): VNode {
                     {armed === `refused:${item.id}` && (
                       <DeleteRefused
                         used={used}
+                        one="a workout"
+                        many="workouts"
                         name={item.name}
                         locale={locale}
                         onRename={(name) => edit(item.id, { name })}

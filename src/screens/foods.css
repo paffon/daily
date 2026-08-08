@@ -1,0 +1,190 @@
+/* The food library. `exercises.css`, with every shared rule identical to it on
+   purpose: the two catalogs are the same screen about different things, and one
+   of them looking different would read as a difference that is not there. That
+   the file is a copy is the same duplication `OPEN.md` records for the module
+   skeleton, one family down. What a food has and an exercise does not — the
+   numbers and the level prose — is `food_facts.css`, since the meal builder
+   wears that block too.
+
+   A row opens in place rather than onto a screen of its own: what is being
+   corrected is usually one word or one number, and a second navigation to fix
+   one number is the ceremony §7 exists to remove. */
+
+.foods {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.foods-strip {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 52px;
+  padding: 0 24px;
+  font: 400 11px/1 var(--family-mono);
+  letter-spacing: 0.12em;
+  color: var(--mono);
+}
+
+.foods-back {
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.foods-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px 24px 0;
+  min-height: 0;
+}
+
+.foods-filter {
+  flex: none;
+  height: 52px;
+  margin-bottom: 20px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  background: var(--paper-input);
+  font: 400 16px/1 var(--family-mono);
+  color: var(--ink);
+}
+
+.foods-filter:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.foods-filter::placeholder {
+  color: var(--mono-faint);
+  font-size: 14px;
+}
+
+.foods-list {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--rule);
+}
+
+.foods-item {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--rule-light);
+}
+
+.foods-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.foods-row:hover {
+  background: var(--paper-hover);
+}
+
+/* sans, because `tokens.css` gives library item names in lists to sans */
+.foods-name {
+  flex: 1;
+  min-width: 0;
+  font: 400 16px/1.2 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.foods-unit {
+  flex: none;
+  font: 400 11px/1 var(--family-mono);
+  color: var(--mono-faint);
+}
+
+.foods-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 24px;
+}
+
+.foods-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 34ch;
+}
+
+.foods-field-label {
+  font: 400 10.5px/1 var(--family-mono);
+  letter-spacing: 0.1em;
+  color: var(--mono);
+}
+
+.foods-field input {
+  width: 100%;
+  min-width: 0;
+  height: var(--hit-min);
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  background: var(--paper-control);
+  font: 400 15px/1 var(--family-sans);
+  color: var(--ink-body);
+}
+
+.foods-field input:focus {
+  border-color: var(--steel);
+  outline: none;
+}
+
+.foods-field input::placeholder {
+  color: var(--mono-faint);
+  font-size: 13px;
+}
+
+/* the numbers and the level prose are `food_facts.css` — one block, worn here
+   and in the meal builder alike */
+
+/* quiet, and never danger: `delete this entry` stays the one control in the
+   app that wears it, and this refuses itself whenever history is watching */
+.foods-remove {
+  align-items: center;
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+  text-align: left;
+  cursor: pointer;
+}
+
+.foods-remove:hover,
+.foods-remove.armed {
+  color: var(--ink);
+}
+
+.foods-note {
+  margin: auto 0 0;
+  padding: 36px 0;
+  max-width: 660px;
+  font: 300 19px/1.55 var(--family-serif);
+  color: var(--ink-quiet);
+  text-wrap: pretty;
+}
+
+@media (min-width: 760px) {
+  .foods-strip {
+    height: 56px;
+    padding: 0 44px;
+  }
+
+  .foods-body {
+    padding: 40px 120px 0;
+  }
+}

@@ -52,7 +52,8 @@
       "unit": "cup",
       "default_level": "normal",
       "kcal": 100,
-      "protein": 8
+      "protein": 8,
+      "fat": 5
     },
     {
       "id": "protein-shake",
@@ -60,7 +61,8 @@
       "unit": "scoop",
       "default_level": "normal",
       "kcal": 120,
-      "protein": 24
+      "protein": 24,
+      "fat": 1.5
     },
     {
       "id": "pizza",
@@ -69,6 +71,7 @@
       "default_level": "normal",
       "kcal": 285,
       "protein": 12,
+      "fat": 10,
       "examples": {
         "lean": "thin crust, light cheese, vegetable toppings",
         "normal": "plain cheese and tomato, standard slice",
@@ -82,6 +85,7 @@
       "default_level": "normal",
       "kcal": 350,
       "protein": 12,
+      "fat": 22,
       "examples": {
         "lean": "small plate, no oil, no pita",
         "normal": "standard plate with oil and one pita",
@@ -95,20 +99,30 @@
       "default_level": "normal",
       "kcal": 90,
       "protein": 2,
+      "fat": 6,
       "examples": {
         "lean": "vegetables and lemon",
         "normal": "vegetables, olive oil, a little cheese",
         "loaded": "plus avocado, tahini and croutons"
       }
     },
-    { "id": "pita", "name": "pita", "unit": "", "default_level": "normal", "kcal": 165, "protein": 5.5 },
+    {
+      "id": "pita",
+      "name": "pita",
+      "unit": "",
+      "default_level": "normal",
+      "kcal": 165,
+      "protein": 5.5,
+      "fat": 1
+    },
     {
       "id": "shakshuka",
       "name": "shakshuka",
       "unit": "plate",
       "default_level": "normal",
       "kcal": 320,
-      "protein": 16
+      "protein": 16,
+      "fat": 22
     },
     {
       "id": "cottage",
@@ -116,7 +130,8 @@
       "unit": "g",
       "default_level": "normal",
       "kcal": 1.03,
-      "protein": 0.09
+      "protein": 0.09,
+      "fat": 0.05
     },
     {
       "id": "chicken-breast",
@@ -124,28 +139,71 @@
       "unit": "g",
       "default_level": "normal",
       "kcal": 1.65,
-      "protein": 0.31
+      "protein": 0.31,
+      "fat": 0.036
     },
-    { "id": "rice", "name": "rice", "unit": "g", "default_level": "normal", "kcal": 1.3, "protein": 0.026 },
-    { "id": "egg", "name": "egg", "unit": "", "default_level": "normal", "kcal": 78, "protein": 6.3 },
+    {
+      "id": "rice",
+      "name": "rice",
+      "unit": "g",
+      "default_level": "normal",
+      "kcal": 1.3,
+      "protein": 0.026,
+      "fat": 0.003
+    },
+    {
+      "id": "egg",
+      "name": "egg",
+      "unit": "",
+      "default_level": "normal",
+      "kcal": 78,
+      "protein": 6.3,
+      "fat": 5.3
+    },
     {
       "id": "omelette",
       "name": "omelette",
       "unit": "plate",
       "default_level": "normal",
       "kcal": 220,
-      "protein": 14
+      "protein": 14,
+      "fat": 16
     },
-    { "id": "bread", "name": "bread", "unit": "slice", "default_level": "normal", "kcal": 80, "protein": 2.6 },
-    { "id": "tahini", "name": "tahini", "unit": "spoon", "default_level": "normal", "kcal": 89, "protein": 2.6 },
-    { "id": "labneh", "name": "labneh", "unit": "spoon", "default_level": "normal", "kcal": 60, "protein": 2 },
+    {
+      "id": "bread",
+      "name": "bread",
+      "unit": "slice",
+      "default_level": "normal",
+      "kcal": 80,
+      "protein": 2.6,
+      "fat": 1
+    },
+    {
+      "id": "tahini",
+      "name": "tahini",
+      "unit": "spoon",
+      "default_level": "normal",
+      "kcal": 89,
+      "protein": 2.6,
+      "fat": 8
+    },
+    {
+      "id": "labneh",
+      "name": "labneh",
+      "unit": "spoon",
+      "default_level": "normal",
+      "kcal": 60,
+      "protein": 2,
+      "fat": 5
+    },
     {
       "id": "yellow-cheese",
       "name": "yellow cheese",
       "unit": "slice",
       "default_level": "normal",
       "kcal": 70,
-      "protein": 5
+      "protein": 5,
+      "fat": 5.5
     },
     {
       "id": "yogurt",
@@ -153,10 +211,27 @@
       "unit": "cup",
       "default_level": "normal",
       "kcal": 150,
-      "protein": 8
+      "protein": 8,
+      "fat": 5
     },
-    { "id": "tuna", "name": "tuna", "unit": "can", "default_level": "normal", "kcal": 190, "protein": 42 },
-    { "id": "avocado", "name": "avocado", "unit": "", "default_level": "normal", "kcal": 240, "protein": 3 },
+    {
+      "id": "tuna",
+      "name": "tuna",
+      "unit": "can",
+      "default_level": "normal",
+      "kcal": 190,
+      "protein": 42,
+      "fat": 2
+    },
+    {
+      "id": "avocado",
+      "name": "avocado",
+      "unit": "",
+      "default_level": "normal",
+      "kcal": 240,
+      "protein": 3,
+      "fat": 22
+    },
     { "id": "banana", "name": "banana", "unit": "", "default_level": "normal", "kcal": 105, "protein": 1.3 },
     { "id": "apple", "name": "apple", "unit": "", "default_level": "normal", "kcal": 95 },
     { "id": "dates", "name": "dates", "unit": "", "default_level": "normal", "kcal": 66 },
@@ -166,32 +241,89 @@
       "unit": "handful",
       "default_level": "normal",
       "kcal": 170,
-      "protein": 6
+      "protein": 6,
+      "fat": 15
     },
-    { "id": "olives", "name": "olives", "unit": "handful", "default_level": "normal", "kcal": 60 },
-    { "id": "falafel", "name": "falafel", "unit": "", "default_level": "normal", "kcal": 57, "protein": 2.3 },
+    {
+      "id": "olives",
+      "name": "olives",
+      "unit": "handful",
+      "default_level": "normal",
+      "kcal": 60,
+      "fat": 6
+    },
+    {
+      "id": "falafel",
+      "name": "falafel",
+      "unit": "",
+      "default_level": "normal",
+      "kcal": 57,
+      "protein": 2.3,
+      "fat": 3
+    },
     {
       "id": "schnitzel",
       "name": "schnitzel",
       "unit": "",
       "default_level": "normal",
       "kcal": 290,
-      "protein": 22
+      "protein": 22,
+      "fat": 16
     },
-    { "id": "pasta", "name": "pasta", "unit": "plate", "default_level": "normal", "kcal": 420, "protein": 13 },
-    { "id": "soup", "name": "soup", "unit": "bowl", "default_level": "normal", "kcal": 150, "protein": 5 },
+    {
+      "id": "pasta",
+      "name": "pasta",
+      "unit": "plate",
+      "default_level": "normal",
+      "kcal": 420,
+      "protein": 13,
+      "fat": 10
+    },
+    {
+      "id": "soup",
+      "name": "soup",
+      "unit": "bowl",
+      "default_level": "normal",
+      "kcal": 150,
+      "protein": 5,
+      "fat": 6
+    },
     { "id": "sushi", "name": "sushi", "unit": "", "default_level": "normal", "kcal": 45, "protein": 2 },
-    { "id": "burekas", "name": "burekas", "unit": "", "default_level": "normal", "kcal": 300, "protein": 6 },
-    { "id": "chocolate", "name": "chocolate", "unit": "square", "default_level": "normal", "kcal": 55 },
+    {
+      "id": "burekas",
+      "name": "burekas",
+      "unit": "",
+      "default_level": "normal",
+      "kcal": 300,
+      "protein": 6,
+      "fat": 20
+    },
+    {
+      "id": "chocolate",
+      "name": "chocolate",
+      "unit": "square",
+      "default_level": "normal",
+      "kcal": 55,
+      "fat": 3.5
+    },
     {
       "id": "ice-cream",
       "name": "ice cream",
       "unit": "scoop",
       "default_level": "normal",
       "kcal": 140,
-      "protein": 2.4
+      "protein": 2.4,
+      "fat": 7
     },
-    { "id": "cake", "name": "cake", "unit": "slice", "default_level": "normal", "kcal": 350, "protein": 4 },
+    {
+      "id": "cake",
+      "name": "cake",
+      "unit": "slice",
+      "default_level": "normal",
+      "kcal": 350,
+      "protein": 4,
+      "fat": 16
+    },
     { "id": "leftovers", "name": "leftovers", "unit": "plate", "default_level": "normal" },
     { "id": "restaurant", "name": "restaurant plate", "unit": "plate", "default_level": "normal" },
     { "id": "office-snacks", "name": "office snacks", "unit": "handful", "default_level": "normal" }

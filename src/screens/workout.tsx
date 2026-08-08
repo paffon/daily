@@ -167,6 +167,8 @@ function Builder({ entry, locale, onClose }: {
     return (
       <DeleteRefused
         used={used}
+        one="a workout"
+        many="workouts"
         name={library.exercises.find((item) => item.id === id)?.name ?? id}
         locale={locale}
         onRename={(name) => retag(id, { name })}

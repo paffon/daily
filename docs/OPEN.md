@@ -37,6 +37,16 @@ something else once the field list moves. Still open underneath it: an
 exercise's own `fields` override, which `DESIGN.md` §8.1 also calls editable, has
 no surface — the kind is the whole of what can be chosen.
 
+**A food created inline was logged at no level at all, and kept a blank unit.**
+Closed on 2026-08-08. `start` in `src/screens/nutrition.tsx` resolved the food
+against the library copy read at render time, which is one press older than the
+food just made, so `asFood`'s fallback handed back a blank `default_level` and
+that blank was written onto the entry — invisibly, since the rail prints the
+level without comment. It now resolves against a fresh read. The blank unit
+beside it is answered rather than fixed: the builder's head carries the name and
+the unit, and its `this food` line opens the numbers and the level prose without
+leaving the meal.
+
 ## Data left behind
 
 **Two callers want one primitive: a `delete` on the `Adapter`.** A month file
@@ -84,6 +94,11 @@ back link, the uppercase field label and the `@media (min-width: 760px)` block
 are duplicated across `body.css`, `edit_entry.css`, `workout.css`,
 `nutrition.css`, `movement.css` and `dance.css`. Raised before the third copy
 and again at the fifth; the fix crosses files no module phase owned.
+
+The catalog screens are a second family of the same thing: `foods.css`
+(2026-08-08) is `exercises.css` with two blocks added, and the two screens are
+deliberately identical everywhere else. Hoisting either family is the same
+piece of work and neither has been done.
 
 **The app cannot be entered offline at all, and that is now deliberate.** The
 question this entry used to ask — what a signed-out app shows — was decided on

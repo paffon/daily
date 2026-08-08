@@ -11,6 +11,7 @@ import { Nutrition } from './screens/nutrition'
 import { Movement } from './screens/movement'
 import { Dance } from './screens/dance'
 import { Exercises } from './screens/exercises'
+import { Foods } from './screens/foods'
 import { Profiles } from './screens/profiles'
 import { EditEntry } from './screens/edit_entry'
 import { AccountBand, SignIn } from './screens/signin'
@@ -27,6 +28,9 @@ const ROUTES: Record<string, () => VNode> = {
      rather than from home, because it is that module's catalog (§7) */
   '#/exercises': () => <Exercises />,
   '#/nutrition': () => <Nutrition />,
+  /* the food library's door, opened from the nutrition module's list for the
+     same reason exercises' is opened from workout's (§7) */
+  '#/foods': () => <Foods />,
   '#/movement': () => <Movement />,
   '#/dance': () => <Dance />,
 }
