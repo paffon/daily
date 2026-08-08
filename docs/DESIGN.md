@@ -487,11 +487,20 @@ several source comments, and renumbering would quietly break all of them.
 
 - **Static files only** — HTML, CSS, JS on a host. No server-side code of ours.
 - **Google sign-in.** OAuth hands a short-lived, narrowly-scoped token to the
-  browser. No credential of ours exists to leak.
+  browser, and since 2026-08-09 the browser keeps it until it expires, so
+  signing in is something that happens about once an hour rather than on every
+  page load. No credential of ours exists to leak, and there is no refresh
+  token to be had: a refresh token needs a client secret, and a page anyone can
+  read the source of cannot hold one. The hour is therefore a ceiling, not a
+  setting.
 - **All records live in the user's own Google Drive**, written by calls from the
   browser to Google's API.
 - **Offline-capable**, so a dead signal in a basement gym does not stop logging
-  mid-set.
+  mid-set. Since 2026-08-09 this holds for the life of a token and no longer:
+  the token is read from disk with no network touched, so inside its hour the
+  app opens, reads and records with no signal at all. Past the hour the door
+  needs Google and there is no way in. Closing that last gap is not a screen
+  change — see `OPEN.md`.
 
 ### 10.1 The threat model, stated plainly
 

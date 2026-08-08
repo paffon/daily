@@ -20,6 +20,31 @@ sites, and every future config key inherits that workaround. Merging on read
 in `src/data/store.ts` removes all six. See
 [ADR 0003](./adr/0003-every-number-is-seeded-data.md).
 
+**A push can put a thin mirror over a full Drive.** Found on 2026-08-09 while
+taking the sign-in gate out, and the reason the gate went back in. Every writer
+in the app is a read-modify-write over the mirror with the seed as its
+fallback: `putEntry` in `src/data/store.ts` reads `[]` for a month file the
+mirror does not hold, and `writeExercises`, `writeFoods` and `createProfile`
+all read through `readJson(path, seed)`. The result is written back whole and
+marked dirty. `syncNow` in `src/data/sync.ts` then runs `push` before `pull`,
+`push` consults only the dirty set, and `putFile` is a whole-file `PATCH` — so
+a one-line month file goes over the month Drive holds. `push` then records the
+upload's own `modifiedTime`, so the `pull` right after skips the path, and
+there is nothing left on either side to restore from.
+
+The gate keeps it unreachable in the ordinary case: nothing can be typed until
+a token exists, and a token means a pass has filled the mirror. Two ways in
+survive it, both narrow. Writing during the pass the press starts — `entered`
+paints before `catchUp` finishes — and a dirty path left over from a session
+whose pull never landed, which pushes before the next pull on the following
+boot. Both predate 2026-08-09.
+
+What would actually close it is a merge rather than an order: entries carry
+`id` and `rev` and tombstone rather than disappear (ADR 0002), so a month file
+is mergeable line by line and nothing in `sync.ts` tries. The library and
+config JSON have no such handle and would need a policy of their own, which is
+why this is not an afternoon.
+
 **An emptied amount box logs the number it used to hold.**
 `src/components/amount_stepper.tsx` suppresses `onChange` for an unreadable
 box, which is right — half a typed number is not a number — but the field then
@@ -100,20 +125,29 @@ The catalog screens are a second family of the same thing: `foods.css`
 deliberately identical everywhere else. Hoisting either family is the same
 piece of work and neither has been done.
 
-**The app cannot be entered offline at all, and that is now deliberate.** The
-question this entry used to ask — what a signed-out app shows — was decided on
-2026-08-05: nothing. No token, no modules and no mirror, on every screen. Google
-Identity Services token clients have no silent mode and the token is memory-only,
-so that means one press per page load, and it means a browser with no signal
-cannot get in even though the mirror behind the gate holds every entry ever
-logged and would take the write.
+**The app cannot be entered offline at all, and that is now deliberate.**
+Narrowed on 2026-08-09, not closed. The token is written to `localStorage`
+beside its expiry and restored at module load, so inside its hour the app
+opens, reads and records with no network touched — which is the basement gym
+`DESIGN.md` §10 asks for, for about an hour after each sign-in. The press it
+used to cost on every page load now costs about one an hour.
 
-That is a live conflict with `DESIGN.md` §10, which lists offline-capable so a
-dead signal in a basement gym does not stop logging mid-set. Both cannot be true
-at once. What would settle it without giving the gate up is a way to prove a
-past sign-in that survives a reload — a stored profile, or an ID token with its
-expiry checked — so the mirror opens offline for a browser that has signed in
-before, and only for one.
+Past the hour there is still no way in, because the door needs Google. The four
+ways to avoid that are all dead and the reasons are worth keeping so nobody
+spends the afternoon again: a GIS token client opens a popup on its only code
+path and a popup needs a gesture; the redirect flow returns its token in the URL
+fragment, which is where this app's router lives; the hidden-iframe flow is
+refused by `X-Frame-Options` on Google's endpoint; and a refresh token needs a
+client secret, which a static page cannot hold without publishing it to anyone
+who opens the source. An hour is the ceiling for any browser-only Google
+integration.
+
+**The gate itself was removed and put back the same day, and that is the part
+worth reading.** Opening the app on the mirror regardless of a token looks free
+— the mirror is already what every screen reads — and it is not. It turns *a
+push can put a thin mirror over a full Drive* above from a race into the
+ordinary state of a fresh browser. Anything that takes the door out again has
+to fix that first.
 
 **Home has no top strip.** Frame 4a shows a 56/52px band carrying `daily` and
 the date above the modules; home does not render it. It was left out rather
