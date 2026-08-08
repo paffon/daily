@@ -22,10 +22,17 @@ export type Food = {
   unit: string
   /** So the common entry is one tap and lean or loaded is the exception. */
   default_level: string
-  /** The **normal** case at one unit, both optional. A name and a time is a
-   *  complete entry. */
+  /** The **normal** case at one unit, all three optional. A name and a time is
+   *  a complete entry.
+   *
+   *  `fat` arrived on 2026-08-08, reversing §8.2's *calories and protein, and
+   *  nothing else*. It is one more optional number on a food that already
+   *  carries two, not a field every food has to answer, and the argument that
+   *  cut it — a field costs a decision per food — is answered by leaving it
+   *  blank, which most of the library does. Carbohydrate and fibre stay cut. */
   kcal?: number
   protein?: number
+  fat?: number
   /** What each level looks like for this food. Written once for the foods where
    *  the distinction is genuinely confusing, absent everywhere else. */
   examples?: Record<string, string>
@@ -83,7 +90,7 @@ export const nutritionConfig = (): typeof appSeed.nutrition => ({
   ...readJson('config/app.json', appSeed).nutrition,
 })
 
-export type Nutrition = { kcal: number | null; protein: number | null }
+export type Nutrition = { kcal: number | null; protein: number | null; fat: number | null }
 
 /** The food's normal-case numbers, times the amount, times the level's
  *  multiplier. A food with no number stays `null` rather than becoming 0: an
@@ -99,7 +106,7 @@ export function nutritionFor(food: Food, amount: number, level: string): Nutriti
   const scaled = (value: number | undefined | null): number | null =>
     value == null ? null : Number((value * amount * factor).toFixed(decimals))
 
-  return { kcal: scaled(food.kcal), protein: scaled(food.protein) }
+  return { kcal: scaled(food.kcal), protein: scaled(food.protein), fat: scaled(food.fat) }
 }
 
 /** `slices` past one, `cup` at one, `g` at either. */
@@ -107,9 +114,15 @@ export function unitOf(library: FoodLibrary, food: Food, amount: number): string
   return amount === 1 ? food.unit : (library.units[food.unit] ?? food.unit)
 }
 
-/** `570 kcal · 24 g protein`, and nothing where the food carries no numbers. */
-export function nutritionLine({ kcal, protein }: Nutrition): string {
-  return [kcal === null ? '' : `${kcal} kcal`, protein === null ? '' : `${protein} g protein`]
+/** `570 kcal · 24 g protein · 20 g fat`, and nothing where the food carries no
+ *  numbers. Each part is dropped on its own, so a food that knows its calories
+ *  and nothing else says only that. */
+export function nutritionLine({ kcal, protein, fat }: Nutrition): string {
+  return [
+    kcal === null ? '' : `${kcal} kcal`,
+    protein === null ? '' : `${protein} g protein`,
+    fat === null ? '' : `${fat} g fat`,
+  ]
     .filter((part) => part !== '')
     .join(' · ')
 }

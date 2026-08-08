@@ -107,8 +107,9 @@ describe('buildReport', () => {
     expect(html).toContain('pizza')
     expect(html).toContain('2 slices')
     expect(html).toContain('loaded')
-    /* 285 kcal × 2 × the loaded multiplier the seed names */
-    expect(html).toContain('798 kcal · 34 g protein')
+    /* 285 kcal × 2 × the loaded multiplier the seed names, and fat beside the
+       other two since 2026-08-08 */
+    expect(html).toContain('798 kcal · 34 g protein · 28 g fat')
     expect(html).toContain('the good bakery')
     expect(html).toContain('1 cup')
   })
@@ -236,6 +237,21 @@ describe('buildReport', () => {
     expect(html).toContain('seat 4, handles at nipple height')
     /* an exercise never performed is catalog, and a catalog is a dump */
     expect(html).not.toContain('pec deck')
+  })
+
+  it('gives a food’s normal case at one unit, with what its levels mean', async () => {
+    putEntry(
+      newEntry(
+        'nutrition',
+        { foods: [{ food_id: 'pizza', amount: 1, level: 'lean' }] },
+        '2026-07-12T13:10:00+03:00',
+      ),
+    )
+    const html = await buildReport()
+    /* the library half states the food itself, unmultiplied — the meal above
+       it is where the level has already been applied */
+    expect(html).toContain('per slice · normal is 285 kcal · 12 g protein · 10 g fat')
+    expect(html).toContain('lean — thin crust, light cheese, vegetable toppings')
   })
 
   it('reads oldest first — a report is a history, not a rail', async () => {

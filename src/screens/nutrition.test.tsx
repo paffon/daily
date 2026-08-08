@@ -31,8 +31,21 @@ describe('a level is a multiplier', () => {
   })
 
   it('leaves a food with no number null rather than calling it 0', () => {
-    expect(nutritionFor(named('water'), 3, 'loaded')).toEqual({ kcal: null, protein: null })
+    expect(nutritionFor(named('water'), 3, 'loaded')).toEqual({
+      kcal: null,
+      protein: null,
+      fat: null,
+    })
     expect(nutritionFor(named('apple'), 1, 'normal').protein).toBeNull()
+    // apple carries calories and nothing else, and each number is unknown on
+    // its own — a food is not obliged to answer all three
+    expect(nutritionFor(named('apple'), 1, 'normal').kcal).toBe(95)
+    expect(nutritionFor(named('apple'), 1, 'normal').fat).toBeNull()
+  })
+
+  it('scales fat the way it scales the other two', () => {
+    const fatty: Food = { ...plain, protein: 4, fat: 10 }
+    expect(nutritionFor(fatty, 2, 'loaded')).toEqual({ kcal: 560, protein: 11, fat: 28 })
   })
 
   it('reads a written-out null in the library as the same unknown', () => {
@@ -282,13 +295,26 @@ describe('the nutrition screen', () => {
     const { container } = render(<Nutrition />)
     openNew(container)
     pick(container, 'pizza')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('285 kcal · 12 g protein')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '285 kcal · 12 g protein · 10 g fat',
+    )
 
     typeAmount(container, '2')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('570 kcal · 24 g protein')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '570 kcal · 24 g protein · 20 g fat',
+    )
 
     chooseLevel(container, 'loaded')
-    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('798 kcal · 34 g protein')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe(
+      '798 kcal · 34 g protein · 28 g fat',
+    )
+  })
+
+  it('says only the numbers the food has, and never a dash for the rest', () => {
+    const { container } = render(<Nutrition />)
+    openNew(container)
+    pick(container, 'apple')
+    expect(container.querySelector('.nutrition-numbers')?.textContent).toBe('95 kcal')
   })
 
   it('says nothing about numbers for a food that carries none', () => {
@@ -497,6 +523,7 @@ describe('the nutrition screen', () => {
       ),
     ).toBe(false)
   })
+
 })
 
 describe('editing a past meal', () => {

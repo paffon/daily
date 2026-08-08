@@ -52,6 +52,7 @@ change back looks like the decision it would be, rather than a correction.
 | No second user — one person, one log | The one account holds profiles (2026-08-06): the catalog is shared, the records are each profile's own. See ADR 0004 |
 | Objectives — a short editable list of targets the coach reasons against | Gone (2026-08-06): nothing is compared against a number, and gap arithmetic is the whole of what the coach has. See ADR 0006 |
 | Resize every photo on import | Item pictures are capped; a body photograph is kept at the size it was shot (2026-08-06), because it is the thing being measured. Both are still re-encoded to JPEG |
+| Calories and protein, and nothing else — fat is noise at this measurement precision | Fat is the third number (2026-08-08), optional like the other two and blank on most of the library. Carbohydrate and fibre stay cut. See `DESIGN.md` §8.2 |
 
 ## The coach's voice
 

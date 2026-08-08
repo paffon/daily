@@ -319,7 +319,11 @@ function foodItems(used: Food[], library: FoodLibrary, srcs: Map<string, string>
   const items = used.map((food) => {
     const src = srcs.get(itemPhotoPath('food', food.id))
     const picture = src === undefined ? '' : `<img class="item" src="${src}" alt="${esc(food.name)}">`
-    const numbers = nutritionLine({ kcal: food.kcal ?? null, protein: food.protein ?? null })
+    const numbers = nutritionLine({
+      kcal: food.kcal ?? null,
+      protein: food.protein ?? null,
+      fat: food.fat ?? null,
+    })
     const facts = bare([
       food.unit === '' ? null : `per ${food.unit}`,
       numbers === '' ? null : `normal is ${numbers}`,

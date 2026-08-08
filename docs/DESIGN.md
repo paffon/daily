@@ -345,7 +345,7 @@ A **food item** carries:
 | `name` | pizza, coffee, cottage cheese |
 | `unit` | the natural unit for *this* food — slice, cup, piece, gram, plate |
 | `default level` | so a normal entry is one tap and lean/loaded is the exception |
-| `kcal`, `protein` | for the **normal** case, at one unit. Both optional |
+| `kcal`, `protein`, `fat` | for the **normal** case, at one unit. All optional, each unknown on its own |
 | `examples` | what lean, normal and loaded look like for this food. Optional |
 
 **Drinks are food items.** Coffee, beer, juice. "What I ate" silently excludes a
@@ -369,9 +369,20 @@ The worked example, in the user's own case:
 | normal | plain cheese and tomato, standard slice |
 | loaded | thick crust, meat, extra cheese |
 
-**Which numbers.** Calories and protein, and nothing else. For recomposition,
-protein is the number that matters more than calories; carbohydrate, fat and
-fibre are noise at this level of measurement precision and cost a field each.
+**Which numbers.** Calories, protein and fat. For recomposition, protein is the
+number that matters more than calories; fat joined the two on 2026-08-08,
+reversing this section's own *calories and protein, and nothing else*.
+
+The argument it reverses was that a field costs a decision per food. That is
+true, and it is answered by the field being optional rather than by the field
+not existing: most of the library carries no fat figure, exactly as most of it
+carries no protein figure, and a food that answers only *kcal* says only that
+where it is logged. What changed the balance is that fat is the one macro a
+portion can be doubled by without the plate looking any different — the same
+schnitzel fried or baked — and that is a thing prose in `examples` describes
+and no number recorded it. Carbohydrate and fibre stay cut, for the reason this
+paragraph used to give for all three: noise at this level of measurement
+precision.
 
 **Nothing is required.** An entry with a name, a time and no numbers at all is a
 valid entry and is worth more than an entry that was never made.
