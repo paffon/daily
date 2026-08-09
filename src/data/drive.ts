@@ -6,7 +6,12 @@
  *
  *  There is still no refresh token and no server by design, so the hour is a
  *  ceiling rather than a setting: past it the next press buys another one, and
- *  the mirror means nothing is lost in between. */
+ *  the mirror means nothing is lost in between.
+ *
+ *  Three states, not two, and telling them apart is most of this file. A token
+ *  in hand is signed in. No token is *not reaching Drive*, which since
+ *  2026-08-09 does not close the app — `main.tsx` opens it on the mirror. Only
+ *  `signOut` is signed out, and it is the one of the three a person chooses. */
 
 /** Per-file access — the app sees only files it created itself — and the name
  *  on the account, which the app shows above every screen so it is never a
@@ -62,6 +67,31 @@ const TOKEN_KEY = 'daily:token'
  *  account chooser. */
 const ACCOUNT_KEY = 'daily:account'
 
+/** Whether the two keys above are written at all. Absent means yes: keeping
+ *  the token is the default, because the alternative is a press on every page
+ *  load and that is what the whole of this was for.
+ *
+ *  Off, nothing about the account reaches the disk — not the token and not the
+ *  `sub` either, so the next press also opens a chooser. Half a refusal is
+ *  worse than none: a browser that was told to forget the account should not
+ *  still name it to Google.
+ *
+ *  The checkbox that writes this is on the door and nowhere else, which is the
+ *  only screen where the choice is live — after the first sign-in a browser
+ *  never sees it again unless sign-out is pressed, and pressing sign-out is
+ *  exactly the moment somebody wants to change their mind about it. */
+const REMEMBER_KEY = 'daily:remember'
+
+/** Set by `signOut` and cleared by the sign-in that follows it. It is what
+ *  makes a sign-out visible: without a token the app now opens on the mirror
+ *  regardless, so dropping the token alone would be a button that appears to
+ *  do nothing. With this, the door comes back and stays back.
+ *
+ *  It says *this browser was signed out on purpose* and nothing else. An hour
+ *  running out is not this; a 401 mid-pass is not this. Those leave the app
+ *  open and the band asking for a press. */
+const SHUT_KEY = 'daily:signed-out'
+
 /** Two minutes short of the expiry Google names. A token with seconds left is
  *  restored only to 401 on the pass that boot starts, so it is treated as
  *  already gone. Not a threshold anyone would tune — it is slack against the
@@ -75,6 +105,10 @@ const HOUR = 3600
 let accessToken = ''
 let accountName = ''
 let accountSub = localStorage.getItem(ACCOUNT_KEY) ?? ''
+
+/** The checkbox, as the last press left it. Read once here and written by
+ *  `signIn`, so everything below asks a variable rather than the disk. */
+let persisting = localStorage.getItem(REMEMBER_KEY) !== 'no'
 
 /** The last sign-in, if its hour is not up. Runs at module load, before
  *  anything has painted, so a reload inside the hour never shows a signed-out
@@ -103,8 +137,13 @@ restore()
 
 /** The token as the next page load will find it. Written on every press that
  *  wins one, not only the first: each buys a fresh hour, and the copy on disk
- *  has to name the new one or the reload after it hands back a corpse. */
+ *  has to name the new one or the reload after it hands back a corpse.
+ *
+ *  Nothing at all when the box is unticked, and the press is still worth
+ *  making — the token lives in memory for as long as the tab does, which is
+ *  the whole of what this file used to do. */
 function keep(expiresIn: number): void {
+  if (!persisting) return
   localStorage.setItem(
     TOKEN_KEY,
     JSON.stringify({
@@ -128,6 +167,44 @@ export function token(): string {
  *  empty in the one case where a token arrived but the profile call did not. */
 export function account(): string {
   return accountName
+}
+
+/** The door's checkbox, as it should be drawn — ticked unless a press turned
+ *  it off. */
+export function remembering(): boolean {
+  return persisting
+}
+
+/** Whether the last thing this browser did about signing in was to sign out.
+ *  Read by the gate in `main.tsx`, which is the only caller and the only
+ *  reason this is not private. */
+export function signedOut(): boolean {
+  return localStorage.getItem(SHUT_KEY) !== null
+}
+
+/** Out. The token goes, the name goes, and the `sub` that suppresses the
+ *  account chooser goes with them — the press after a sign-out is the one
+ *  press that has business showing a chooser, since choosing again is most of
+ *  what signing out is for.
+ *
+ *  Nothing is revoked at Google, deliberately: under `drive.file` the app's
+ *  per-file access is held alongside the grant, so dropping the grant can lose
+ *  the app sight of the very files it wrote. The token this drops expires
+ *  within the hour by itself.
+ *
+ *  The mirror is left exactly where it is. It holds every entry ever logged
+ *  and some of them may not be in Drive yet — the dirty set survives this and
+ *  goes up on the next pass. What the door hides is the log, not the disk:
+ *  anyone with this browser and the developer tools can still read it, which
+ *  is true of the whole app and is stated in `DESIGN.md` §10.1 rather than
+ *  papered over here. */
+export function signOut(): void {
+  accessToken = ''
+  accountName = ''
+  accountSub = ''
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(ACCOUNT_KEY)
+  localStorage.setItem(SHUT_KEY, 'yes')
 }
 
 /** Read at call time, not at module load, so importing this file in a test
@@ -162,8 +239,19 @@ const CONSENT_KEY = 'daily:needs-consent'
  *
  *  Resolves `false` instead of throwing: offline, consent declined and
  *  script-never-loaded all leave the door exactly as it was, so the caller has
- *  nothing to tell apart. */
-export function signIn(): Promise<boolean> {
+ *  nothing to tell apart.
+ *
+ *  `remember` is the door's checkbox, and it is written down before the popup
+ *  opens rather than after it closes: a press that is abandoned still says
+ *  what was asked for, and a browser told to forget the account should not
+ *  keep yesterday's token on disk while a popup it may never finish is open. */
+export function signIn(remember: boolean): Promise<boolean> {
+  persisting = remember
+  localStorage.setItem(REMEMBER_KEY, remember ? 'yes' : 'no')
+  if (!remember) {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(ACCOUNT_KEY)
+  }
   return new Promise((resolve) => {
     if (typeof google === 'undefined') return resolve(false)
     google.accounts.oauth2
@@ -182,6 +270,11 @@ export function signIn(): Promise<boolean> {
              written down only then, since the name is part of what is kept. */
           void whoAmI(response.scope ?? '').then(() => {
             keep(response.expires_in ?? HOUR)
+            /* Only here, and not beside the preference above: a press that was
+               cancelled or refused has to leave a signed-out browser signed
+               out, or the door would open on the mirror for a press nobody
+               completed. */
+            localStorage.removeItem(SHUT_KEY)
             resolve(true)
           })
         },
@@ -221,9 +314,10 @@ async function whoAmI(granted: string): Promise<void> {
     const who = await (await api('/oauth2/v3/userinfo')).json()
     accountName = (who.name as string | undefined) ?? ''
     /* Kept whether or not the name came with it: the chooser this suppresses
-       is a nuisance on exactly the presses that follow this one. */
+       is a nuisance on exactly the presses that follow this one. On disk only
+       if the box was ticked — see the note above `REMEMBER_KEY`. */
     accountSub = (who.sub as string | undefined) ?? ''
-    if (accountSub !== '') localStorage.setItem(ACCOUNT_KEY, accountSub)
+    if (accountSub !== '' && persisting) localStorage.setItem(ACCOUNT_KEY, accountSub)
     if (accountName === '') console.warn('daily: the profile call named no account')
   } catch (failure) {
     console.warn('daily: the profile call failed', failure)

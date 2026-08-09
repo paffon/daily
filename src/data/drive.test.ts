@@ -106,7 +106,7 @@ describe('a grant that came up short', () => {
   it('asks for consent on the next press, and stops once the scope arrives', async () => {
     /* the old grant: a token, but only the scope consented to years ago */
     const short = fakeGoogle({ access_token: 'partial', scope: DRIVE })
-    expect(await signIn()).toBe(true)
+    expect(await signIn(true)).toBe(true)
 
     /* signed in — Drive works — but there is no name and no pretending there is */
     expect(short.prompts).toEqual([''])
@@ -119,7 +119,7 @@ describe('a grant that came up short', () => {
       'fetch',
       vi.fn(async () => answer({ name: 'Omri Nardin' })),
     )
-    expect(await signIn()).toBe(true)
+    expect(await signIn(true)).toBe(true)
 
     expect(full.prompts).toEqual(['consent'])
     expect(account()).toBe('Omri Nardin')
@@ -131,7 +131,7 @@ describe('a grant that came up short', () => {
       'fetch',
       vi.fn(async () => answer({ name: 'Omri Nardin' })),
     )
-    await signIn()
+    await signIn(true)
     expect(after.prompts).toEqual([''])
   })
 
@@ -143,7 +143,7 @@ describe('a grant that came up short', () => {
     )
 
     /* a failed name is not a failed sign-in — Drive is reachable either way */
-    expect(await signIn()).toBe(true)
+    expect(await signIn(true)).toBe(true)
     expect(account()).toBe('')
   })
 })
@@ -181,7 +181,7 @@ describe('a token that outlives the tab', () => {
     fakeGoogle(whole)
     profile()
     const pressed = await import('./drive')
-    expect(await pressed.signIn()).toBe(true)
+    expect(await pressed.signIn(true)).toBe(true)
 
     /* the reload: a fresh module, and nothing pressed */
     vi.resetModules()
@@ -194,7 +194,7 @@ describe('a token that outlives the tab', () => {
   it('names the account on the press after it, so no chooser opens', async () => {
     fakeGoogle(whole)
     profile()
-    expect(await (await import('./drive')).signIn()).toBe(true)
+    expect(await (await import('./drive')).signIn(true)).toBe(true)
 
     /* an hour later, on a load that restored nothing */
     localStorage.removeItem(TOKEN_KEY)
@@ -205,7 +205,7 @@ describe('a token that outlives the tab', () => {
     const fresh = await import('./drive')
     expect(fresh.token()).toBe('')
 
-    await fresh.signIn()
+    await fresh.signIn(true)
     expect(later.hints).toEqual(['the-sub'])
   })
 
@@ -246,5 +246,135 @@ describe('a token that outlives the tab', () => {
     /* or the next load restores the very token that just proved itself dead */
     expect(reloaded.token()).toBe('')
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+  })
+})
+
+/** The box on the door, and the button in the band. Between them they are the
+ *  three states this module has: signed in, not reaching Drive, and out. */
+
+const ACCOUNT_KEY = 'daily:account'
+const SHUT_KEY = 'daily:signed-out'
+
+describe('the box on the door', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.resetModules()
+    import.meta.env.VITE_GOOGLE_CLIENT_ID = 'test-client'
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('is ticked on a browser that has never answered it', async () => {
+    expect((await import('./drive')).remembering()).toBe(true)
+  })
+
+  it('leaves nothing behind when it is unticked — not the token, not the account', async () => {
+    fakeGoogle(whole)
+    profile()
+    const pressed = await import('./drive')
+
+    expect(await pressed.signIn(false)).toBe(true)
+
+    /* signed in for as long as this tab lives, and no longer */
+    expect(pressed.token()).toBe('whole')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(ACCOUNT_KEY)).toBeNull()
+
+    vi.resetModules()
+    expect((await import('./drive')).token()).toBe('')
+  })
+
+  it('is remembered as it was left, so the door opens on the last answer', async () => {
+    fakeGoogle(whole)
+    profile()
+    await (await import('./drive')).signIn(false)
+
+    vi.resetModules()
+    expect((await import('./drive')).remembering()).toBe(false)
+  })
+
+  it('drops a token an earlier press left on disk when it is unticked', async () => {
+    localStorage.setItem(
+      TOKEN_KEY,
+      JSON.stringify({ token: 'stale', name: 'Omri Nardin', until: Date.now() + 600_000 }),
+    )
+    localStorage.setItem(ACCOUNT_KEY, 'the-sub')
+    /* the popup is never answered, which is the point: the disk is cleared on
+       the way in rather than on the way out */
+    vi.stubGlobal('google', {
+      accounts: { oauth2: { initTokenClient: () => ({ requestAccessToken: () => {} }) } },
+    })
+
+    void (await import('./drive')).signIn(false)
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(ACCOUNT_KEY)).toBeNull()
+  })
+})
+
+describe('the way out', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.resetModules()
+    import.meta.env.VITE_GOOGLE_CLIENT_ID = 'test-client'
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('drops the token, the name and the account, and says so past the reload', async () => {
+    fakeGoogle(whole)
+    profile()
+    const pressed = await import('./drive')
+    await pressed.signIn(true)
+
+    pressed.signOut()
+
+    expect(pressed.token()).toBe('')
+    expect(pressed.account()).toBe('')
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull()
+    expect(localStorage.getItem(ACCOUNT_KEY)).toBeNull()
+    expect(pressed.signedOut()).toBe(true)
+
+    vi.resetModules()
+    expect((await import('./drive')).signedOut()).toBe(true)
+  })
+
+  it('opens a chooser on the press after it — choosing again is what it is for', async () => {
+    fakeGoogle(whole)
+    profile()
+    const pressed = await import('./drive')
+    await pressed.signIn(true)
+    pressed.signOut()
+
+    vi.unstubAllGlobals()
+    const back = fakeGoogle(whole)
+    profile()
+    await pressed.signIn(true)
+
+    expect(back.hints).toEqual([undefined])
+  })
+
+  it('is over only once a press actually wins a token', async () => {
+    const shut = await import('./drive')
+    shut.signOut()
+
+    /* a popup opened and abandoned: no callback, no token, still out */
+    vi.stubGlobal('google', {
+      accounts: { oauth2: { initTokenClient: () => ({ requestAccessToken: () => {} }) } },
+    })
+    void shut.signIn(true)
+    expect(shut.signedOut()).toBe(true)
+
+    vi.unstubAllGlobals()
+    fakeGoogle(whole)
+    profile()
+    expect(await shut.signIn(true)).toBe(true)
+    expect(shut.signedOut()).toBe(false)
   })
 })

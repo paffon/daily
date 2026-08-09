@@ -11,7 +11,7 @@ vi.mock('./drive', () => ({
 
 import { getFile, listFiles, putFile, token } from './drive'
 import { localAdapter } from './store'
-import { driveAdapter, onPass, pull, push, syncNow } from './sync'
+import { driveAdapter, filled, onPass, pull, push, syncNow } from './sync'
 
 const remote = vi.mocked(getFile)
 const upload = vi.mocked(putFile)
@@ -246,5 +246,37 @@ describe('syncNow', () => {
     signedInAs.mockReturnValue('a-token')
     await syncNow()
     expect(upload).toHaveBeenCalledWith(PATH, 'written here')
+  })
+})
+
+/** The gate `main.tsx` reads. It is not about sync at all — it is the question
+ *  *does this browser hold the log*, asked of the one map that can answer it,
+ *  and the reason the app can be opened without a token at all. */
+describe('a mirror that has been filled', () => {
+  it('says no until Drive has been heard from', () => {
+    expect(filled()).toBe(false)
+  })
+
+  it('says yes on a file pulled down', async () => {
+    await pull()
+    expect(filled()).toBe(true)
+  })
+
+  it('says yes on a file pushed up, which is a Drive with nothing in it yet', async () => {
+    remoteList.mockResolvedValue([])
+    adapter.set(PATH, 'the seeds')
+    await push()
+
+    expect(filled()).toBe(true)
+  })
+
+  it('says no after a pass that never landed, so a thin mirror stays shut in', async () => {
+    remote.mockRejectedValue(new Error('offline'))
+    remoteList.mockRejectedValue(new Error('offline'))
+    signedInAs.mockReturnValue('a-token')
+
+    await syncNow()
+
+    expect(filled()).toBe(false)
   })
 })
