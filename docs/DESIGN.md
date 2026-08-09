@@ -488,19 +488,30 @@ several source comments, and renumbering would quietly break all of them.
 - **Static files only** — HTML, CSS, JS on a host. No server-side code of ours.
 - **Google sign-in.** OAuth hands a short-lived, narrowly-scoped token to the
   browser, and since 2026-08-09 the browser keeps it until it expires, so
-  signing in is something that happens about once an hour rather than on every
-  page load. No credential of ours exists to leak, and there is no refresh
-  token to be had: a refresh token needs a client secret, and a page anyone can
-  read the source of cannot hold one. The hour is therefore a ceiling, not a
-  setting.
+  signing in is something that happens about once an hour of active syncing
+  rather than on every page load. No credential of ours exists to leak, and
+  there is no refresh token to be had: a refresh token needs a client secret,
+  and a page anyone can read the source of cannot hold one. The hour is
+  therefore a ceiling, not a setting.
+- **A checkbox on the door decides whether the token is kept**, ticked unless a
+  press turned it off. Unticked, nothing about the account reaches the disk —
+  not the token and not the opaque `sub` that suppresses the account chooser —
+  and the token dies with the tab, which is what the app did before that date.
+- **The band carries a sign-out**, and it is the only way out. It drops the
+  token, the name and the `sub`, and puts the door back until the next press.
+  Nothing is revoked at Google: under `drive.file` the app's per-file access is
+  held alongside the grant, so dropping the grant can lose the app sight of the
+  files it wrote. The mirror is left alone — signing out hides the log, it does
+  not delete it.
 - **All records live in the user's own Google Drive**, written by calls from the
   browser to Google's API.
 - **Offline-capable**, so a dead signal in a basement gym does not stop logging
-  mid-set. Since 2026-08-09 this holds for the life of a token and no longer:
-  the token is read from disk with no network touched, so inside its hour the
-  app opens, reads and records with no signal at all. Past the hour the door
-  needs Google and there is no way in. Closing that last gap is not a screen
-  change — see `OPEN.md`.
+  mid-set. Since 2026-08-09 this is the ordinary state of the app rather than a
+  window: the gate is on the mirror, so a browser that has synced with Drive at
+  least once opens on the log, reads it and records into it with no token and no
+  signal at all. What the hour bounds is reaching Drive — past it the band says
+  nothing is getting there and writes wait in the mirror until a press. A
+  browser that has never synced is still kept out, and why is in `OPEN.md`.
 
 ### 10.1 The threat model, stated plainly
 
