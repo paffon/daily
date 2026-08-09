@@ -32,12 +32,25 @@ a one-line month file goes over the month Drive holds. `push` then records the
 upload's own `modifiedTime`, so the `pull` right after skips the path, and
 there is nothing left on either side to restore from.
 
-The gate keeps it unreachable in the ordinary case: nothing can be typed until
-a token exists, and a token means a pass has filled the mirror. Two ways in
-survive it, both narrow. Writing during the pass the press starts — `entered`
-paints before `catchUp` finishes — and a dirty path left over from a session
-whose pull never landed, which pushes before the next pull on the following
-boot. Both predate 2026-08-09.
+The gate keeps it unreachable in the ordinary case, and since later on
+2026-08-09 it says so directly: `enterable` in `src/main.tsx` asks `filled` in
+`src/data/sync.ts`, which is whether `daily:pulled` holds anything — one file
+reconciled with Drive either way, pulled down or pushed up. A browser that has
+never synced still cannot type a character. What changed is that a browser that
+has can, with or without a token, which is what the hazard was always about: an
+empty mirror, not an absent token.
+
+Two ways in survive it, both narrow, and both predate 2026-08-09. Writing
+during the pass the press starts — `entered` paints before `catchUp` finishes —
+and a dirty path left over from a session whose pull never landed, which pushes
+before the next pull on the following boot.
+
+What the same change widens is the conflict policy's window rather than this
+hazard. `pull` skips dirty paths and `push` uploads whole files, so
+last-writer-wins was always the policy; entries can now be logged for days
+without a token and go up whole on the next pass, beating whatever another
+browser wrote to the same month meanwhile. One person, usually one browser, and
+the merge below is what would end the argument for good.
 
 What would actually close it is a merge rather than an order: entries carry
 `id` and `rev` and tombstone rather than disappear (ADR 0002), so a month file
@@ -125,29 +138,37 @@ The catalog screens are a second family of the same thing: `foods.css`
 deliberately identical everywhere else. Hoisting either family is the same
 piece of work and neither has been done.
 
-**The app cannot be entered offline at all, and that is now deliberate.**
-Narrowed on 2026-08-09, not closed. The token is written to `localStorage`
-beside its expiry and restored at module load, so inside its hour the app
-opens, reads and records with no network touched — which is the basement gym
-`DESIGN.md` §10 asks for, for about an hour after each sign-in. The press it
-used to cost on every page load now costs about one an hour.
+**The app could not be entered offline at all. Closed on 2026-08-09**, in two
+steps on the same day. First the token was written to `localStorage` beside its
+expiry and restored at module load, which bought an hour. Then the gate was
+moved off the token and onto the mirror — `enterable` asks `filled`, above — so
+a browser that has synced once opens on the log with no token and no network at
+all. That is the basement gym `DESIGN.md` §10 asks for, without a clock on it.
 
-Past the hour there is still no way in, because the door needs Google. The four
-ways to avoid that are all dead and the reasons are worth keeping so nobody
-spends the afternoon again: a GIS token client opens a popup on its only code
-path and a popup needs a gesture; the redirect flow returns its token in the URL
-fragment, which is where this app's router lives; the hidden-iframe flow is
-refused by `X-Frame-Options` on Google's endpoint; and a refresh token needs a
-client secret, which a static page cannot hold without publishing it to anyone
-who opens the source. An hour is the ceiling for any browser-only Google
-integration.
+**Reaching Drive is still capped at an hour**, and that part is not closed and
+cannot be. The four ways around it are all dead and the reasons are worth
+keeping so nobody spends the afternoon again: a GIS token client opens a popup
+on its only code path and a popup needs a gesture; the redirect flow returns its
+token in the URL fragment, which is where this app's router lives; the
+hidden-iframe flow is refused by `X-Frame-Options` on Google's endpoint; and a
+refresh token needs a client secret, which a static page cannot hold without
+publishing it to anyone who opens the source. An hour is the ceiling for any
+browser-only Google integration. What the second step changed is what the
+ceiling costs: a press to sync rather than a press to get in.
 
-**The gate itself was removed and put back the same day, and that is the part
-worth reading.** Opening the app on the mirror regardless of a token looks free
-— the mirror is already what every screen reads — and it is not. It turns *a
-push can put a thin mirror over a full Drive* above from a race into the
-ordinary state of a fresh browser. Anything that takes the door out again has
-to fix that first.
+Only a server could lift it — a function holding the client secret and
+exchanging a code for a refresh token. That is the one alternative that was
+live rather than dead, and it was not taken: it contradicts the no-server line
+in `DESIGN.md` §10, needs a billing plan, and would put a renewable credential
+on the disk in place of one that expires by itself. It would want an ADR.
+
+**The gate was removed and put back on 2026-08-09, and then moved rather than
+removed, which is the part worth reading.** Opening the app on the mirror
+regardless of a token looks free — the mirror is already what every screen
+reads — and it is not: it turns *a push can put a thin mirror over a full
+Drive* above from a race into the ordinary state of a fresh browser. What made
+it safe was not taking the door out but asking a better question at it. Anything
+that widens `filled` has to answer the same one.
 
 **Home has no top strip.** Frame 4a shows a 56/52px band carrying `daily` and
 the date above the modules; home does not render it. It was left out rather

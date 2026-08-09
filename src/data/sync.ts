@@ -35,6 +35,25 @@ function remember(times: Record<string, string>): void {
   localStorage.setItem(PULLED_KEY, JSON.stringify(times))
 }
 
+/** Whether Drive has ever been heard from on this browser — one file
+ *  reconciled either way, pulled down or pushed up, is enough.
+ *
+ *  This is the gate in `main.tsx`, and the map above is the right thing to ask
+ *  rather than a flag of its own: it is written by `pull` from the listing and
+ *  by `push` from the upload's own `modifiedTime`, so it is non-empty exactly
+ *  when the mirror has been squared against the remote at least once. That is
+ *  the condition the door was really standing in for — *a push can put a thin
+ *  mirror over a full Drive* in `OPEN.md` is a hazard of a mirror that has
+ *  never been filled, and this is how a browser says it has been.
+ *
+ *  A Drive with nothing in it yet answers `false` until the seeds land, which
+ *  is a pass and a push away and always inside the hour the token bought. The
+ *  conservative direction: a browser that has not proved it holds the log does
+ *  not get to open on it. */
+export function filled(): boolean {
+  return Object.keys(pulled()).length > 0
+}
+
 /** The mirror, handed over by the store at load. Kept here so the store can
  *  import this module without this module importing it back. */
 let mirror: Adapter

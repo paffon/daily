@@ -33,13 +33,40 @@
   background: var(--steel-hover);
 }
 
+/* The box under the button, in the band's voice rather than the button's: it
+   is a note about what the press will leave behind, not a second action. The
+   gap above is the container's 28px, so it sits with the button rather than
+   floating off on its own. */
+
+.signin-remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: -12px;
+  min-height: var(--hit-min);
+  font: 400 12px/1 var(--family-mono);
+  letter-spacing: 0.04em;
+  color: var(--mono);
+  cursor: pointer;
+}
+
+.signin-box {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--steel);
+  cursor: pointer;
+}
+
 /* The account band. Chrome above whatever screen is showing, sized like the
-   module strip so it reads as part of the frame. It carries one thing, so it
-   is quiet: mono, faint, top left, out of the way of what is being logged. */
+   module strip so it reads as part of the frame. It carries two things now, so
+   it is still quiet: mono, faint, the fact on the left and the way out on the
+   right, both out of the way of what is being logged. */
 
 .account-band {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   min-height: var(--hit-min);
   padding: 0 clamp(24px, 7vw, 56px);
   border-bottom: 1px solid var(--rule);
@@ -53,4 +80,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The way out, and the way back in — the same control in both states, so the
+   corner it lives in does not move. Text, not a button shape: it is pressed
+   about once a day and should never compete with `log it`. */
+
+.account-door {
+  align-items: center;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--steel-text);
+  cursor: pointer;
+}
+
+.account-door:hover {
+  color: var(--ink);
 }

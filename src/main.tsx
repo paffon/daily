@@ -1,9 +1,9 @@
 import { render } from 'preact'
 import type { VNode } from 'preact'
 import './styles/tokens.css'
-import { token } from './data/drive'
+import { signedOut, token } from './data/drive'
 import { ensureSeeded } from './data/store'
-import { onPass, syncNow } from './data/sync'
+import { filled, onPass, syncNow } from './data/sync'
 import { Home } from './screens/home'
 import { Body } from './screens/body'
 import { Workout } from './screens/workout'
@@ -48,47 +48,60 @@ function screen(hash: string): VNode {
 
 const mount = document.getElementById('app')!
 
-/** No token, no app — not the modules, not the mirror, not one entry. The
- *  sign-in screen is the whole of what a signed-out browser shows.
+/** The gate, and it is a gate on the mirror rather than on the token since
+ *  2026-08-09. A browser gets in if it holds the log — `filled` is Drive
+ *  having been heard from here at least once — and stays out otherwise. A
+ *  token is a second way in, for the first sign-in of all, when nothing has
+ *  been pulled yet.
  *
- *  It is no longer what every page load starts on, which is the point of the
- *  change that put the token on disk: `drive.ts` restores one that has not run
- *  out of hour, so a reload inside that hour arrives here already holding a
- *  token and goes straight past. Only a browser that has never signed in, or
- *  one whose hour is up, sees the door.
+ *  Why the token stopped being the condition: Google caps a browser-only token
+ *  at an hour and there is no refresh token to be had by a page with no server
+ *  (`OPEN.md`), so *no token, no app* meant a press every morning for an app
+ *  whose whole job is being faster to open than a notebook. The hour is still
+ *  the ceiling on reaching Drive. It is no longer the ceiling on logging.
  *
- *  The gate stays, and it is worth writing down why, because removing it looks
- *  free and is not. Every writer in the app is a read-modify-write over the
- *  mirror with the seed as its fallback, `push` uploads whole files and runs
- *  before `pull`, and `pull` skips dirty paths. So an entry logged on a
- *  browser whose mirror has never been filled writes a one-line month file,
- *  and the first pass after it puts that single line over the month Drive
- *  holds — and then records the upload's own `modifiedTime`, so the pull that
- *  follows skips it and there is nothing left anywhere to restore from. The
- *  gate is what makes that unreachable: nothing can be typed until a token
- *  exists, and a token means a pass has filled the mirror.
+ *  What the gate was really standing in for is the hazard `OPEN.md` calls *a
+ *  push can put a thin mirror over a full Drive*: every writer is a
+ *  read-modify-write over the mirror with the seed as its fallback, `push`
+ *  uploads whole files and runs before `pull`, and `pull` skips dirty paths —
+ *  so an entry logged on a browser whose mirror has never been filled puts a
+ *  one-line month file over the month Drive holds, and the pull that follows
+ *  skips it. That is a hazard of an *empty* mirror, not of an absent token,
+ *  and `filled` names it directly. A browser that has never synced still
+ *  cannot type a character.
  *
- *  What that costs is that a browser whose hour is up cannot get in without a
- *  signal. What it does not cost is the basement gym: the token is on disk, so
- *  inside the hour this branch is skipped with no network at all, and the
- *  mirror behind it has been pulled. `OPEN.md` carries the rest.
+ *  What it widens is the window on the conflict policy, which is unchanged and
+ *  is last-writer-wins: entries logged here over days go up whole on the next
+ *  pass and beat whatever another browser wrote to the same month meanwhile.
+ *  One person, usually one browser — and `OPEN.md` carries the merge that
+ *  would end the argument.
  *
- *  A 401 mid-session lands here too, which is the same statement made late:
- *  the token that dropped was the one holding the app open. Nothing is lost
- *  by it — every write is already in the mirror, and the next sign-in carries
- *  the dirty set up.
+ *  `signedOut` is the deliberate exception and outranks both: the door is what
+ *  the sign-out button is for, and without it that button would drop a token
+ *  and leave the log on screen.
  *
- *  Signed in, the band sits above whatever screen is showing, so whose log
- *  this is stays visible from wherever the app was opened rather than only on
- *  the way in. */
+ *  A 401 mid-session no longer lands here. The band says nothing is reaching
+ *  Drive and the app stays open — every write is already in the mirror, and
+ *  the next sign-in carries the dirty set up.
+ *
+ *  Inside, the band sits above whatever screen is showing, so whose log this
+ *  is — or that it is going nowhere — stays visible from wherever the app was
+ *  opened rather than only on the way in. */
+function enterable(): boolean {
+  return !signedOut() && (token() !== '' || filled())
+}
+
 function paint(): void {
-  if (token() === '') {
+  if (!enterable()) {
     render(<SignIn onDone={entered} />, mount)
     return
   }
   render(
     <>
-      <AccountBand />
+      {/* the press repaints through `entered`, so a sign-in from the band
+          starts a pass exactly as one from the door does; the sign-out has
+          nothing to sync and only has to redraw, which lands on the door */}
+      <AccountBand onSignIn={entered} onSignOut={paint} />
       {screen(location.hash || '#/')}
     </>,
     mount,

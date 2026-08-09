@@ -245,3 +245,58 @@ profile. The owner was asked and took the trade.
 Built on the day it was decided, on `claude/remember-me-login-3dce71`. A
 browser that has signed in before gains nothing until its next press, since
 there is no token on disk to restore until one is written.
+
+### 2026-08-09 · the gate moves to the mirror, and the door gains a choice
+
+| decided | written in |
+| :- | :- |
+| the gate is on the mirror, not the token: a browser that has squared itself against Drive at least once opens on the log with or without one, and a browser that has never synced is still kept out | [§10](DESIGN.md#10-platform), *Reversals* in [RULES.md](RULES.md#reversals), [OPEN.md](OPEN.md) |
+| a checkbox on the door decides whether the token is kept, ticked unless a press turned it off — unticked, neither the token nor the `sub` reaches the disk | [§10](DESIGN.md#10-platform) |
+| the band carries a sign-out, which drops the token, the name and the `sub`, puts the door back and revokes nothing at Google | [§10](DESIGN.md#10-platform) |
+
+Written the morning after the token went to disk, because that change did not
+do what it was for. It bought an hour, and an app opened once or twice a day is
+past the hour every single time — so for its owner the shipped feature was
+indistinguishable from not shipping it. The hour is Google's and cannot be
+argued with. What could be argued with was the assumption that a token is what
+holds the app open.
+
+No ADR, on the same reasoning as the entry above: reverting is one boolean in
+`enterable`. It reverses a rule rather than a feature, so the *Reversals* table
+carries it and `main.tsx` argues it at the gate itself.
+
+**The hazard is unchanged and is now named directly.** *A push can put a thin
+mirror over a full Drive* is a defect of a mirror that has never been filled —
+the token was only ever a proxy for one having been. `filled` in `sync.ts` asks
+`daily:pulled`, which `pull` writes from the listing and `push` writes from the
+upload's own `modifiedTime`, so it is non-empty exactly when the mirror has been
+squared against the remote at least once. A Drive with nothing in it yet answers
+no until the seeds land, which is a pass and a push away and always inside the
+hour the first token bought. The conservative direction: a browser that has not
+proved it holds the log does not get to open on it.
+
+**What it does widen is the conflict policy's window**, which is the honest cost
+and is last-writer-wins either way. Entries can now be logged for days without a
+token and go up whole on the next pass, over whatever another browser wrote to
+the same month meanwhile. One person, usually one browser; the merge in
+`OPEN.md` is what would end it.
+
+**Three alternatives, and the one that was live.** Keeping the door and making
+the press cheaper does nothing — the press was already one click with no chooser
+and it is the *interruption* that costs, not the clicks. Widening the token is
+not available: the four ways were tried the night before and are dead. A server
+holding the client secret and exchanging a code for a refresh token would
+genuinely lift the hour, and is the alternative that was rejected rather than
+refuted — it contradicts the no-server line in §10, needs a billing plan, and
+swaps a credential that expires by itself for one that does not. The owner was
+offered it and chose the mirror.
+
+**Why the sign-out arrives with this and not with the token.** Yesterday
+closing the tab was the sign-out. It stopped being one when the token went to
+disk, and stops being one twice over now that the app opens without a token at
+all — a button that only dropped the token would leave the log on screen and
+look broken, so `daily:signed-out` outranks the mirror at the gate. It is the
+one of the three states a person chooses, which is also why the checkbox lives
+on the door beside it: after the first sign-in a browser never sees that screen
+again unless sign-out is pressed, and pressing it is exactly when somebody wants
+to change their mind about being remembered.
