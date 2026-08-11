@@ -167,12 +167,11 @@ const KINDS: Record<string, Field[]> = {
 }
 
 describe('fieldPalette', () => {
-  it('offers each name-and-unit once, in the order the kinds declare them', () => {
+  it('offers each name once, in the order the kinds declare them', () => {
     expect(fieldPalette(KINDS).map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
       'weight kg',
       'reps',
       'duration s',
-      'duration min',
       'level',
     ])
   })
@@ -185,8 +184,15 @@ describe('fieldPalette', () => {
     })
   })
 
-  it('tells one name in two units apart', () => {
-    expect(fieldPalette(KINDS).filter((field) => field.name === 'duration')).toHaveLength(2)
+  it('collapses one name into a single offer regardless of how many units it appears in', () => {
+    /* 2026-08-11: duration in seconds and duration in minutes used to be two
+       offers, and a set row can only ever hold one duration column anyway —
+       the unit is picked separately now, never what tells two offers apart */
+    expect(fieldPalette(KINDS).filter((field) => field.name === 'duration')).toHaveLength(1)
+    expect(fieldPalette(KINDS).find((field) => field.name === 'duration')).toEqual({
+      name: 'duration',
+      unit: 's',
+    })
   })
 })
 

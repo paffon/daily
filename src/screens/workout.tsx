@@ -416,8 +416,14 @@ function Builder({ entry, locale, onClose }: {
                   <p class="workout-define-title">
                     this exercise is new — what does a set of it record?
                   </p>
+                  {/* `used` is empty and says so: this block opens for an
+                      exercise `create` just made, so there is no logged set
+                      for a unit to restate. The library screen, where an
+                      exercise has a history, is where that ask bites */}
                   <SetFields
                     exercise={exercise}
+                    used={[]}
+                    locale={locale}
                     onChange={(patch) => retag(exercise.id, patch)}
                   />
                 </div>

@@ -162,8 +162,12 @@ export function Exercises(): VNode {
                         first one. */}
                     <div class="exercises-field exercises-field-wide">
                       <span class="exercises-field-label">a set records</span>
+                      {/* the workouts that already logged it, so a unit
+                          change names them before it restates them (§8.1) */}
                       <SetFields
                         exercise={item}
+                        used={used}
+                        locale={locale}
                         onChange={(patch) => edit(item.id, patch)}
                       />
                     </div>
