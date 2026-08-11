@@ -167,7 +167,8 @@ logging stays — it is the fast path and the rule above still holds — but it 
 the *only* way to reach an item, so correcting a name meant starting a workout
 you did not intend to log. Exercises get a screen, opened from the workout
 module's list rather than from home, where an item's name, kind, body part and
-picture are edited directly.
+picture are edited directly — and, since 2026-08-10, the field list its sets
+record (§8.1).
 
 **Foods got the same screen on 2026-08-08**, opened from the nutrition module's
 list. It carries the whole of a food — name, unit, the level it opens at, the
@@ -281,6 +282,22 @@ shows. A weight box never appears for running.
 Every row also carries a next-time mark. Kinds are a starting point, and the field list
 of any individual exercise is editable — an exercise that needs both distance and
 weight can have both.
+
+**The field list has a surface of its own** (2026-08-10). The moment an
+exercise is made inline, the builder says it is new and offers every field the
+kinds between them declare — weight, reps, a duration in seconds and one in
+minutes, distance, incline, level, count, read off the kinds map rather than
+written in source — as a row of toggles, with the set table live beneath them,
+so defining and logging stay one screen rather than a mode. The same row sits
+on the library screen (§7). A list that lands exactly on a kind's is recorded
+as the kind — a copy would stop following the kind when the kind is edited —
+and any other list is the exercise's own. The kind control then says *its own
+fields* rather than naming a kind the rows are not drawn from, and picking a
+kind from it adopts that kind's list whole. A field is for what is worth
+comparing over time; the one-off parameter stays a comment, as above. A picked
+list can be longer than any kind's, so the set row wraps once it outgrows the
+line on a wide screen as it already did on a phone — the page clips rather than
+pans, and a box past the edge would be a box that cannot be typed into.
 
 An **exercise** in the library carries:
 
@@ -517,9 +534,13 @@ file drop, not a feature. Resize on import, lazy load, cache for offline.
 Since 2026-08-06 the logging screens also take one directly — *+ add a photo
 for this exercise / food* — resized on import and filed under the same naming
 convention (`photos/exercise-<id>.jpg`, `photos/food-<id>.jpg`). Food items get
-the same treatment as exercises. Like the body module's photos these are never
-mirrored: the bytes are fetched from Drive when the item is on screen, so a
-photo is absent offline, and the caching this section asks for is still open.
+the same treatment as exercises. Since 2026-08-10 the press also takes a
+literal drop: a file dragged onto the picture or the press adds or replaces
+it, on the item screens and the body module alike, which is this section's
+first sentence honoured on the screens themselves. Like the body module's
+photos these are never mirrored: the bytes are fetched from Drive when the
+item is on screen, so a photo is absent offline, and the caching this section
+asks for is still open.
 
 **Item pictures are compressed; body photographs are not** (2026-08-06,
 reversing this section's own *resize on import* for the body alone). An exercise

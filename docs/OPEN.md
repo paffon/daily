@@ -58,9 +58,11 @@ kind, permanently.** Closed on 2026-08-05. The workout header now carries a
 `datalist` of the parts already in use, both writing straight to
 `library/exercises.json`, and both reachable for a seeded exercise as well as an
 added one. Changing the kind clears the rows already typed — they are rows of
-something else once the field list moves. Still open underneath it: an
-exercise's own `fields` override, which `DESIGN.md` §8.1 also calls editable, has
-no surface — the kind is the whole of what can be chosen.
+something else once the field list moves. The `fields` override underneath it
+stayed open until 2026-08-10 — the kind was the whole of what could be chosen.
+The list is now picked directly, at the moment an exercise is made and on the
+library screen, from every field the kinds declare; a list that lands on a
+kind's is recorded as the kind rather than as a copy.
 
 **A food created inline was logged at no level at all, and kept a blank unit.**
 Closed on 2026-08-08. `start` in `src/screens/nutrition.tsx` resolved the food

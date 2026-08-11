@@ -245,3 +245,23 @@ profile. The owner was asked and took the trade.
 Built on the day it was decided, on `claude/remember-me-login-3dce71`. A
 browser that has signed in before gains nothing until its next press, since
 there is no token on disk to restore until one is written.
+
+### 2026-08-10 · the field list and the file drop
+
+| decided | written in |
+| :- | :- |
+| an exercise's field list is picked directly — a row of toggles offering every field the kinds declare, shown the moment an exercise is made inline and on the library screen | [§8.1](DESIGN.md#81-workout) |
+| a list that lands exactly on a kind's is recorded as the kind, never as a copy that would stop following it | [§8.1](DESIGN.md#81-workout) |
+| overridden, the kind control says *its own fields*; picking a kind there adopts its list whole and drops the override | [§8.1](DESIGN.md#81-workout) |
+| adding or replacing a photo takes a dropped file as well as the picker — item pictures and the body's photographs alike | [§10.2](DESIGN.md#102-images) |
+
+No ADR. Every row is undoable in an afternoon, and the first three are §8.1's
+own sentence — kinds are a starting point, the field list of any individual
+exercise is editable — finally given a surface; `OPEN.md` had carried the gap
+since 2026-08-05. The fourth is §10.2's "adding an image is a file drop"
+taken at its word on the screens themselves.
+
+Built on the day it was decided, on `claude/exercise-parameter-config-e02512`.
+A browser holding its own `library/exercises.json` keeps what it has: nothing
+migrates, and an exercise that never gets a list of its own reads exactly as
+before.
