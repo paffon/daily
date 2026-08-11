@@ -1,0 +1,49 @@
+/* The field list as a row of toggles. A pressed one is a recorded property of
+   the exercise, not a live action, so it wears ink-select the way a chosen
+   level does — steel stays with "this is the live one". */
+
+.set-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.set-fields-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.set-fields-choice {
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.set-fields-choice[aria-pressed='true'] {
+  border-color: var(--ink-select);
+  background: var(--ink-select);
+  color: var(--paper);
+}
+
+.set-fields-unit {
+  font-size: 10.5px;
+  color: var(--mono-faint);
+}
+
+.set-fields-choice[aria-pressed='true'] .set-fields-unit {
+  color: var(--paper);
+  opacity: 0.75;
+}
+
+.set-fields-note {
+  margin: 0;
+  max-width: 52ch;
+  font: 400 11.5px/1.5 var(--family-mono);
+  color: var(--mono-faint);
+}
