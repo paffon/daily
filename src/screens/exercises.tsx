@@ -11,6 +11,7 @@ import {
 import { readEntries, readJson } from '../data/store'
 import { DeleteRefused } from '../components/delete_refused'
 import { ItemPhoto } from '../components/item_photo'
+import { SetFields } from '../components/set_fields'
 import appSeed from '../seed/app.json'
 import './exercises.css'
 
@@ -131,11 +132,21 @@ export function Exercises(): VNode {
 
                     <label class="exercises-field">
                       <span class="exercises-field-label">kind</span>
+                      {/* picking a kind adopts its list whole, dropping the
+                          exercise's own (§8.1) — overridden, it says so rather
+                          than naming a kind the set rows are not drawn from */}
                       <select
                         aria-label={`kind of ${item.name}`}
-                        value={item.kind}
-                        onChange={(e) => edit(item.id, { kind: e.currentTarget.value })}
+                        value={item.fields === undefined ? item.kind : ''}
+                        onChange={(e) =>
+                          edit(item.id, { kind: e.currentTarget.value, fields: undefined })
+                        }
                       >
+                        {item.fields !== undefined && (
+                          <option value="" disabled>
+                            its own fields
+                          </option>
+                        )}
                         {Object.keys(library.kinds).map((kind) => (
                           <option value={kind} key={kind}>
                             {kind}
@@ -143,6 +154,19 @@ export function Exercises(): VNode {
                         ))}
                       </select>
                     </label>
+
+                    {/* the list itself, under the kind that presets it —
+                        §8.1's editable field list, which the kind used to be
+                        the whole of. A div rather than a label: the chips are
+                        buttons, and a label would hand every press to the
+                        first one. */}
+                    <div class="exercises-field exercises-field-wide">
+                      <span class="exercises-field-label">a set records</span>
+                      <SetFields
+                        exercise={item}
+                        onChange={(patch) => edit(item.id, patch)}
+                      />
+                    </div>
 
                     <label class="exercises-field">
                       <span class="exercises-field-label">body part</span>

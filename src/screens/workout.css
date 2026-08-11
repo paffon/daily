@@ -276,6 +276,20 @@
   color: var(--mono-faint);
 }
 
+/* the definition moment — an exercise just made, before its first set */
+.workout-define {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* serif, because it is a sentence to the reader rather than data */
+.workout-define-title {
+  margin: 0;
+  font: 300 17px/1.4 var(--family-serif);
+  color: var(--ink-quiet);
+}
+
 /* previous, where the marks are as loud as the numbers */
 
 .workout-previous-sets {

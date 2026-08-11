@@ -1,7 +1,7 @@
 import { fireEvent, render } from '@testing-library/preact'
 import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
-import { bodyPartsOf, fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
+import { bodyPartsOf, fieldPalette, fieldsFor, loadExercises, parseMark, setLine } from '../data/exercise'
 import type { Exercise, Performed, SetRow } from '../data/exercise'
 import { SetTable } from '../components/set_table'
 import { ensureSeeded, getEntry, readEntries, writeJson } from '../data/store'
@@ -133,6 +133,15 @@ describe('the exercise library', () => {
     )
     expect(setLine({ weight: 47.5, reps: 10, mark: 'more' }, fieldsFor(named('chest press')))).toBe(
       '47.5 kg × 10',
+    )
+  })
+
+  it('gives the first value written no separator, since it follows nothing', () => {
+    const run = named('run · river path')
+    /* a run with no distance reads `28 min`, never `/ 28 min` — and a picked
+       list that leads with `reps` never opens with `×` */
+    expect(setLine({ distance: null, duration: 28, incline: null, mark: 'same' }, fieldsFor(run))).toBe(
+      '28 min',
     )
   })
 })
@@ -439,6 +448,125 @@ describe('the kind and body part of an exercise made inline', () => {
     expect(loadExercises().exercises.find((item) => item.name === 'pull ups')?.body_part).toBe(
       'shoulders',
     )
+  })
+})
+
+/** §8.1: kinds are a starting point, and the field list of any individual
+ *  exercise is editable. The moment an exercise is made inline is the one time
+ *  its list is more urgent than its first set, so the builder says it is new
+ *  and offers the fields directly — with the set table live underneath, since
+ *  define-then-log as a mode would be a second screen for the same thing. */
+describe('defining an exercise where it is made', () => {
+  const make = (name: string) => {
+    const screen = render(<Workout />)
+    openNew(screen.container)
+    fireEvent.input(screen.container.querySelector<HTMLInputElement>('.picker-filter')!, {
+      target: { value: name },
+    })
+    press(screen.container, '.picker-new')
+    return screen
+  }
+
+  const set = (container: Element, label: string, value: string) =>
+    fireEvent.change(container.querySelector<HTMLInputElement>(`[aria-label="${label}"]`)!, {
+      target: { value },
+    })
+
+  const toggle = (container: Element, label: string) =>
+    fireEvent.click(
+      container.querySelector<HTMLButtonElement>(`.set-fields-choice[aria-label="${label}"]`)!,
+    )
+
+  const made = (name: string) => loadExercises().exercises.find((item) => item.name === name)
+
+  it('says the exercise is new, and says it only for the one just made', () => {
+    const { container } = make('hip airplane')
+    expect(container.querySelector('.workout-define-title')?.textContent).toBe(
+      'this exercise is new — what does a set of it record?',
+    )
+
+    press(container, '.workout-rail-add')
+    pick(container, 'chest press')
+    expect(container.querySelector('.workout-define')).toBeNull()
+  })
+
+  it('opens with the default kind’s fields pressed, so the common case is no taps', () => {
+    const { container } = make('hip airplane')
+    const pressed = [...container.querySelectorAll('.set-fields-choice[aria-pressed="true"]')].map(
+      (chip) => chip.getAttribute('aria-label'),
+    )
+    const first = Object.values(loadExercises().kinds)[0]!
+    expect(pressed).toEqual(first.map((field) => `${field.name} ${field.unit}`.trim()))
+  })
+
+  it('offers every field the kinds declare, and nothing written in source', () => {
+    const { container } = make('hip airplane')
+    const offered = [...container.querySelectorAll('.set-fields-choice')].map((chip) =>
+      chip.getAttribute('aria-label'),
+    )
+    expect(offered).toEqual(
+      fieldPalette(loadExercises().kinds).map((field) => `${field.name} ${field.unit}`.trim()),
+    )
+  })
+
+  it('swaps the set row as a field is toggled, and writes the list to the library', () => {
+    const { container } = make('hip airplane')
+    expect(box(container, 'set 1 duration')).toBeNull()
+
+    toggle(container, 'duration s')
+
+    expect(box(container, 'set 1 duration')).not.toBeNull()
+    expect(made('hip airplane')?.fields?.map((field) => field.name)).toEqual([
+      'weight',
+      'reps',
+      'duration',
+    ])
+    /* and the kind control says so, rather than naming a kind the table is
+       not drawing */
+    const kind = container.querySelector<HTMLSelectElement>('[aria-label="kind"]')!
+    expect(kind.value).toBe('')
+    expect(kind.querySelector('option[value=""]')?.textContent).toBe('its own fields')
+  })
+
+  it('records a list that lands on a kind as that kind, never as a copy', () => {
+    const { container } = make('hip airplane')
+    toggle(container, 'weight kg')
+    toggle(container, 'weight kg')
+
+    /* reps then weight is bodyweight's own order, so it is bodyweight */
+    expect(made('hip airplane')?.kind).toBe('bodyweight')
+    expect(made('hip airplane')?.fields).toBeUndefined()
+    /* and the optional weight drawn open is the kind's, proof the list
+       followed the kind rather than a copy of it */
+    expect(box(container, 'set 1 weight')?.className).toContain('set-input-optional')
+  })
+
+  it('leaves once a set row is typed — a toggle clears rows, and now there are some', () => {
+    const { container } = make('hip airplane')
+    expect(container.querySelector('.workout-define')).not.toBeNull()
+
+    type(container, 'set 1 weight', '40')
+    expect(container.querySelector('.workout-define')).toBeNull()
+
+    /* taking the only row back out is returning to the definition moment */
+    drop(container, 1)
+    expect(container.querySelector('.workout-define')).not.toBeNull()
+  })
+
+  it('adopts a kind whole from the select, dropping the exercise’s own list', () => {
+    const { container } = make('hip airplane')
+    toggle(container, 'duration s')
+
+    set(container, 'kind', 'distance')
+
+    expect(made('hip airplane')?.kind).toBe('distance')
+    expect(made('hip airplane')?.fields).toBeUndefined()
+    expect(box(container, 'set 1 distance')).not.toBeNull()
+  })
+
+  it('says what a field is for, which is not what a comment is for', () => {
+    const { container } = make('hip airplane')
+    expect(container.querySelector('.set-fields-note')?.textContent).toContain('comment')
   })
 })
 

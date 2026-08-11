@@ -119,6 +119,11 @@
   color: var(--mono);
 }
 
+/* the field-list row holds a wrapping run of chips, not one box */
+.exercises-field-wide {
+  max-width: 52ch;
+}
+
 .exercises-field input,
 .exercises-field select {
   width: 100%;

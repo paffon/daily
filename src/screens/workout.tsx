@@ -20,6 +20,7 @@ import { Comment, Danger, Previous, Timestamp, dayTimeOf } from '../components/f
 import { DeleteRefused } from '../components/delete_refused'
 import { ItemPhoto } from '../components/item_photo'
 import { LibraryPicker } from '../components/library_picker'
+import { SetFields } from '../components/set_fields'
 import { SetTable } from '../components/set_table'
 import { registerEditor } from './edit_entry'
 import appSeed from '../seed/app.json'
@@ -122,6 +123,11 @@ function Builder({ entry, locale, onClose }: {
   /** Bumped when the library is written, since `library` above is read on
    *  render and nothing else here would ask for a fresher one. */
   const [, retagged] = useState(0)
+  /** The exercise just made inline, still at its definition moment (§8.1) —
+   *  the one time its field list is more urgent than its first set. Session
+   *  state, like the rest of the builder: an exercise picked from the library
+   *  was defined when it was made, and never lands here. */
+  const [defining, setDefining] = useState('')
 
   const write = (next: Performed) =>
     setPerformed(performed.map((p, i) => (i === at ? next : p)))
@@ -132,9 +138,11 @@ function Builder({ entry, locale, onClose }: {
     setPicking(false)
   }
 
-  /** What was typed to filter is the new exercise's name. Body part and kind
-   *  start blank and at the library's first kind, and the header above the set
-   *  table is where both are answered — see `retag`. */
+  /** What was typed to filter is the new exercise's name. Body part starts
+   *  blank and the kind at the library's first, and the header above the set
+   *  table is where both are answered — see `retag`. The first kind is a seed
+   *  like any other guess, so the definition block the id lands in below says
+   *  so and offers the field list directly. */
   const create = (name: string) => {
     const exercise: Exercise = {
       id: crypto.randomUUID(),
@@ -145,6 +153,7 @@ function Builder({ entry, locale, onClose }: {
     writeExercises((held) => [...held.exercises, exercise])
     retagged((n) => n + 1)
     start(exercise.id)
+    setDefining(exercise.id)
   }
 
   /** Nothing in a seed list is protected while nothing references it —
@@ -188,17 +197,19 @@ function Builder({ entry, locale, onClose }: {
    *  movement that has genuinely become a different one is a new exercise
    *  rather than a renamed old one (§8.1).
    *
-   *  A kind decides which fields a set row records, so changing it makes the
-   *  rows already typed rows of something else. They are cleared rather than
-   *  carried over half-filled; in the case this exists for — a kind chosen
-   *  right after making the exercise — there is nothing there to lose. A rename
-   *  is not that case, which is why the branch is keyed on `patch.kind`. */
+   *  A kind or an exercise's own field list decides which columns a set row
+   *  records, so changing either makes the rows already typed rows of
+   *  something else. They are cleared rather than carried over half-filled; in
+   *  the case this exists for — a list chosen right after making the exercise
+   *  — there is nothing there to lose. A rename is not that case, which is why
+   *  the branch is keyed on the patch carrying a kind or a `fields`. */
   const retag = (id: string, patch: Partial<Exercise>) => {
     writeExercises((held) =>
       held.exercises.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     )
     retagged((n) => n + 1)
-    if (patch.kind !== undefined && current !== undefined) write({ ...current, sets: [] })
+    if ((patch.kind !== undefined || 'fields' in patch) && current !== undefined)
+      write({ ...current, sets: [] })
   }
 
   /** An exercise picked into the workout by mistake, or one that was not
@@ -331,13 +342,24 @@ function Builder({ entry, locale, onClose }: {
                     written here can be the right one (§8.1) */}
                 <div class="workout-pair">
                   {/* the kinds map, never a list written here — a kind added to
-                      the library shows up in this control without a build */}
+                      the library shows up in this control without a build.
+                      Picking one adopts its list whole, dropping the
+                      exercise's own (§8.1): a select that changed nothing
+                      visible would read as broken. Overridden, it says so
+                      rather than naming a kind the table is not drawing. */}
                   <select
                     class="workout-kind hit"
                     aria-label="kind"
-                    value={exercise.kind}
-                    onChange={(e) => retag(exercise.id, { kind: e.currentTarget.value })}
+                    value={exercise.fields === undefined ? exercise.kind : ''}
+                    onChange={(e) =>
+                      retag(exercise.id, { kind: e.currentTarget.value, fields: undefined })
+                    }
                   >
+                    {exercise.fields !== undefined && (
+                      <option value="" disabled>
+                        its own fields
+                      </option>
+                    )}
                     {Object.keys(library.kinds).map((kind) => (
                       <option value={kind} key={kind}>
                         {kind}
@@ -381,12 +403,35 @@ function Builder({ entry, locale, onClose }: {
                 }}
               />
 
-              {/* keyed on the position in the workout, and on the kind: two
+              {/* the definition moment: the exercise just made is new to the
+                  library, so its field list is offered before its first set —
+                  with the table live below, because define-then-log as a mode
+                  would be a second screen for the same thing (§5). It leaves
+                  when the first row is typed: a toggle clears the rows it
+                  re-columns, which is free at that moment and a trap any
+                  later. Afterwards the library screen is where the list is
+                  edited (§7). */}
+              {defining === current.exercise_id && current.sets.length === 0 && (
+                <div class="workout-define">
+                  <p class="workout-define-title">
+                    this exercise is new — what does a set of it record?
+                  </p>
+                  <SetFields
+                    exercise={exercise}
+                    onChange={(patch) => retag(exercise.id, patch)}
+                  />
+                </div>
+              )}
+
+              {/* keyed on the position in the workout, and on the columns: two
                   exercises share the set table's inputs, and an uncontrolled
                   box keeps what was typed unless the subtree is rebuilt — a
-                  kind changed under it swaps the columns the same way */}
+                  field list changed under it, by the kind select or the
+                  definition block, swaps the columns the same way */}
               <SetTable
-                key={`${at}:${exercise.kind}`}
+                key={`${at}:${fieldsFor(exercise)
+                  .map((field) => `${field.name} ${field.unit}`)
+                  .join('·')}`}
                 exercise={exercise}
                 sets={current.sets}
                 onChange={(sets) => write({ ...current, sets })}
