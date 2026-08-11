@@ -87,18 +87,46 @@ export function fieldsFor(exercise: Exercise): Field[] {
 }
 
 /** Every field the kinds between them declare, which is what a field list is
- *  picked from. Deduped by name and unit — `duration` in seconds and
- *  `duration` in minutes are different offers — keeping the first declaration,
- *  decoration and all, in the order the kinds file declares them. The palette
- *  is the kinds map read sideways, so it grows with the library and is never a
- *  list written in source (§11). */
+ *  picked from. Deduped by name alone — `duration` in seconds and `duration`
+ *  in minutes are the same offer, since a set row can only ever hold one
+ *  column of that name anyway (2026-08-11, reversing the pair of separate
+ *  offers this used to keep) — keeping the first declaration, decoration and
+ *  all, in the order the kinds file declares them. The palette is the kinds
+ *  map read sideways, so it grows with the library and is never a list
+ *  written in source (§11). A field's unit is picked separately, and is never
+ *  what tells two offers apart. */
 export function fieldPalette(kinds: Record<string, Field[]>): Field[] {
   const offered = new Map<string, Field>()
   for (const field of Object.values(kinds).flat()) {
-    const key = JSON.stringify([field.name, field.unit])
-    if (!offered.has(key)) offered.set(key, field)
+    if (!offered.has(field.name)) offered.set(field.name, field)
   }
   return [...offered.values()]
+}
+
+/** Every field declared anywhere in the library — the kinds map and every
+ *  exercise's own list — which `unitsFor` and `fieldNamesIn` both read
+ *  sideways, the same way `fieldPalette` reads the kinds map alone. */
+const allFields = (library: Library): Field[] => [
+  ...Object.values(library.kinds).flat(),
+  ...library.exercises.flatMap((item) => item.fields ?? []),
+]
+
+/** Every unit this field name has ever been recorded in, offered when the
+ *  field's unit is being changed — the same way a food offers the units it
+ *  has already used (§8.2). Never enforced: typing one that has never
+ *  appeared is how a field's unit changes at all (2026-08-11). */
+export function unitsFor(library: Library, name: string): string[] {
+  return [...new Set(allFields(library).filter((field) => field.name === name).map((field) => field.unit))]
+    .filter((unit) => unit !== '')
+    .sort()
+}
+
+/** Every field name declared anywhere in the library, kinds and per-exercise
+ *  overrides alike — offered when a wholly new field is being typed, so a
+ *  one-off parameter added for one exercise (`raise`, `cm`) is easy to reuse
+ *  on another rather than retyped from nothing (2026-08-11). */
+export function fieldNamesIn(library: Library): string[] {
+  return [...new Set(allFields(library).map((field) => field.name))].sort()
 }
 
 /** The kind that already says what this list says, or `null` when none does.

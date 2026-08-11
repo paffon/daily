@@ -299,6 +299,38 @@ list can be longer than any kind's, so the set row wraps once it outgrows the
 line on a wide screen as it already did on a phone — the page clips rather than
 pans, and a box past the edge would be a box that cannot be typed into.
 
+**A field's unit is typed, not only chosen (2026-08-11).** The toggle row
+offers one chip per field name, never two for the same name in different
+units — `duration` in seconds and `duration` in minutes used to be separate
+offers, and a set row can only ever hold one duration column regardless, so
+the two were never really different fields. A name and a unit can also be
+typed directly beneath the chips: changing an existing field's unit, or adding
+one no kind declares at all, the same free-typed-with-suggestions shape a
+food's own unit already has (§8.2). A typed name is lower-cased on the way in,
+because it is the key a set row stores its number under and `reps` beside
+`REPS` is two boxes for one number. That is also how a comparable one-off
+parameter becomes a field — see the reversal below.
+
+**Changing a unit restates the sets already logged, so it names them first.**
+A set stores its number under the field's name and nothing else, and every
+screen — the set table, `Previous`, and the report (§10.3) — resolves the unit
+from the library as it draws. So a plank logged at `45 s` reads `45 min` the
+moment the unit changes, and the seeded rowing machine's metres would read as
+kilometres. The number is never touched; what it says is. The change is
+allowed, because the alternative is a unit that is wrong for good, but it is
+not quiet: it names the workouts holding those sets, as links, and goes
+through only on a second press — the shape §7 already uses for a refused
+delete, for the same reason. Switching a chip off and back on gives back the
+unit it went out with rather than the kind's default, so a round trip is not a
+silent way around the ask.
+
+What is still open is the general case: an entry does not record the unit it
+was logged under, so nothing can distinguish a set logged in seconds from one
+logged in minutes after the fact. Stamping it onto the set at save time is
+what `DECISIONS.md` — *an entry says what was true when it happened* — would
+actually ask for, and it is the fix this ask is standing in for. `OPEN.md`
+carries it.
+
 An **exercise** in the library carries:
 
 | field | purpose |
@@ -320,11 +352,20 @@ genuinely become a different one is a new exercise rather than a renamed old one
 
 **Comments carry forward.** A comment written on an exercise (`30°`,
 `strait poll, hands at shoulders width`) appears with `Previous` next time. The
-log remembers *how* to do a movement, not only how much. It is also where a
-one-off parameter belongs — how high the feet were on a push-up, which pin is
-really the counterweight — rather than a new field on the exercise. A field
-earns its place by being compared over time; everything else is remembered, and
-remembering is what a comment is for.
+log remembers *how* to do a movement, not only how much. It is where a
+one-off detail belongs — which pin is really the counterweight, a note about
+the grip — rather than a new field on the exercise. A field earns its place by
+being compared over time; everything else is remembered, and remembering is
+what a comment is for.
+
+**A parameter compared over time is a field, not a comment (2026-08-11,
+reversing this section's own earlier example).** How high the feet were on a
+push-up used to be named right here as what a comment is for, and it stopped
+being true the moment a field's unit could be typed rather than only chosen:
+height on a raised push-up gets pushed the same way a loaded exercise's weight
+does, and it is exactly the number `Previous` exists to hand back. The bar has
+not moved — is it worth comparing over time? — only which side of it this one
+example sits on. The pin and the grip note stay comments; they answer no.
 
 **Body part is not decoration.** It is what lets the coach notice that nothing
 has been done for the back in three weeks, and since 2026-08-06 it is also what

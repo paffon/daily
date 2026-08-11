@@ -1,5 +1,12 @@
 import { fireEvent, render } from '@testing-library/preact'
-import { byStaleness, lastUsedAt, loadExercises } from '../data/exercise'
+import {
+  byStaleness,
+  fieldsFor,
+  lastUsedAt,
+  loadExercises,
+  performedIn,
+  setLine,
+} from '../data/exercise'
 import { ensureSeeded, readEntries } from '../data/store'
 import { Exercises } from './exercises'
 import { Workout, workoutLine } from './workout'
@@ -26,6 +33,24 @@ const set = (container: Element, label: string, value: string) =>
 
 const names = (container: Element) =>
   [...container.querySelectorAll('.exercises-name')].map((span) => span.textContent)
+
+/** A 45-second plank, logged through the module so the entry is real — the
+ *  history a unit change has to answer to. */
+const logPlank = () => {
+  const screen = render(<Workout />)
+  press(screen.container, '.workout-new')
+  fireEvent.click(
+    [...screen.container.querySelectorAll<HTMLButtonElement>('.picker-item')].find(
+      (item) => item.textContent?.startsWith('plank'),
+    )!,
+  )
+  fireEvent.input(
+    screen.container.querySelector<HTMLInputElement>('[aria-label="set 1 duration"]')!,
+    { target: { value: '45' } },
+  )
+  press(screen.container, '.workout-end')
+  screen.unmount()
+}
 
 /** The demo workout, logged through the module so the entry is real. */
 const logChestPress = () => {
@@ -199,6 +224,19 @@ describe('an exercise’s field list on the library screen', () => {
       container.querySelector<HTMLButtonElement>(`.set-fields-choice[aria-label="${label}"]`)!,
     )
 
+  /** The free-typed row: a name, a unit, and `+ field` — how a unit already on
+   *  the exercise is changed, and how a field no kind declares is added at all
+   *  (2026-08-11). */
+  const addField = (container: Element, name: string, unit: string) => {
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field name"]')!, {
+      target: { value: name },
+    })
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field unit"]')!, {
+      target: { value: unit },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.set-fields-add-press')!)
+  }
+
   const held = (name: string) => loadExercises().exercises.find((item) => item.name === name)
 
   const pressed = (container: Element) =>
@@ -224,36 +262,115 @@ describe('an exercise’s field list on the library screen', () => {
     )
   })
 
-  it('replaces a field of the same name rather than drawing two columns for it', () => {
+  it('offers one chip per name, never two for the same field in different units', () => {
     const { container } = render(<Exercises />)
     /* plank follows `hold` — duration in seconds, weight optional beside it */
     open(container, 'plank')
 
-    toggle(container, 'duration min')
+    expect(pressed(container).filter((label) => label?.startsWith('duration'))).toEqual([
+      'duration s',
+    ])
+    expect(container.querySelector('[aria-label="duration min"]')).toBeNull()
+  })
 
-    const durations = pressed(container).filter((label) => label?.startsWith('duration'))
-    expect(durations).toEqual(['duration min'])
+  it('changes a chosen field’s unit through the typed row, in place rather than at the end', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+
+    addField(container, 'duration', 'min')
+
     // it takes the seconds column's place, rather than joining at the end: a
     // set row keys its values by name, so two durations would be one box
     expect(held('plank')?.fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
       'duration min',
       'weight kg',
     ])
+    /* the chip row is offered in the palette's own order — weight before
+       duration — which is unrelated to the order the exercise's own list
+       stores them in, checked above */
+    expect(pressed(container)).toEqual(['weight kg', 'duration min'])
+  })
+
+  it('adds a field no kind declares, for a one-off parameter worth comparing over time', () => {
+    const { container } = render(<Exercises />)
+    /* the exact case DESIGN.md §8.1 used to name as a comment's, never a
+       field's — how far the feet are raised on a push-up */
+    open(container, 'push ups')
+
+    addField(container, 'raise', 'cm')
+
+    expect(held('push ups')?.fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'reps',
+      'weight kg',
+      'raise cm',
+    ])
+    expect(pressed(container)).toContain('raise cm')
+  })
+
+  it('normalises a typed name, so one field never becomes two that read alike', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'push ups')
+
+    addField(container, 'raise', 'cm')
+    /* the same field in three spellings — a set row keys its values by the
+       name, so `reps` beside `REPS` would be two boxes for one number */
+    addField(container, 'Raise', 'cm')
+    addField(container, 'REPS', '')
+
+    expect(held('push ups')?.fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'reps',
+      'weight kg',
+      'raise cm',
+    ])
+  })
+
+  it('offers no press until a name is typed, so a nameless field cannot be made', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'push ups')
+
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field unit"]')!, {
+      target: { value: 'cm' },
+    })
+    const addPress = container.querySelector<HTMLButtonElement>('.set-fields-add-press')!
+    expect(addPress.disabled).toBe(true)
+
+    /* and whitespace is not a name either */
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field name"]')!, {
+      target: { value: '   ' },
+    })
+    expect(addPress.disabled).toBe(true)
+    expect(held('push ups')?.fields).toBeUndefined()
+  })
+
+  it('gives a custom unit back when a chip is switched off and on again', () => {
+    const { container } = render(<Exercises />)
+    /* the rowing machine counts metres and every kind counts kilometres, so a
+       round trip through the chip used to hand back km and make its history
+       1000× what it said */
+    open(container, 'rowing machine')
+
+    toggle(container, 'distance m')
+    expect(pressed(container)).toEqual(['duration min', 'level'])
+
+    toggle(container, 'distance km')
+
+    expect(pressed(container)).toContain('distance m')
+    expect(held('rowing machine')?.fields?.map((field) => `${field.name} ${field.unit}`.trim()))
+      .toContain('distance m')
   })
 
   it('offers a field the exercise records that no kind declares, already pressed', () => {
     const { container } = render(<Exercises />)
     /* the seeded rowing machine counts metres, and every kind measures distance
        in km — a row built from the kinds alone would press no chip for a column
-       the set table draws, and the km chip would silently rewrite the unit */
+       the set table draws, and picking distance off the palette would silently
+       rewrite the unit back to km */
     open(container, 'rowing machine')
 
-    expect(pressed(container)).toEqual(['duration min', 'level', 'distance m'])
-    expect(
-      container
-        .querySelector('.set-fields-choice[aria-label="distance km"]')
-        ?.getAttribute('aria-pressed'),
-    ).toBe('false')
+    expect(pressed(container)).toEqual(['duration min', 'distance m', 'level'])
+    /* one chip for the name, not a second one for the km a row lands on
+       elsewhere — the unit is never what tells two offers apart */
+    expect(container.querySelector('[aria-label="distance km"]')).toBeNull()
   })
 
   it('says an overridden kind is its own fields, and a kind picked there adopts the kind', () => {
@@ -270,5 +387,109 @@ describe('an exercise’s field list on the library screen', () => {
 
     expect(held('farmer carry')?.kind).toBe('hold')
     expect(held('farmer carry')?.fields).toBeUndefined()
+  })
+})
+
+/** A unit is resolved at read time, so changing one changes what every set
+ *  already logged says — the number keeps its value and stops meaning what it
+ *  meant. The change is allowed; it names what it restates first, the way a
+ *  refused delete names what depends on it (§7). */
+describe('changing a unit an exercise’s history already depends on', () => {
+  const addField = (container: Element, name: string, unit: string) => {
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field name"]')!, {
+      target: { value: name },
+    })
+    fireEvent.input(container.querySelector<HTMLInputElement>('[aria-label="new field unit"]')!, {
+      target: { value: unit },
+    })
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.set-fields-add-press')!)
+  }
+
+  const held = () => loadExercises().exercises.find((item) => item.name === 'plank')!
+
+  /** What the workout already logged now reads as, resolved the way every
+   *  screen and the report resolve it. */
+  const logged = () => {
+    const done = performedIn(readEntries('workout')[0]!).find((p) => p.exercise_id === 'plank')!
+    return setLine(done.sets[0]!, fieldsFor(held()))
+  }
+
+  it('changes nothing on the press that asks, and names the workout it would restate', () => {
+    logPlank()
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+    expect(logged()).toBe('45 s')
+
+    addField(container, 'duration', 'min')
+
+    expect(container.querySelector('.set-fields-restate')).not.toBeNull()
+    expect(container.querySelector('.set-fields-restate-line')?.textContent).toContain(
+      'starts reading min rather than s',
+    )
+    /* the workout is named, and as a link — the way out is through it */
+    expect(container.querySelectorAll('.set-fields-restate-link')).toHaveLength(1)
+    /* and nothing is written yet */
+    expect(held().fields).toBeUndefined()
+    expect(logged()).toBe('45 s')
+  })
+
+  it('leaves it alone, and puts the panel away', () => {
+    logPlank()
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+
+    addField(container, 'duration', 'min')
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.set-fields-restate-stop')!)
+
+    expect(container.querySelector('.set-fields-restate')).toBeNull()
+    expect(held().fields).toBeUndefined()
+    expect(logged()).toBe('45 s')
+  })
+
+  it('goes through on the second press, and the set logged before it reads the new unit', () => {
+    logPlank()
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+
+    addField(container, 'duration', 'min')
+    fireEvent.click(container.querySelector<HTMLButtonElement>('.set-fields-restate-go')!)
+
+    expect(held().fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'duration min',
+      'weight kg',
+    ])
+    /* the guard's whole reason, pinned: the number is untouched and the
+       sentence around it is not */
+    expect(logged()).toBe('45 min')
+  })
+
+  it('asks nothing when no workout has logged the exercise yet', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+
+    addField(container, 'duration', 'min')
+
+    expect(container.querySelector('.set-fields-restate')).toBeNull()
+    expect(held().fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'duration min',
+      'weight kg',
+    ])
+  })
+
+  it('asks nothing when the field is new rather than re-united', () => {
+    logPlank()
+    const { container } = render(<Exercises />)
+    open(container, 'plank')
+
+    /* nothing was ever logged under `raise`, so there is nothing to restate */
+    addField(container, 'raise', 'cm')
+
+    expect(container.querySelector('.set-fields-restate')).toBeNull()
+    expect(held().fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'duration s',
+      'weight kg',
+      'raise cm',
+    ])
+    expect(logged()).toBe('45 s')
   })
 })

@@ -41,6 +41,101 @@
   opacity: 0.75;
 }
 
+.set-fields-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-fields-add-name,
+.set-fields-add-unit {
+  padding: 0 10px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+}
+
+.set-fields-add-name {
+  width: 11ch;
+}
+
+.set-fields-add-unit {
+  width: 6ch;
+}
+
+.set-fields-add-press {
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.set-fields-add-press:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* what a unit change says before it goes through. Quiet, and never danger:
+   the change is allowed and nothing is destroyed — the panel exists so the
+   workouts it restates get looked at first. Borrowed from `.refused`, which
+   is the same idea one step further along. */
+
+.set-fields-restate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  background: var(--paper-hover);
+}
+
+.set-fields-restate-line {
+  margin: 0;
+  max-width: 52ch;
+  font: 400 11.5px/1.5 var(--family-mono);
+  color: var(--mono);
+}
+
+.set-fields-restate-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.set-fields-restate-link {
+  align-items: center;
+  font: 400 12.5px/1 var(--family-mono);
+  color: var(--ink-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.set-fields-restate-press {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.set-fields-restate-go,
+.set-fields-restate-stop {
+  align-items: center;
+  padding: 0 14px;
+  border: 1px solid var(--rule);
+  background: var(--paper-control);
+  color: var(--mono);
+  font: 400 12.5px/1 var(--family-mono);
+  cursor: pointer;
+}
+
+.set-fields-restate-go {
+  border-color: var(--ink-select);
+  background: var(--ink-select);
+  color: var(--paper);
+}
+
 .set-fields-note {
   margin: 0;
   max-width: 52ch;

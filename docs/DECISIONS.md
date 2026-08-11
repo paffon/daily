@@ -265,3 +265,27 @@ Built on the day it was decided, on `claude/exercise-parameter-config-e02512`.
 A browser holding its own `library/exercises.json` keeps what it has: nothing
 migrates, and an exercise that never gets a list of its own reads exactly as
 before.
+
+### 2026-08-11 · typed fields
+
+| decided | written in |
+| :- | :- |
+| a field's unit is typed as well as chosen, and the toggle row offers one chip per name — `duration` in seconds and `duration` in minutes stop being two offers | [§8.1](DESIGN.md#81-workout), *Reversals* in [RULES.md](RULES.md#reversals) |
+| a parameter worth comparing over time is a field, not only a comment — reversing §8.1's own example, how high the feet were on a push-up | [§8.1](DESIGN.md#81-workout), *Reversals* in [RULES.md](RULES.md#reversals) |
+| a unit change over an exercise a workout already logged names those workouts and takes a second press, rather than restating them quietly | [§8.1](DESIGN.md#81-workout), [OPEN.md](OPEN.md) |
+| a typed field name is lower-cased, since it is the key a set row stores its number under | [§8.1](DESIGN.md#81-workout) |
+
+No ADR. Reverting is deleting the typed row and putting the two duration
+offers back, which is the same afternoon the field list itself was
+(2026-08-10) — the first of the three tests fails the same way it did there.
+
+The ask before a unit change is a stand-in and is recorded as one. A set
+records its number under the field's name and never the unit it was logged
+under, so nothing can tell seconds from minutes after the fact; the real fix
+is stamping the unit onto the set at save time, which is what ADR 0002 asks
+for everywhere else and is not an afternoon. `OPEN.md` carries it.
+
+Built on the day it was decided, on `claude/exercise-height-units-cc5404`. A
+browser holding its own `library/exercises.json` keeps what it has: nothing
+migrates, an exercise whose fields already differ per unit reads exactly as
+before, and typing a field is the only thing that changes anything.
