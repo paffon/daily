@@ -86,6 +86,34 @@ export function fieldsFor(exercise: Exercise): Field[] {
   return exercise.fields ?? loadExercises().kinds[exercise.kind] ?? []
 }
 
+/** Every field the kinds between them declare, which is what a field list is
+ *  picked from. Deduped by name and unit — `duration` in seconds and
+ *  `duration` in minutes are different offers — keeping the first declaration,
+ *  decoration and all, in the order the kinds file declares them. The palette
+ *  is the kinds map read sideways, so it grows with the library and is never a
+ *  list written in source (§11). */
+export function fieldPalette(kinds: Record<string, Field[]>): Field[] {
+  const offered = new Map<string, Field>()
+  for (const field of Object.values(kinds).flat()) {
+    const key = JSON.stringify([field.name, field.unit])
+    if (!offered.has(key)) offered.set(key, field)
+  }
+  return [...offered.values()]
+}
+
+/** The kind that already says what this list says, or `null` when none does.
+ *  A column's identity is its name and unit; `optional` and `sep` are the
+ *  kind's own decoration and never block a match, so a list that lands on a
+ *  kind is recorded as the kind rather than as a copy — a copy would stop
+ *  following the kind when the kind is edited, and kinds are editable data
+ *  (§11). Order counts: weight-then-reps is `loaded`, reps-then-weight is
+ *  `bodyweight`, and the two mean what they read as. */
+export function kindOf(kinds: Record<string, Field[]>, fields: Field[]): string | null {
+  const written = (list: Field[]) => JSON.stringify(list.map((field) => [field.name, field.unit]))
+  const wanted = written(fields)
+  return Object.keys(kinds).find((kind) => written(kinds[kind]!) === wanted) ?? null
+}
+
 /** When each exercise was last done, as epoch milliseconds keyed by id. One
  *  pass over the workouts the caller has already read, never a scan per
  *  exercise.
@@ -172,10 +200,17 @@ export function parseMark(input: string): { value: number | null; mark: string }
 }
 
 /** `47.5 kg × 10`. Blanks are skipped rather than written as gaps, so a run
- *  with no incline reads `5 km / 28 min` and not `5 km / 28 min @`. */
+ *  with no incline reads `5 km / 28 min` and not `5 km / 28 min @`. A
+ *  separator says what it follows, so the first value written carries none: a
+ *  run with no distance reads `28 min` rather than `/ 28 min`, and a picked
+ *  list that leads with `reps` never opens with `×`. */
 export function setLine(set: SetRow, fields: Field[]): string {
   return fields
     .filter((field) => set[field.name] !== null && set[field.name] !== undefined)
-    .map((field) => [field.sep, String(set[field.name]), field.unit].filter(Boolean).join(' '))
+    .map((field, at) =>
+      [at === 0 ? undefined : field.sep, String(set[field.name]), field.unit]
+        .filter(Boolean)
+        .join(' '),
+    )
     .join(' ')
 }
