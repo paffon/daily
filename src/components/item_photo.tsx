@@ -20,6 +20,9 @@ export function ItemPhoto({
 }): VNode {
   const [url, setUrl] = useState<string | null>(null)
   const [trouble, setTrouble] = useState('')
+  /** A file is mid-drag over the block — the outline that says the drop will
+   *  land here. */
+  const [over, setOver] = useState(false)
   /** The object URL on screen, held for revoking — swapping items or leaving
    *  the screen must not leave decoded JPEGs pinned in memory. */
   const held = useRef('')
@@ -57,12 +60,8 @@ export function ItemPhoto({
    *  and a picture of a body is a measurement. Straight to Drive either way,
    *  and shown from the very bytes that went up rather than fetched back.
    *  Offline this is the one press on the screen that cannot work, and saying
-   *  so beats doing nothing visibly. */
-  const add = async (picker: HTMLInputElement) => {
-    const file = picker.files?.[0]
-    /* cleared so choosing the same file again is still a change event */
-    picker.value = ''
-    if (file === undefined) return
+   *  so beats doing nothing visibly. Fed by the picker and by a drop alike. */
+  const add = async (file: Blob) => {
     setTrouble('')
     const item = showing.current
     try {
@@ -76,8 +75,43 @@ export function ItemPhoto({
     }
   }
 
+  const picked = (picker: HTMLInputElement) => {
+    const file = picker.files?.[0]
+    /* cleared so choosing the same file again is still a change event */
+    picker.value = ''
+    if (file !== undefined) void add(file)
+  }
+
+  /** §10.2's "adding an image is a file drop", taken literally on the screen
+   *  itself. The whole block is the target — the picture to replace it, the
+   *  press to add one — and the press stays, because a phone has nowhere to
+   *  drag a file from. Anything that is not an image is left where it was. */
+  const carrying = (e: DragEvent) => (e.dataTransfer?.types ?? []).includes('Files')
+
+  const dropped = (e: DragEvent) => {
+    e.preventDefault()
+    setOver(false)
+    const file = Array.from(e.dataTransfer?.files ?? []).find((one) =>
+      one.type.startsWith('image/'),
+    )
+    if (file !== undefined) void add(file)
+  }
+
   return (
-    <div class="item-photo">
+    <div
+      class={over ? 'item-photo item-photo-over' : 'item-photo'}
+      onDragOver={(e) => {
+        if (!carrying(e)) return
+        e.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={(e) => {
+        /* into a child of the block fires this too, and is not leaving */
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+        setOver(false)
+      }}
+      onDrop={dropped}
+    >
       {url !== null && <img class="item-photo-shot" src={url} alt={name} loading="lazy" />}
       {/* a label over a hidden input is the file picker — no ref, no synthetic
           click, and the whole control is the hit area */}
@@ -87,7 +121,7 @@ export function ItemPhoto({
           accept="image/*"
           hidden
           aria-label={`photo for this ${kind}`}
-          onChange={(e) => void add(e.currentTarget)}
+          onChange={(e) => picked(e.currentTarget)}
         />
         {url === null ? `+ add a photo for this ${kind}` : 'replace the photo'}
       </label>

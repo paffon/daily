@@ -161,4 +161,37 @@ describe('the body screen', () => {
     await waitFor(() => expect(container.querySelector('.body-trouble')).not.toBeNull())
     expect(readEntries('body')).toHaveLength(0)
   })
+
+  it('takes a dropped image through the same path the picker feeds', async () => {
+    const { container } = render(<Body />)
+    const press = container.querySelector('.body-photo')!
+
+    fireEvent.dragOver(press, { dataTransfer: { types: ['Files'], files: [] } })
+    expect(press.className).toContain('body-photo-over')
+
+    fireEvent.drop(press, {
+      dataTransfer: {
+        types: ['Files'],
+        files: [new File(['jpeg bytes'], 'shot.jpg', { type: 'image/jpeg' })],
+      },
+    })
+
+    await waitFor(() => expect(readEntries('body')).toHaveLength(1))
+    expect(readEntries('body')[0]?.payload['photo']).toBe('photos/2026-08-01.jpg')
+    expect(press.className).not.toContain('body-photo-over')
+  })
+
+  it('leaves a drop that carries no image where it was', () => {
+    const { container } = render(<Body />)
+
+    fireEvent.drop(container.querySelector('.body-photo')!, {
+      dataTransfer: {
+        types: ['Files'],
+        files: [new File(['notes'], 'notes.txt', { type: 'text/plain' })],
+      },
+    })
+
+    expect(upload).not.toHaveBeenCalled()
+    expect(readEntries('body')).toHaveLength(0)
+  })
 })

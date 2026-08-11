@@ -198,6 +198,14 @@
   background: var(--paper-hover);
 }
 
+/* a file mid-drag over the press — the drop lands here. Steel, because a drop
+   about to land is the live action. */
+.body-photo-over {
+  border-style: dashed;
+  border-color: var(--steel);
+  color: var(--ink);
+}
+
 /* the photo that could not go up, and the one that could not come down */
 .body-trouble,
 .body-photo-path {

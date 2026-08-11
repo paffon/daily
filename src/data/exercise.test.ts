@@ -1,11 +1,12 @@
-/** The order the picker offers, and the reference check that guards a delete.
- *  Both are pure — a hand-built library and a hand-built list of entries, no
- *  store and no DOM — so what is exercised here is the arithmetic rather than
- *  the screen that happens to call it. */
+/** The order the picker offers, the reference check that guards a delete, and
+ *  the palette a field list is picked from. All pure — a hand-built library
+ *  and a hand-built list of entries, no store and no DOM — so what is
+ *  exercised here is the arithmetic rather than the screen that happens to
+ *  call it. */
 
 import type { Entry } from './entry'
-import type { Exercise, Performed } from './exercise'
-import { byStaleness, lastUsedAt, usedBy } from './exercise'
+import type { Exercise, Field, Performed } from './exercise'
+import { byStaleness, fieldPalette, kindOf, lastUsedAt, usedBy } from './exercise'
 
 const at = (name: string, body_part: string): Exercise => ({
   id: name,
@@ -141,6 +142,90 @@ describe('byStaleness', () => {
     const held = [...LIBRARY]
     byStaleness(LIBRARY, lastUsedAt([workout(3, 'squat')]))
     expect(LIBRARY).toEqual(held)
+  })
+})
+
+/* a hand-built kinds map, so the palette and the match are read off known
+   declarations rather than off whatever the seed happens to hold today */
+const KINDS: Record<string, Field[]> = {
+  loaded: [
+    { name: 'weight', unit: 'kg' },
+    { name: 'reps', unit: '', sep: '×' },
+  ],
+  bodyweight: [
+    { name: 'reps', unit: '' },
+    { name: 'weight', unit: 'kg', optional: true },
+  ],
+  hold: [
+    { name: 'duration', unit: 's' },
+    { name: 'weight', unit: 'kg', optional: true },
+  ],
+  machine: [
+    { name: 'duration', unit: 'min' },
+    { name: 'level', unit: '', sep: '@' },
+  ],
+}
+
+describe('fieldPalette', () => {
+  it('offers each name-and-unit once, in the order the kinds declare them', () => {
+    expect(fieldPalette(KINDS).map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'weight kg',
+      'reps',
+      'duration s',
+      'duration min',
+      'level',
+    ])
+  })
+
+  it('keeps the first declaration, decoration and all', () => {
+    /* loaded's weight, not bodyweight's optional one */
+    expect(fieldPalette(KINDS).find((field) => field.name === 'weight')).toEqual({
+      name: 'weight',
+      unit: 'kg',
+    })
+  })
+
+  it('tells one name in two units apart', () => {
+    expect(fieldPalette(KINDS).filter((field) => field.name === 'duration')).toHaveLength(2)
+  })
+})
+
+describe('kindOf', () => {
+  it('names the kind whose list this is, by name and unit in order', () => {
+    expect(
+      kindOf(KINDS, [
+        { name: 'weight', unit: 'kg' },
+        { name: 'reps', unit: '' },
+      ]),
+    ).toBe('loaded')
+  })
+
+  it('reads order as meaning — reps then weight is bodyweight, not loaded', () => {
+    expect(
+      kindOf(KINDS, [
+        { name: 'reps', unit: '' },
+        { name: 'weight', unit: 'kg' },
+      ]),
+    ).toBe('bodyweight')
+  })
+
+  it('never lets optional or a separator block a match — they are the kind’s own', () => {
+    expect(
+      kindOf(KINDS, [
+        { name: 'duration', unit: 's', sep: '/' },
+        { name: 'weight', unit: 'kg' },
+      ]),
+    ).toBe('hold')
+  })
+
+  it('answers null for a list no kind declares, units included', () => {
+    expect(
+      kindOf(KINDS, [
+        { name: 'duration', unit: 'min' },
+        { name: 'weight', unit: 'kg' },
+      ]),
+    ).toBeNull()
+    expect(kindOf(KINDS, [])).toBeNull()
   })
 })
 

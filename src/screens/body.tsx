@@ -100,6 +100,9 @@ export function Body(): VNode {
   const [weight, setWeight] = useState('')
   const [ts, setTs] = useState(() => toIso(new Date()))
   const [trouble, setTrouble] = useState('')
+  /** A file is mid-drag over the photo press — the border that says the drop
+   *  will land there. */
+  const [over, setOver] = useState(false)
 
   const weights = entries.filter((entry) => photoOf(entry.payload) === null)
   const photos = entries.filter((entry) => photoOf(entry.payload) !== null)
@@ -117,12 +120,9 @@ export function Body(): VNode {
    *
    *  A photo is an addition, not an alternative: the weight box and the time
    *  are left as they are, so a weight typed before the picker still logs
-   *  afterwards, at the same moment the photo was filed under. */
-  const addPhoto = async (picker: HTMLInputElement) => {
-    const file = picker.files?.[0]
-    /* cleared so choosing the same file again is still a change event */
-    picker.value = ''
-    if (file === undefined) return
+   *  afterwards, at the same moment the photo was filed under. Fed by the
+   *  picker and by a drop on the same press alike. */
+  const addPhoto = async (file: Blob) => {
     setTrouble('')
     try {
       const path = await putPhoto(file, ts)
@@ -131,6 +131,25 @@ export function Body(): VNode {
     } catch {
       setTrouble('the photo did not reach drive — it is the one thing here that needs a signal.')
     }
+  }
+
+  const picked = (picker: HTMLInputElement) => {
+    const file = picker.files?.[0]
+    /* cleared so choosing the same file again is still a change event */
+    picker.value = ''
+    if (file !== undefined) void addPhoto(file)
+  }
+
+  /** §10.2's "adding an image is a file drop", honoured on the press itself —
+   *  the body's photo as much as an item's. Not an image, and it is left
+   *  where it was. */
+  const dropped = (e: DragEvent) => {
+    e.preventDefault()
+    setOver(false)
+    const file = Array.from(e.dataTransfer?.files ?? []).find((one) =>
+      one.type.startsWith('image/'),
+    )
+    if (file !== undefined) void addPhoto(file)
   }
 
   /* Both of these are about weights, because a line is what they are about
@@ -207,14 +226,29 @@ export function Body(): VNode {
               log it
             </button>
             {/* a label over a hidden input is the file picker — no ref, no
-                synthetic click, and the whole control is the hit area */}
-            <label class="body-photo hit">
+                synthetic click, and the whole control is the hit area. It is
+                also the drop target, so the laptop half of §10 can skip the
+                picker entirely */}
+            <label
+              class={over ? 'body-photo body-photo-over hit' : 'body-photo hit'}
+              onDragOver={(e) => {
+                if (!(e.dataTransfer?.types ?? []).includes('Files')) return
+                e.preventDefault()
+                setOver(true)
+              }}
+              onDragLeave={(e) => {
+                /* into a child of the label fires this too, and is not leaving */
+                if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+                setOver(false)
+              }}
+              onDrop={dropped}
+            >
               <input
                 type="file"
                 accept="image/*"
                 hidden
                 aria-label="add a photo"
-                onChange={(e) => void addPhoto(e.currentTarget)}
+                onChange={(e) => picked(e.currentTarget)}
               />
               add a photo
             </label>

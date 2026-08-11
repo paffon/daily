@@ -189,3 +189,86 @@ describe('the exercise library screen', () => {
     expect(lastUsedAt(readEntries('workout')).size).toBe(1)
   })
 })
+
+/** §8.1's editable field list, on the slow path: the chips say what a set of
+ *  this exercise records, the kind select is the preset beside them, and a
+ *  list that lands on a kind's is recorded as the kind. */
+describe('an exercise’s field list on the library screen', () => {
+  const toggle = (container: Element, label: string) =>
+    fireEvent.click(
+      container.querySelector<HTMLButtonElement>(`.set-fields-choice[aria-label="${label}"]`)!,
+    )
+
+  const held = (name: string) => loadExercises().exercises.find((item) => item.name === name)
+
+  const pressed = (container: Element) =>
+    [...container.querySelectorAll('.set-fields-choice[aria-pressed="true"]')].map((chip) =>
+      chip.getAttribute('aria-label'),
+    )
+
+  it('shows the kind’s list pressed, for an exercise that follows its kind', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'chest press')
+
+    expect(pressed(container)).toEqual(['weight kg', 'reps'])
+  })
+
+  it('writes a toggled list to the library as the exercise’s own', () => {
+    const { container } = render(<Exercises />)
+    open(container, 'chest press')
+
+    toggle(container, 'duration s')
+
+    expect(held('chest press')?.fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual(
+      ['weight kg', 'reps', 'duration s'],
+    )
+  })
+
+  it('replaces a field of the same name rather than drawing two columns for it', () => {
+    const { container } = render(<Exercises />)
+    /* plank follows `hold` — duration in seconds, weight optional beside it */
+    open(container, 'plank')
+
+    toggle(container, 'duration min')
+
+    const durations = pressed(container).filter((label) => label?.startsWith('duration'))
+    expect(durations).toEqual(['duration min'])
+    // it takes the seconds column's place, rather than joining at the end: a
+    // set row keys its values by name, so two durations would be one box
+    expect(held('plank')?.fields?.map((field) => `${field.name} ${field.unit}`.trim())).toEqual([
+      'duration min',
+      'weight kg',
+    ])
+  })
+
+  it('offers a field the exercise records that no kind declares, already pressed', () => {
+    const { container } = render(<Exercises />)
+    /* the seeded rowing machine counts metres, and every kind measures distance
+       in km — a row built from the kinds alone would press no chip for a column
+       the set table draws, and the km chip would silently rewrite the unit */
+    open(container, 'rowing machine')
+
+    expect(pressed(container)).toEqual(['duration min', 'level', 'distance m'])
+    expect(
+      container
+        .querySelector('.set-fields-choice[aria-label="distance km"]')
+        ?.getAttribute('aria-pressed'),
+    ).toBe('false')
+  })
+
+  it('says an overridden kind is its own fields, and a kind picked there adopts the kind', () => {
+    const { container } = render(<Exercises />)
+    /* farmer carry ships with a list of its own — §8.1's "the one that needs
+       both", in the seed */
+    open(container, 'farmer carry')
+
+    const select = container.querySelector<HTMLSelectElement>('[aria-label="kind of farmer carry"]')!
+    expect(select.value).toBe('')
+    expect(select.querySelector('option[value=""]')?.textContent).toBe('its own fields')
+
+    set(container, 'kind of farmer carry', 'hold')
+
+    expect(held('farmer carry')?.kind).toBe('hold')
+    expect(held('farmer carry')?.fields).toBeUndefined()
+  })
+})

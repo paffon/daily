@@ -35,6 +35,14 @@
   cursor: pointer;
 }
 
+/* a file mid-drag over the block: the outline says the drop will land here —
+   §10.2's "a file drop" honoured on the screen itself, replacement included.
+   Steel, because a drop about to land is the live action. */
+.item-photo-over {
+  outline: 1.5px dashed var(--steel);
+  outline-offset: 6px;
+}
+
 /* the same sentence the body module shows, in the same register — danger
    stays with `delete this entry` alone */
 .item-photo-trouble {
