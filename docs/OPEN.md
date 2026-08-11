@@ -45,6 +45,24 @@ is mergeable line by line and nothing in `sync.ts` tries. The library and
 config JSON have no such handle and would need a policy of their own, which is
 why this is not an afternoon.
 
+**A set does not record the unit it was logged under.** A `SetRow` keys its
+values by field name alone, and `fieldsFor` resolves the unit from the library
+at read time — in `src/components/set_table.tsx`, in `workoutLine`, and in the
+report. So changing an exercise's unit changes what every set already logged
+says: `45 s` becomes `45 min`, and the rowing machine's metres become
+kilometres. Narrowed on 2026-08-11 rather than closed — the change now names
+the workouts it would restate and takes a second press (`DESIGN.md` §8.1), and
+a chip switched off and back on returns the unit it went out with, so neither
+path is silent. Both are asks, not fixes.
+
+What would close it is stamping the unit onto the set at save time, which is
+what ADR 0002's *an entry says what was true when it happened* asks for
+everywhere else — a rename already cannot rewrite history because the entry
+holds the id, and the unit is the one part of a set row that has no such
+handle. It is not an afternoon: every reader of a `SetRow` would have to
+prefer the stamped unit and fall back to the library for the rows written
+before the stamp existed.
+
 **An emptied amount box logs the number it used to hold.**
 `src/components/amount_stepper.tsx` suppresses `onChange` for an unreadable
 box, which is right — half a typed number is not a number — but the field then
