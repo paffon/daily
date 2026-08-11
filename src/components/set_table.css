@@ -136,10 +136,18 @@
     gap: 14px;
   }
 
-  /* room enough for the whole row on one line, so the head carries its fourth
-     label again and holds the × column open under it */
-  .set-row {
-    flex-wrap: nowrap;
+  /* the head wraps too, and the row's `nowrap` here is gone. A picked field
+     list can be longer than any kind's, and a fixed-width column cannot shrink:
+     six fields put the last box 434px past a page that clips rather than pans,
+     which is a box that cannot be typed into. Measured at 900px, where the
+     builder gives the fields 476 of it.
+
+     What it costs is that the two stop wrapping at the same place once either
+     of them does — the head holds 58px open on the right for the × column — so
+     past four fields the labels read as a legend rather than as a grid, which
+     is what they already are on a phone. */
+  .set-head {
+    flex-wrap: wrap;
   }
 
   .set-head .set-next {
