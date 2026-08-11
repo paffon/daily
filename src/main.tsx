@@ -138,6 +138,14 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller !== null)
   })
 }
 
+/* A photo dropped a few pixels wide of its target is otherwise opened by the
+   browser: the tab navigates away to the JPEG, and a workout typed but not yet
+   logged goes with it. The two drop targets stop their own events; this is the
+   rest of the window saying no. Both are needed — a drop only fires where a
+   dragover was refused first. */
+addEventListener('dragover', (e) => e.preventDefault())
+addEventListener('drop', (e) => e.preventDefault())
+
 addEventListener('hashchange', paint)
 addEventListener('online', () => {
   paint()
