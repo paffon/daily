@@ -57,6 +57,7 @@ change back looks like the decision it would be, rather than a correction.
 | A food carries numbers — kcal, protein and fat, in a matrix a multiplier fills in | A food carries none (2026-08-08, later the same day, reversing both rows above). Four fields and no fifth: name, unit, the level it opens at, and one free-text note. What a portion was is read off the food, the level and the note. See `DESIGN.md` §8.2 |
 | A level's prose is three fields, one per level of the scale | One note on the food (2026-08-08), which is where the numbers' job went too. Three boxes per food is a form; one is a sentence |
 | The access token lives in memory and nowhere else — never `localStorage`, never a cookie | It is written to `localStorage` beside the moment it expires (2026-08-09), so a reload inside its hour needs no press. Google Identity Services has no silent mode and a page with no server cannot hold a refresh token, so the alternative was not a quieter sign-in — it was one on every page load |
+| A one-off parameter — how high the feet were on a push-up — is a comment, never a new field | A field's unit is typed as well as chosen (2026-08-11), and a parameter worth comparing over time is a field now — how high the feet were on a push-up among them. What is still one-off stays a comment. See `DESIGN.md` §8.1 |
 
 ## The coach's voice
 
