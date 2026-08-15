@@ -58,6 +58,7 @@ change back looks like the decision it would be, rather than a correction.
 | A level's prose is three fields, one per level of the scale | One note on the food (2026-08-08), which is where the numbers' job went too. Three boxes per food is a form; one is a sentence |
 | The access token lives in memory and nowhere else — never `localStorage`, never a cookie | It is written to `localStorage` beside the moment it expires (2026-08-09), so a reload inside its hour needs no press. Google Identity Services has no silent mode and a page with no server cannot hold a refresh token, so the alternative was not a quieter sign-in — it was one on every page load |
 | A one-off parameter — how high the feet were on a push-up — is a comment, never a new field | A field's unit is typed as well as chosen (2026-08-11), and a parameter worth comparing over time is a field now — how high the feet were on a push-up among them. What is still one-off stays a comment. See `DESIGN.md` §8.1 |
+| The export holds only the library items the log names; the rest of a library is a catalog, and a catalog is a database dump | The report still holds only what its entries name, for exactly that reason. The catalog is a document of its own (2026-08-15) — one library per sheet, every item in it, from that library's own screen. A dump is a catalog nobody asked for; this one is asked for by name. See `DESIGN.md` §10.3 |
 
 ## The coach's voice
 

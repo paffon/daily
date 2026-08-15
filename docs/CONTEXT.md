@@ -42,6 +42,15 @@ ship seeded with useful defaults and grow by use; nothing in a seed list is
 protected.
 _Avoid_: catalogue entry, template, preset
 
+**Library sheet**:
+One library printed whole, as a document (`DESIGN.md` §10.3, 2026-08-15): every
+item it holds with its picture, whether or not anything has ever been logged
+against it, downloaded from that library's own screen. The catalog half of the
+export, and the *report*'s opposite in the one way that matters — a report is
+one profile's log, a sheet is nobody's, because the catalog is shared (ADR
+0004). It answers *what is available*; the report answers *what was done*.
+_Avoid_: arsenal, dump, catalogue, inventory
+
 **Meal**:
 One nutrition entry: an untyped container of the foods eaten together, started
 and ended the way a workout is. Reintroduced 2026-08-06 — only the word came
@@ -96,7 +105,9 @@ _Avoid_: user, account (the account is Google's, and every profile lives in one)
 The export (`DESIGN.md` §10.3): one self-contained HTML document holding
 everything the active profile has recorded, downloaded from home's footer.
 Sent to a trainer whole; an LLM is handed text copied out of it, which is how
-a second opinion stays outside the walls. It states, it does not judge.
+a second opinion stays outside the walls. It states, it does not judge. The log
+half of the export — the catalog half is a *library sheet*, and the two words
+are not interchangeable.
 _Avoid_: dump, backup (the data's home is Drive; the report is a document)
 
 **Segment**:

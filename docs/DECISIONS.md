@@ -289,3 +289,39 @@ Built on the day it was decided, on `claude/exercise-height-units-cc5404`. A
 browser holding its own `library/exercises.json` keeps what it has: nothing
 migrates, an exercise whose fields already differ per unit reads exactly as
 before, and typing a field is the only thing that changes anything.
+
+### 2026-08-15 · the library sheets
+
+| decided | written in |
+| :- | :- |
+| each library downloads as a document of its own — every exercise, and every food, whether or not anything has ever been logged against it, each with its picture | [§10.3](DESIGN.md#103-export), *Reversals* in [RULES.md](RULES.md#reversals) |
+| the report is unchanged: it still lists only the items its entries name, and for the reason it always gave | [§10.3](DESIGN.md#103-export) |
+| a sheet leaves from the screen its library is edited on, never home's footer, and names no profile in its head or its filename | [§10.3](DESIGN.md#103-export), [ADR 0004](adr/0004-profiles-share-the-catalog-and-own-their-records.md) |
+| a sheet keeps the library's own order — exercises under their body parts, foods as the file declares them — rather than the report's alphabet or the app list's staleness | [§10.3](DESIGN.md#103-export) |
+| an exercise's line says what a set of it records rather than the name of the kind that presets it, in the report's glossary as well as in the sheet | [§10.3](DESIGN.md#103-export), [§8.1](DESIGN.md#81-workout) |
+
+No ADR. Reverting is deleting two builders and two footer controls, which is
+well under the afternoon the first of the three tests asks for, and there was
+no trade-off left to weigh once the question was asked out loud: *what is
+available* and *what was done* are two questions, and the report was only ever
+refusing to answer the first one inside its answer to the second.
+
+The reversal is recorded because *a catalog is a database dump* was argued
+explicitly, and the argument still holds — it is the reason the report was not
+simply widened to hold every library item. What changed is that a catalog
+somebody asked for by name is not a dump, and it needed somewhere to go.
+
+The last row is the one that reaches existing output. The report's glossary
+used to print an exercise's `kind`, which is a preset name and stops being true
+the moment a field list overrides it — a thing that has been possible since
+2026-08-10 and that the seeded rowing machine already does, counting metres
+where its kind counts kilometres. It now prints the list itself, so the
+glossary describes the sets above it rather than naming a template they may no
+longer follow.
+
+Built on the day it was decided, on
+`claude/arsenal-reports-workouts-foods-0ee3a3`. Nothing migrates and no seed
+changed: a sheet is a read of the library as it stands. `CONTEXT.md` gained
+**Library sheet**, which is also where *arsenal* — the word the feature was
+asked for in — is filed as one to avoid, since the project's word for the
+shared libraries is the catalog.
