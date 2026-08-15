@@ -8,8 +8,11 @@ import {
   usedBy,
   writeExercises,
 } from '../data/exercise'
+import { toIso } from '../data/entry'
+import { buildExerciseSheet, sheetFileName } from '../data/report'
 import { readEntries, readJson } from '../data/store'
 import { DeleteRefused } from '../components/delete_refused'
+import { DownloadButton } from '../components/download_button'
 import { ItemPhoto } from '../components/item_photo'
 import { SetFields } from '../components/set_fields'
 import appSeed from '../seed/app.json'
@@ -235,6 +238,19 @@ export function Exercises(): VNode {
           type. This screen is for correcting one afterwards, and a rename here reaches every
           workout that ever used it.
         </p>
+
+        {/* the library as a document (§10.3) — every exercise in it, whether
+            or not it has ever been done, which is the half home's report
+            deliberately leaves out. It leaves from here rather than from home
+            because the catalog is shared by every profile and the report is
+            one profile's log (ADR 0004). */}
+        <DownloadButton
+          class="exercises-sheet"
+          label="download the library"
+          building="building the library…"
+          name={() => sheetFileName('exercises', toIso(new Date()))}
+          build={buildExerciseSheet}
+        />
       </div>
     </main>
   )

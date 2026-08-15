@@ -1,17 +1,23 @@
-/** The export — `DESIGN.md` §10.3. One report, one file: a self-contained
- *  HTML document holding everything the active profile has recorded, written
- *  for two readers. A trainer is sent the file and opens it; an LLM is handed
- *  the text copied out of it. Prose and tables, never a database dump — the
- *  copied-out text has to read as a document, so the document is what is
- *  built.
+/** The documents this app hands out, both of them self-contained HTML files —
+ *  `DESIGN.md` §10.3.
  *
- *  It states, it does not judge: no scores, no totals dressed as a verdict,
- *  no commentary. Comments and next-time marks are kept — they are the half
- *  worth having, and a report that dropped them would be numbers with the
- *  reasoning taken out.
+ *  **The report** is one profile's log, downloaded from home's footer and
+ *  written for two readers. A trainer is sent the file and opens it; an LLM is
+ *  handed the text copied out of it. Prose and tables, never a database dump —
+ *  the copied-out text has to read as a document, so the document is what is
+ *  built. It states, it does not judge: no scores, no totals dressed as a
+ *  verdict, no commentary. Comments and next-time marks are kept — they are
+ *  the half worth having, and a report that dropped them would be numbers with
+ *  the reasoning taken out.
  *
- *  Pictures come from Drive as the report is built, because photos are never
- *  mirrored (§10.2). Offline it still builds, and it names the pictures it
+ *  **A library sheet** is the other half: one library printed whole, from that
+ *  library's own screen. The report holds only the items its entries name,
+ *  because a catalog nobody asked for is the dump the paragraph above refuses;
+ *  a sheet is that catalog asked for by name, and says what is *available*
+ *  rather than what was done with it.
+ *
+ *  Pictures come from Drive as either is built, because photos are never
+ *  mirrored (§10.2). Offline both still build, and they name the pictures they
  *  could not reach rather than refusing to produce anything. */
 
 import type { Entry } from './entry'
@@ -19,7 +25,14 @@ import { toIso } from './entry'
 import { readEntries, readJson } from './store'
 import { activeProfile } from './profile'
 import type { Exercise } from './exercise'
-import { asExercise, fieldsFor, loadExercises, performedIn, setLine } from './exercise'
+import {
+  asExercise,
+  fieldLine,
+  fieldsFor,
+  loadExercises,
+  performedIn,
+  setLine,
+} from './exercise'
 import type { Food, Logged } from './food'
 import { asFood, commentOf, foodsIn, loadFoods, notesOf, unitOf } from './food'
 import type { Segment } from './segment'
@@ -120,8 +133,11 @@ async function fetchPictures(
 
 const NOTHING = '<p class="empty">nothing recorded</p>'
 
+/** The title is escaped here rather than at every call: the report's own
+ *  headings are plain words, but a sheet heads its groups with a body part,
+ *  and a body part is whatever the user typed. */
 const section = (title: string, body: string): string =>
-  `<section><h2>${title}</h2>${body === '' ? NOTHING : body}</section>`
+  `<section><h2>${esc(title)}</h2>${body === '' ? NOTHING : body}</section>`
 
 /** `47.5 kg × 10` beside `more` — the set and the decision made about it, the
  *  same pair the module shows (§7.1). */
@@ -285,21 +301,36 @@ function bodySection(
 }
 
 /* ── The libraries ─────────────────────────────────────────────────────────
-   What the log's names refer to, as the library holds them today — only the
-   items the entries actually name, because the rest is a catalog and a
-   catalog is a database dump. Pictures land here, each one once. */
+   What the log's names refer to, as the library holds them today — in the
+   report, only the items the entries actually name, because the rest is a
+   catalog and a catalog nobody asked for is a database dump. The sheets below
+   are the same item blocks over a whole library. Pictures land here, each one
+   once. */
 
 const bare = (parts: (string | null)[]): string =>
   parts.filter((part): part is string => part !== null && part !== '').join(' · ')
 
-function exerciseItems(used: Exercise[], srcs: Map<string, string>): string {
+/** An exercise as the library holds it: its picture, what a set of it records,
+ *  its rep scheme and its setup note. What a set records is the field list
+ *  rather than the kind that usually presets it — a kind's name is a preset
+ *  and stops describing the exercise the moment the list is overridden, and a
+ *  document is read long after anyone remembers which of the two is in force.
+ *
+ *  `namesPart` is off where the block already stands under a heading naming
+ *  the body part, which is every block in the exercise sheet: the report's
+ *  glossary is one flat list and has to carry the part on each line. */
+function exerciseItems(
+  used: Exercise[],
+  srcs: Map<string, string>,
+  namesPart = true,
+): string {
   const items = used.map((exercise) => {
     const src = srcs.get(itemPhotoPath('exercise', exercise.id))
     const picture =
       src === undefined ? '' : `<img class="item" src="${src}" alt="${esc(exercise.name)}">`
     const facts = bare([
-      exercise.body_part,
-      exercise.kind,
+      namesPart ? exercise.body_part : null,
+      fieldLine(fieldsFor(exercise)),
       exercise.rep_scheme === undefined ? null : `rep scheme ${exercise.rep_scheme}`,
     ])
     const notes =
@@ -355,7 +386,9 @@ function usedItems<T extends { name: string }>(ids: string[], resolve: (id: stri
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-/* ── The document ────────────────────────────────────────────────────────── */
+/* ── The document ──────────────────────────────────────────────────────────
+   One head, one stylesheet and one head-of-page sentence, so a sheet and a
+   report read as two pages of the same hand. */
 
 /** Self-contained on purpose: no script, no webfont, nothing fetched when it
  *  is opened — the file is sent to someone whose network the app knows
@@ -423,7 +456,30 @@ const STYLE = `
   figcaption { color: var(--mono); font-size: 12px; margin-top: 4px; }
   .entry { display: flex; gap: 12px; margin: 10px 0; }
   img.item { width: 88px; height: 88px; object-fit: cover; flex: none; }
+  /* a sheet opens straight into its items, with no dated heading between the
+     title and the first one, so the first block gets the room an h2 gives */
+  section:first-of-type > .entry:first-child { margin-top: 20px; }
 `
+
+/** `says` is the line under the title — prose the caller builds out of dates
+ *  and words, never out of anything typed, since it is the one string here
+ *  that is written into the page unescaped. */
+const page = (title: string, says: string, body: string, missing: string): string =>
+  `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
+  `<meta name="viewport" content="width=device-width, initial-scale=1">` +
+  `<title>daily — ${esc(title)}</title><style>${STYLE}</style></head><body>` +
+  `<header><h1>daily — ${esc(title)}</h1><p>${says}</p></header>` +
+  body +
+  missing +
+  `</body></html>`
+
+/** What Drive could not be asked for, named rather than quietly absent
+ *  (§10.3). The document names itself, because a sheet is not a report. */
+const missingLine = (unreached: string[], what: string): string =>
+  unreached.length === 0
+    ? ''
+    : `<p class="unreached">not reached when this ${what} was written: ` +
+      `${unreached.map(esc).join(' · ')}.</p>`
 
 /** The whole report, as one HTML string the caller hands to a download. One
  *  profile per report — `readEntries` already reads as the active one, and
@@ -499,26 +555,102 @@ export async function buildReport(): Promise<string> {
         ].join('') +
         `</section>`
 
-  const missing =
-    unreached.length === 0
-      ? ''
-      : `<p class="unreached">not reached when this report was written: ` +
-        `${unreached.map(esc).join(' · ')}.</p>`
-
-  return (
-    `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
-    `<meta name="viewport" content="width=device-width, initial-scale=1">` +
-    `<title>daily — ${esc(profile.name)}</title><style>${STYLE}</style></head><body>` +
-    `<header><h1>daily — ${esc(profile.name)}</h1>` +
-    `<p>${span} written ${dayOf(written, locale)}.</p></header>` +
+  return page(
+    profile.name,
+    `${span} written ${dayOf(written, locale)}.`,
     workoutSection(workouts, locale) +
-    nutritionSection(meals, locale) +
-    movementSection(movement, locale) +
-    danceSection(dance, locale) +
-    bodySection(body, srcs, locale, config.body) +
-    libraries +
-    missing +
-    `</body></html>`
+      nutritionSection(meals, locale) +
+      movementSection(movement, locale) +
+      danceSection(dance, locale) +
+      bodySection(body, srcs, locale, config.body) +
+      libraries,
+    missingLine(unreached, 'report'),
+  )
+}
+
+/* ── The library sheets ────────────────────────────────────────────────────
+   One library, printed whole: every item it holds, whether or not anything
+   has ever been logged against it. The report above deliberately refuses
+   this — it is one profile's log, and the items it never names are a catalog
+   it was not asked for — so the catalog gets a document of its own instead of
+   being smuggled into that one.
+
+   A sheet is nobody's. Profiles share the catalog and own only their records
+   (ADR 0004), so no profile is named in a sheet's head or in its filename,
+   and nothing a profile recorded reaches it: not a date, not a count, not
+   which items have been used. What is available and what was done with it are
+   two questions, and this document answers the first one only.
+
+   The library's own order is kept throughout, rather than the alphabet the
+   report's glossary uses. A glossary is looked things up in; a sheet is
+   browsed, and the order the user wrote — chest, then back, then legs — is a
+   fact about the library that re-sorting would throw away. */
+
+const EMPTY_LIBRARY = '<p class="empty">nothing in the library</p>'
+
+/** The exercises under the body parts they name, groups in the order their
+ *  first exercise appears. A blank body part is the absence of one rather
+ *  than a part of its own — `byStaleness` reads a blank the same way — so it
+ *  never leads, and its group goes last however early it turns up. */
+function byBodyPart(exercises: Exercise[]): [string, Exercise[]][] {
+  const groups = new Map<string, Exercise[]>()
+  for (const exercise of exercises) {
+    const held = groups.get(exercise.body_part)
+    if (held === undefined) groups.set(exercise.body_part, [exercise])
+    else held.push(exercise)
+  }
+  /* stable, so this moves the blank group to the end and reorders nothing else */
+  return [...groups].sort((a, b) => Number(a[0] === '') - Number(b[0] === ''))
+}
+
+/** Every picture a library holds, asked for once each — most items have none,
+ *  and none of them is `expected`, so an item without one is silence rather
+ *  than a line in the missing list (§10.3). */
+const wantedFor = (kind: 'exercise' | 'food', items: { id: string; name: string }[]): Wanted[] =>
+  items.map((item) => ({
+    path: itemPhotoPath(kind, item.id),
+    named: `the picture of ${item.name}`,
+    expected: false,
+  }))
+
+const writtenOn = (locale: string): string => `written ${dayOf(toIso(new Date()), locale)}.`
+
+/** The exercise library as a document — `DESIGN.md` §10.3. Every exercise in
+ *  it, under its body part, with its picture and what a set of it records. */
+export async function buildExerciseSheet(): Promise<string> {
+  const { locale } = readJson('config/app.json', appSeed)
+  const { exercises } = loadExercises()
+  const { srcs, unreached } = await fetchPictures(wantedFor('exercise', exercises))
+
+  const body = byBodyPart(exercises)
+    .map(([part, held]) =>
+      /* the heading is the body part, so the blocks under it do not repeat it */
+      section(part === '' ? 'no body part' : part, exerciseItems(held, srcs, false)),
+    )
+    .join('')
+
+  return page(
+    'exercises',
+    `every exercise the library holds, whether or not it has ever been done. ` +
+      writtenOn(locale),
+    body === '' ? EMPTY_LIBRARY : body,
+    missingLine(unreached, 'sheet'),
+  )
+}
+
+/** The food library as a document. Flat, because a food has no body part and
+ *  nothing else about it groups: the unit belongs to the food rather than
+ *  sorting it, and a meal is the one thing that gathers foods at all. */
+export async function buildFoodSheet(): Promise<string> {
+  const { locale } = readJson('config/app.json', appSeed)
+  const { foods } = loadFoods()
+  const { srcs, unreached } = await fetchPictures(wantedFor('food', foods))
+
+  return page(
+    'foods',
+    `every food the library holds, whether or not it has ever been eaten. ` + writtenOn(locale),
+    foods.length === 0 ? EMPTY_LIBRARY : `<section>${foodItems(foods, srcs)}</section>`,
+    missingLine(unreached, 'sheet'),
   )
 }
 
@@ -532,3 +664,11 @@ export function reportFileName(profileName: string, ts: string): string {
     .replace(/^-+|-+$/g, '')
   return `daily-report-${slug === '' ? 'profile' : slug}-${ts.slice(0, 10)}.html`
 }
+
+/** `daily-exercises-2026-08-15.html`. No profile in the name, unlike a
+ *  report's: the catalog is shared by every profile (ADR 0004), so two
+ *  profiles exporting the same library on the same day are exporting the same
+ *  file and should say so. The library names itself — there is no slug to
+ *  make, since these two words are the app's and not the user's. */
+export const sheetFileName = (library: 'exercises' | 'foods', ts: string): string =>
+  `daily-${library}-${ts.slice(0, 10)}.html`

@@ -641,6 +641,41 @@ attachment. No switch turns them off — `RULES.md` prefers deleting a feature t
 adding a setting that disables it — so when the file outgrows mail the answer is
 a link to it in Drive, not a toggle.
 
+**The catalog is a second document, not more of this one** (2026-08-15). The
+report lists only the library items its entries name, and that stands: the rest
+of a library is a catalog, and a catalog nobody asked for sitting inside a log
+is exactly the database dump this section refuses. What was missing is the case
+where somebody does ask, because *what is available* is a different question
+from *what was done* — a trainer wanting to know which machines the gym has, a
+second opinion on a food list nothing has been logged against yet. So each
+library also downloads as a **library sheet**: every exercise the library
+holds, and every food, whether or not anything has ever been logged against it,
+each with its picture. A sheet leaves from the screen its library is edited on
+(§7), not from home's footer, which stays the report's and nothing else's.
+
+**A sheet is nobody's.** Profiles share the catalog and own only their records
+(ADR 0004), so no profile is named in a sheet's head or in its filename, and
+nothing a profile recorded reaches it — not a date, not a count, not which
+items have been used. That rules out staleness too: it orders the app's own
+exercise list (§8.1) and it is a fact about a log, so a sheet keeps the
+library's own order instead — exercises under headings for the body parts they
+name, foods in the order the file declares them, and an item with no body part
+last under a heading saying so. Browsing order, not the alphabet the report's
+glossary uses, because a glossary is looked things up in and a sheet is read
+through.
+
+**An exercise says what a set of it records** — `weight kg × reps` — rather
+than the name of the kind that presets that list, in the report's glossary as
+well as in the sheet. A kind is a preset and stops describing an exercise the
+moment its own field list overrides it (§8.1), and a document is read long
+after anyone remembers which of the two is in force.
+
+Everything else a sheet inherits from the report: one file, self-contained,
+nothing fetched when it is opened, pictures pulled from Drive as it is built
+and named rather than silently lost when Drive cannot be reached. It states and
+does not judge, which here means it has no counts in it — a library is a list
+of what is there, and how long the list is is not a fact about training.
+
 ## 11. The configurability contract
 
 Every default is a guess and every guess is the user's to overwrite. Nothing in

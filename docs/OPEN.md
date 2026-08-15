@@ -145,6 +145,14 @@ The catalog screens are a second family of the same thing: `foods.css`
 deliberately identical everywhere else. Hoisting either family is the same
 piece of work and neither has been done.
 
+The library sheets added a third twin to that family on 2026-08-15 —
+`.exercises-sheet` and `.foods-sheet` are the same eleven lines twice, and both
+are `.home-report` in `home.css` a third time. Only the markup was hoisted:
+`src/components/download_button.tsx` is now the one place a document is built,
+named and handed to the browser, and it takes the class it wears from its
+caller precisely because the three footers are dressed separately. One quiet
+mono control class, shared, would collapse all three.
+
 **The app cannot be entered offline at all, and that is now deliberate.**
 Narrowed on 2026-08-09, not closed. The token is written to `localStorage`
 beside its expiry and restored at module load, so inside its hour the app

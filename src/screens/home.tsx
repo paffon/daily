@@ -1,10 +1,10 @@
-import { useState } from 'preact/hooks'
 import type { VNode } from 'preact'
 import type { Entry } from '../data/entry'
 import { MODULES, toIso } from '../data/entry'
 import { lastTouched, readJson, recentEntries } from '../data/store'
 import { activeProfile } from '../data/profile'
 import { buildReport, reportFileName } from '../data/report'
+import { DownloadButton } from '../components/download_button'
 import { whenOf } from '../components/fields'
 import { bodyLine } from './body'
 import { workoutLine } from './workout'
@@ -35,44 +35,6 @@ function detail(entry: Entry, config: typeof appSeed): string {
     case 'dance':
       return danceLine(entry)
   }
-}
-
-/** The export, from home's footer — `DESIGN.md` §10.3 names the spot. One
- *  press builds the whole report and hands it to the browser as a download;
- *  the build fetches every picture from Drive, so the press can take a
- *  moment, and the button says so rather than sitting silent under a second
- *  press that would build it twice. */
-function ReportDownload({ profileName }: { profileName: string }): VNode {
-  const [building, setBuilding] = useState(false)
-
-  const download = async () => {
-    setBuilding(true)
-    try {
-      const html = await buildReport()
-      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }))
-      const link = document.createElement('a')
-      link.href = url
-      link.download = reportFileName(profileName, toIso(new Date()))
-      link.click()
-      /* on a tick, not inline — the click starts the download, and revoking
-         in the same task can pull the blob out from under a browser that has
-         not yet opened it */
-      setTimeout(() => URL.revokeObjectURL(url), 0)
-    } finally {
-      setBuilding(false)
-    }
-  }
-
-  return (
-    <button
-      type="button"
-      class="home-report hit"
-      disabled={building}
-      onClick={() => void download()}
-    >
-      {building ? 'building the report…' : 'download report'}
-    </button>
-  )
 }
 
 /** Home in its silent state: the modules, what was last recorded, and whose
@@ -129,8 +91,17 @@ export function Home(): VNode {
         </span>
         {/* the report, from this footer and nowhere else (§10.3). A quiet
             control like its neighbour: rare, whole-log, and not a door out —
-            the file leaves, the screen stays. */}
-        <ReportDownload profileName={activeProfile().name} />
+            the file leaves, the screen stays. The library sheets are the
+            other document and are not here: they are the shared catalog
+            rather than this profile's log, so each leaves from the screen its
+            library is edited on. */}
+        <DownloadButton
+          class="home-report"
+          label="download report"
+          building="building the report…"
+          name={() => reportFileName(activeProfile().name, toIso(new Date()))}
+          build={buildReport}
+        />
       </footer>
     </main>
   )
