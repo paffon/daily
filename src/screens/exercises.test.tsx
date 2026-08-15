@@ -201,6 +201,16 @@ describe('the exercise library screen', () => {
     )
   })
 
+  /* §10.3: the library sheet leaves from the screen the library is edited on,
+     not from home's footer, because the catalog is shared and the report is
+     one profile's. A control, not a door — the file leaves, the screen stays. */
+  it('offers the library as a document, as a control rather than a route', () => {
+    const { getByText, container } = render(<Exercises />)
+    const control = getByText('download the library')
+    expect(control.closest('a')).toBeNull()
+    expect(container.querySelectorAll('.exercises-sheet')).toHaveLength(1)
+  })
+
   it('goes back to the workout module rather than to home', () => {
     const { container } = render(<Exercises />)
     expect(container.querySelector('.exercises-back')?.getAttribute('href')).toBe('#/workout')

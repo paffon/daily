@@ -177,11 +177,30 @@
 
 .foods-note {
   margin: auto 0 0;
-  padding: 36px 0;
+  padding: 36px 0 24px;
   max-width: 660px;
   font: 300 19px/1.55 var(--family-serif);
   color: var(--ink-quiet);
   text-wrap: pretty;
+}
+
+/* the library as a file, at the foot of the screen the library is edited on.
+   Dressed like home's report control and quiet for the same reason: rare,
+   whole-library, and not a door out — the file leaves, the screen stays. */
+.foods-sheet {
+  align-items: center;
+  align-self: flex-start;
+  padding: 0 0 34px;
+  border: none;
+  background: none;
+  font: 400 12px/1 var(--family-mono);
+  color: var(--mono);
+  cursor: pointer;
+}
+
+.foods-sheet:disabled {
+  color: var(--mono-faint);
+  cursor: default;
 }
 
 @media (min-width: 760px) {
