@@ -242,3 +242,23 @@ export function setLine(set: SetRow, fields: Field[]): string {
     )
     .join(' ')
 }
+
+/** `weight kg × reps` — what an exercise records, written in a set row's own
+ *  notation with the field names standing where its numbers go. The kind's
+ *  name stops describing an exercise the moment its own field list overrides
+ *  it (§8.1, 2026-08-10), and this never does: it is read off the list that is
+ *  actually drawn. Every field is named, the optional ones included — this
+ *  says what a set *can* hold, not what one of them did.
+ *
+ *  A column that declares no separator gets `/` here, which a row of numbers
+ *  does not: `10 40 kg` is a bodyweight set and reads fine because the numbers
+ *  are distinct, and `reps weight kg` reads as one field with a long name. The
+ *  glyph is the library's own — the seeded kinds already separate two columns
+ *  with it. */
+export const fieldLine = (fields: Field[]): string => {
+  const shown = fields.map((field) => ({ ...field, sep: field.sep ?? '/' }))
+  return setLine(
+    { mark: '', ...Object.fromEntries(shown.map((field) => [field.name, field.name])) },
+    shown,
+  )
+}

@@ -14,8 +14,14 @@ vi.mock('./drive', () => ({
 
 import { getBlob } from './drive'
 import { newEntry } from './entry'
-import { putEntry } from './store'
-import { buildReport, reportFileName } from './report'
+import { putEntry, writeJson } from './store'
+import {
+  buildExerciseSheet,
+  buildFoodSheet,
+  buildReport,
+  reportFileName,
+  sheetFileName,
+} from './report'
 
 const drive = vi.mocked(getBlob)
 
@@ -235,8 +241,16 @@ describe('buildReport', () => {
     /* the seed's chest press carries a rep scheme and setup notes */
     expect(html).toContain('rep scheme 12-11-10-9')
     expect(html).toContain('seat 4, handles at nipple height')
-    /* an exercise never performed is catalog, and a catalog is a dump */
+    /* an exercise never performed is catalog, and a catalog is the sheet's */
     expect(html).not.toContain('pec deck')
+  })
+
+  /* the kind is a preset and a field list overrides it (§8.1), so the glossary
+     says what the sets above it are actually columns of */
+  it('says what an exercise records, rather than the kind that presets it', async () => {
+    logWorkout('2026-07-12T07:40:00+03:00', [{ mark: '', weight: 40, reps: 10 }])
+    const html = await buildReport()
+    expect(html).toContain('chest · weight kg × reps · rep scheme 12-11-10-9')
   })
 
   it('gives a food its unit, the level it opens at, and its note', async () => {
@@ -295,6 +309,115 @@ describe('buildReport', () => {
   })
 })
 
+/** The other document: one library printed whole. What the report refuses —
+ *  the items nothing has ever been logged against — is the whole point here,
+ *  so most of what is asserted is the presence of something never used. */
+describe('the library sheets', () => {
+  it('holds every exercise the library has, not only the ones ever done', async () => {
+    logWorkout('2026-07-12T07:40:00+03:00', [{ mark: '', weight: 40, reps: 10 }])
+    const html = await buildExerciseSheet()
+    expect(html).toContain('chest press')
+    /* the same exercise the report leaves out on purpose, two tests above */
+    expect(html).toContain('pec deck')
+  })
+
+  it('groups the exercises under their body parts, in the library’s own order', async () => {
+    const html = await buildExerciseSheet()
+    expect(html).toContain('<h2>chest</h2>')
+    expect(html).toContain('<h2>legs</h2>')
+    /* the seed declares chest before back, and a sheet is browsed rather than
+       looked things up in, so it is not alphabetised */
+    expect(html.indexOf('<h2>chest</h2>')).toBeLessThan(html.indexOf('<h2>back</h2>'))
+  })
+
+  it('sends an exercise with no body part to the end, under a heading saying so', async () => {
+    writeJson('library/exercises.json', {
+      kinds: { loaded: [{ name: 'weight', unit: 'kg' }] },
+      marks: [],
+      exercises: [
+        { id: 'nowhere', name: 'nowhere', body_part: '', kind: 'loaded' },
+        { id: 'curl', name: 'curl', body_part: 'hands', kind: 'loaded' },
+      ],
+    })
+    const html = await buildExerciseSheet()
+    expect(html.indexOf('<h2>hands</h2>')).toBeLessThan(html.indexOf('<h2>no body part</h2>'))
+  })
+
+  it('says what a set of it records, and never the kind that presets one', async () => {
+    const html = await buildExerciseSheet()
+    expect(html).toContain('weight kg × reps')
+    /* the seed's farmer carry is a `hold` with a field list of its own, so its
+       kind has stopped describing it (§8.1) and the list is what is true */
+    expect(html).toContain('weight kg / duration s')
+    expect(html).not.toContain('loaded')
+  })
+
+  it('holds every food, with its unit, the level it opens at and its note', async () => {
+    const html = await buildFoodSheet()
+    expect(html).toContain('per slice · opens at normal')
+    expect(html).toContain('lean is thin crust with vegetables')
+    /* nothing has ever been eaten in this test and the sheet is unchanged */
+    expect(html).toContain('espresso')
+  })
+
+  it('is nobody’s: no profile in its head, and nothing a profile recorded in it', async () => {
+    logWorkout('2026-07-12T07:40:00+03:00', [{ mark: '', weight: 40, reps: 10 }])
+    const html = await buildExerciseSheet()
+    expect(html).toContain('daily — exercises')
+    expect(html).not.toContain('daily — main')
+    /* what is available, never what was done with it */
+    expect(html).not.toContain('12 july 2026')
+    expect(html).not.toContain('40 kg × 10')
+  })
+
+  it('is one self-contained document, the way the report is', async () => {
+    const html = await buildFoodSheet()
+    expect(html).toMatch(/^<!doctype html>/)
+    expect(html).not.toContain('<script')
+    expect(html).not.toMatch(/(src|href)="http/)
+  })
+
+  it('embeds an item’s picture, and asks Drive for each one once', async () => {
+    drive.mockResolvedValue(JPEG)
+    const html = await buildExerciseSheet()
+    expect(html).toContain('<img class="item" src="data:image/jpeg;base64,')
+    expect(html).toContain('alt="pec deck"')
+    const asked = drive.mock.calls.filter(([path]) => path === 'photos/exercise-pec-deck.jpg')
+    expect(asked).toHaveLength(1)
+  })
+
+  it('still builds offline, and calls itself a sheet when it names what it missed', async () => {
+    drive.mockRejectedValue(new Error('drive 0 on nothing'))
+    const html = await buildFoodSheet()
+    expect(html).toContain('not reached when this sheet was written')
+    expect(html).toContain('the picture of pizza')
+    /* the library itself never depended on a signal */
+    expect(html).toContain('per slice · opens at normal')
+  })
+
+  it('says an empty library is empty rather than drawing nothing at all', async () => {
+    writeJson('library/foods.json', { units: {}, foods: [] })
+    expect(await buildFoodSheet()).toContain('nothing in the library')
+  })
+
+  it('writes a name and a body part as text, never as markup', async () => {
+    writeJson('library/exercises.json', {
+      kinds: {},
+      marks: [],
+      exercises: [{ id: 'x', name: '<b>dips</b>', body_part: '<i>chest</i>', kind: '' }],
+    })
+    const html = await buildExerciseSheet()
+    expect(html).toContain('<h2>&lt;i&gt;chest&lt;/i&gt;</h2>')
+    expect(html).toContain('&lt;b&gt;dips&lt;/b&gt;')
+    expect(html).not.toContain('<b>dips</b>')
+  })
+
+  it('states and never judges — no counts, no scores', async () => {
+    const html = await buildExerciseSheet()
+    expect(html).not.toMatch(/total|score|\b\d+ exercises\b/i)
+  })
+})
+
 describe('reportFileName', () => {
   it('carries the profile and the day, so two profiles never fight over one name', () => {
     expect(reportFileName('main', '2026-08-07T10:00:00+03:00')).toBe(
@@ -314,6 +437,19 @@ describe('reportFileName', () => {
   it('keeps a name written in another alphabet — letters are letters', () => {
     expect(reportFileName('עמרי', '2026-08-07T10:00:00+03:00')).toBe(
       'daily-report-עמרי-2026-08-07.html',
+    )
+  })
+})
+
+describe('sheetFileName', () => {
+  /* no profile in it, unlike a report's: the catalog is shared (ADR 0004), so
+     two profiles exporting the same library on one day export the same file */
+  it('names the library and the day, and nobody', () => {
+    expect(sheetFileName('exercises', '2026-08-15T10:00:00+03:00')).toBe(
+      'daily-exercises-2026-08-15.html',
+    )
+    expect(sheetFileName('foods', '2026-08-15T10:00:00+03:00')).toBe(
+      'daily-foods-2026-08-15.html',
     )
   })
 })
